@@ -1,0 +1,201 @@
+import dotenv from 'dotenv';
+dotenv.config(); // ⚠️ doit être le tout premier import
+
+import './mongoose-setup.js'; // Must be before any model/route imports
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+import coreRoutes from './routes/core.js';
+import authRoutes from './routes/auth.js';
+import prestatairesRoutes from './routes/prestataires.js';
+import servicesRoutes from './routes/services.js';
+import subscriptionRoutes from './routes/subscription.js';
+import reservationsRoutes from './routes/reservations.js';
+import publicationsRoutes from './routes/publications.js';
+import favoritesRoutes from './routes/favorites.js';
+import usersRoutes from './routes/users.js';
+import dashboardRoutes from './routes/dashboard.js';
+import prestataireReservationsRoutes from './routes/prestataire-reservations.js';
+import pushTokensRoutes from './routes/push-tokens.js';
+import notificationsRoutes from './routes/notifications.js';
+import adminRoutes from './routes/admin.js';
+import avisRoutes from './routes/avis.js';
+import notificationPreferencesRoutes from './routes/notification-preferences.js';
+import waveTransactionsRoutes from './routes/wave-transactions.js';
+import adminWaveTransactionsRoutes from './routes/admin-wave-transactions.js';
+import adminUsersRoutes from './routes/admin-users.js';
+import adminServicesRoutes from './routes/admin-services.js';
+import adminCategoriesRoutes from './routes/admin-categories.js';
+import adminReservationsRoutes from './routes/admin-reservations.js';
+import adminAvisRoutes from './routes/admin-avis.js';
+import adminNotificationsRoutes from './routes/admin-notifications.js';
+import adminStatisticsRoutes from './routes/admin-statistics.js';
+import adminPlansRoutes from './routes/admin-plans.js';
+import adminMaintenanceRoutes from './routes/admin-maintenance.js';
+import { connectDB } from './db.js';
+import { logger } from './logger.js';
+
+const app = express();
+const normalizeOrigin = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return trimmed;
+  }
+};
+
+const RAW_FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map(origin => normalizeOrigin(origin))
+  .filter(Boolean) as string[];
+
+const corsLogger = (origin: string | undefined) => {
+  const formatted = origin ? normalizeOrigin(origin) : 'local (same origin)';
+  console.log(`CORS check for origin: ${formatted}`);
+};
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    corsLogger(origin);
+    if (!origin) {
+      return callback(null, true);
+    }
+    const normalized = normalizeOrigin(origin);
+    if (normalized && RAW_FRONTEND_ORIGINS.includes(normalized)) {
+      return callback(null, true);
+    }
+    logger.warn(`CORS blocked request from ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // handled by frontend
+}));
+
+// Rate limiting — global
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes, réessayez dans quelques minutes' },
+});
+app.use(globalLimiter);
+
+// Rate limiting — auth (strict)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives, réessayez dans 15 minutes' },
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// Request logging middleware (writes to logs/app.log)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    logger.request(req.method, req.path, res.statusCode, ms);
+  });
+  next();
+});
+
+// Body parsing middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(cookieParser());
+
+// 🔹 Routes
+app.use('/api', coreRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/prestataires', prestatairesRoutes);
+app.use('/api/services', servicesRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/reservations', reservationsRoutes);
+app.use('/api/publications', publicationsRoutes);
+app.use('/api/favorites', favoritesRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/prestataire/reservations', prestataireReservationsRoutes);
+app.use('/api/push-tokens', pushTokensRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/avis', avisRoutes);
+app.use('/api/notification-preferences', notificationPreferencesRoutes);
+app.use('/api/wave-transactions', waveTransactionsRoutes);
+app.use('/api/admin/wave-transactions', adminWaveTransactionsRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/services', adminServicesRoutes);
+app.use('/api/admin/categories', adminCategoriesRoutes);
+app.use('/api/admin/reservations', adminReservationsRoutes);
+app.use('/api/admin/avis', adminAvisRoutes);
+app.use('/api/admin/notifications', adminNotificationsRoutes);
+app.use('/api/admin/statistics', adminStatisticsRoutes);
+app.use('/api/admin/plans', adminPlansRoutes);
+app.use('/api/admin/maintenance', adminMaintenanceRoutes);
+
+// Root endpoint with API info
+app.get('/', (_req, res) => res.json({ 
+  name: 'PrestaCI Backend', 
+  version: '0.1.0',
+  status: 'running',
+  timestamp: new Date().toISOString(),
+  endpoints: {
+    health: '/api/health',
+    auth: '/api/auth',
+    categories: '/api/categories',
+    prestataires: '/api/prestataires',
+    services: '/api/services',
+    reservations: '/api/reservations',
+    publications: '/api/publications',
+    favorites: '/api/favorites',
+    users: '/api/users',
+    subscription: '/api/subscription'
+  }
+}));
+
+// 404 handler for undefined routes
+app.use('*', (_req, res) => {
+  res.status(404).json({ error: 'Route non trouvée' });
+});
+
+// Global error handling middleware (must be last)
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error(`Global error handler: ${err.message || err}`);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ 
+    error: process.env.NODE_ENV === 'production' ? 'Erreur interne du serveur' : err.message 
+  });
+});
+
+const port = Number(process.env.PORT || 4000);
+
+(async () => {
+  try {
+    await connectDB();
+    logger.info('Connected to MongoDB Atlas');
+    app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
+  } catch (err: any) {
+    logger.error(`Database connection failed: ${err.message}`);
+    process.exit(1);
+  }
+})();

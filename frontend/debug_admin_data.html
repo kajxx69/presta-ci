@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Admin Data</title>
+</head>
+<body>
+    <h1>Debug Admin Panel Data</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testAdminAPI() {
+            const results = document.getElementById('results');
+            
+            // Récupérer le token JWT du localStorage
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                results.innerHTML = '<p style="color: red;">❌ Aucun token JWT trouvé dans localStorage</p>';
+                return;
+            }
+            
+            console.log('Token trouvé:', token.substring(0, 50) + '...');
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+            
+            results.innerHTML = '<p>🔄 Test en cours...</p>';
+            
+            try {
+                // Test de la route /api/admin/stats
+                console.log('Test de /api/admin/stats...');
+                const statsResponse = await fetch('http://localhost:4000/api/admin/stats', { headers });
+                const statsData = await statsResponse.json();
+                
+                console.log('Réponse /api/admin/stats:', statsData);
+                
+                if (statsResponse.ok) {
+                    results.innerHTML = `
+                        <h2>✅ Route /api/admin/stats fonctionne !</h2>
+                        <pre>${JSON.stringify(statsData, null, 2)}</pre>
+                        <p><strong>Vos vraies données :</strong></p>
+                        <ul>
+                            <li>👥 Total utilisateurs: ${statsData.users?.total_users || 'N/A'}</li>
+                            <li>🧑‍💼 Clients: ${statsData.users?.clients || 'N/A'}</li>
+                            <li>🏢 Prestataires: ${statsData.users?.prestataires || 'N/A'}</li>
+                            <li>👑 Admins: ${statsData.users?.admins || 'N/A'}</li>
+                            <li>📦 Services: ${statsData.services?.total_services || 'N/A'}</li>
+                            <li>🔔 Notifications: ${statsData.notifications?.total_notifications || 'N/A'}</li>
+                        </ul>
+                    `;
+                } else {
+                    results.innerHTML = `
+                        <h2>❌ Erreur ${statsResponse.status}</h2>
+                        <pre>${JSON.stringify(statsData, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                results.innerHTML = `
+                    <h2>❌ Erreur de connexion</h2>
+                    <p>${error.message}</p>
+                    <p>Vérifiez que le serveur backend tourne sur http://localhost:4000</p>
+                `;
+            }
+        }
+        
+        // Lancer le test au chargement
+        testAdminAPI();
+    </script>
+</body>
+</html>

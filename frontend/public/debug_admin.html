@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Admin API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Admin API - PrestaCI</h1>
+    
+    <div class="info result">
+        <strong>Instructions :</strong>
+        <ol>
+            <li>Connectez-vous d'abord en tant qu'admin sur http://localhost:5173</li>
+            <li>Revenez sur cette page et cliquez sur "Tester API"</li>
+        </ol>
+    </div>
+
+    <button onclick="testAdminAPI()">🧪 Tester API Admin</button>
+    <button onclick="clearResults()">🗑️ Effacer</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testAdminAPI() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="info result">🔄 Test en cours...</div>';
+            
+            // Debug localStorage complet
+            let output = '<div class="info result"><h3>🔍 Debug localStorage</h3>';
+            output += '<p><strong>Toutes les clés dans localStorage :</strong></p><ul>';
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                output += `<li><strong>${key}:</strong> ${value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'null'}</li>`;
+            }
+            output += '</ul>';
+            
+            // Essayer différentes clés possibles pour le token
+            const possibleTokenKeys = ['token', 'authToken', 'jwt', 'access_token', 'auth_token'];
+            let token = null;
+            let tokenKey = null;
+            
+            for (const key of possibleTokenKeys) {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    token = value;
+                    tokenKey = key;
+                    break;
+                }
+            }
+            
+            output += `<p><strong>Token trouvé avec la clé "${tokenKey}":</strong> ${token ? 'Oui (' + token.length + ' caractères)' : 'Non'}</p>`;
+            output += '</div>';
+            
+            if (!token) {
+                output += '<div class="error result">❌ Aucun token JWT trouvé. Essayez ces solutions :<ul>';
+                output += '<li>1. Assurez-vous d\'être connecté sur <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>';
+                output += '<li>2. Ouvrez la console (F12) sur l\'app principale et tapez: <code>localStorage.getItem("token")</code></li>';
+                output += '<li>3. Si le token existe là-bas, copiez cette page dans l\'app principale</li>';
+                output += '</ul></div>';
+                results.innerHTML = output;
+                return;
+            }
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+            
+            // Continuer avec les tests API
+            
+            try {
+                // Test 1: Route /api/admin/stats
+                output += '<div class="info result"><h3>🧪 Test 1: /api/admin/stats</h3>';
+                
+                const statsResponse = await fetch('http://localhost:4000/api/admin/stats', { headers });
+                const statsData = await statsResponse.json();
+                
+                if (statsResponse.ok) {
+                    output += '<div class="success result">✅ Succès !</div>';
+                    output += '<pre>' + JSON.stringify(statsData, null, 2) + '</pre>';
+                    
+                    // Analyser les données
+                    output += '<div class="info result"><strong>📊 Analyse des données :</strong><ul>';
+                    output += `<li>👥 Total utilisateurs: ${statsData.users?.total_users || 'N/A'}</li>`;
+                    output += `<li>🧑‍💼 Clients: ${statsData.users?.clients || 'N/A'}</li>`;
+                    output += `<li>🏢 Prestataires: ${statsData.users?.prestataires || 'N/A'}</li>`;
+                    output += `<li>👑 Admins: ${statsData.users?.admins || 'N/A'}</li>`;
+                    output += `<li>📦 Services totaux: ${statsData.services?.total_services || 'N/A'}</li>`;
+                    output += `<li>📦 Services actifs: ${statsData.services?.services_actifs || 'N/A'}</li>`;
+                    output += `<li>📅 Réservations: ${statsData.reservations?.total_reservations || 'N/A'}</li>`;
+                    output += `<li>🔔 Notifications: ${statsData.notifications?.total_notifications || 'N/A'}</li>`;
+                    output += '</ul></div>';
+                } else {
+                    output += '<div class="error result">❌ Erreur ' + statsResponse.status + '</div>';
+                    output += '<pre>' + JSON.stringify(statsData, null, 2) + '</pre>';
+                }
+                output += '</div>';
+                
+                // Test 2: Route /api/admin/statistics/overview
+                output += '<div class="info result"><h3>🧪 Test 2: /api/admin/statistics/overview</h3>';
+                
+                const overviewResponse = await fetch('http://localhost:4000/api/admin/statistics/overview', { headers });
+                const overviewData = await overviewResponse.json();
+                
+                if (overviewResponse.ok) {
+                    output += '<div class="success result">✅ Succès !</div>';
+                    output += '<pre>' + JSON.stringify(overviewData, null, 2) + '</pre>';
+                } else {
+                    output += '<div class="error result">❌ Erreur ' + overviewResponse.status + '</div>';
+                    output += '<pre>' + JSON.stringify(overviewData, null, 2) + '</pre>';
+                }
+                output += '</div>';
+                
+                // Test 3: Vérifier le token
+                output += '<div class="info result"><h3>🔐 Informations Token</h3>';
+                output += '<p><strong>Token présent:</strong> Oui (' + token.length + ' caractères)</p>';
+                output += '<p><strong>Début du token:</strong> ' + token.substring(0, 50) + '...</p>';
+                output += '</div>';
+                
+            } catch (error) {
+                output += '<div class="error result"><h3>❌ Erreur de connexion</h3>';
+                output += '<p>' + error.message + '</p>';
+                output += '<p>Vérifiez que le serveur backend tourne sur http://localhost:4000</p>';
+                output += '</div>';
+            }
+            
+            results.innerHTML = output;
+        }
+        
+        // Auto-test si token présent
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('results').innerHTML = '<div class="success result">✅ Token JWT détecté ! Vous pouvez tester l\'API.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
