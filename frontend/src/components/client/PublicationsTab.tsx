@@ -193,19 +193,24 @@ export default function PublicationsTab() {
 
   const handlePrestataireInputChange = (value: string) => {
     setPrestataireInput(value);
-    setShowPrestataireDropdown(value.startsWith('@') && value.length > 1);
+    setShowPrestataireDropdown(value.trim().length > 0);
+    // Reset selection if user edits after selecting
+    if (newPublication.prestataire_id && value !== prestataires.find(p => p.id === newPublication.prestataire_id)?.nom_commercial) {
+      setNewPublication(prev => ({ ...prev, prestataire_id: 0, service_id: 0 }));
+      setServices([]);
+    }
   };
 
   const selectPrestataire = (prestataire: any) => {
-    setPrestataireInput(`@${prestataire.nom_commercial}`);
+    setPrestataireInput(prestataire.nom_commercial);
     setNewPublication(prev => ({ ...prev, prestataire_id: prestataire.id, service_id: 0 }));
     setShowPrestataireDropdown(false);
     loadServicesForPrestataire(prestataire.id);
   };
 
   const filteredPrestataires = prestataires.filter(p => {
-    if (!prestataireInput.startsWith('@') || prestataireInput.length < 2) return false;
-    const searchTerm = prestataireInput.slice(1).toLowerCase();
+    if (!prestataireInput.trim()) return false;
+    const searchTerm = prestataireInput.trim().toLowerCase();
     return p.nom_commercial.toLowerCase().includes(searchTerm);
   });
 
@@ -656,24 +661,60 @@ export default function PublicationsTab() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Prestataire
                 </label>
-                <input
-                  type="text"
-                  placeholder="@Nom du prestataire"
-                  value={prestataireInput}
-                  onChange={(e) => handlePrestataireInputChange(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Rechercher un prestataire..."
+                    value={prestataireInput}
+                    onChange={(e) => handlePrestataireInputChange(e.target.value)}
+                    onFocus={() => { if (prestataireInput.trim()) setShowPrestataireDropdown(true); }}
+                    onBlur={() => setTimeout(() => setShowPrestataireDropdown(false), 200)}
+                    className={`w-full px-4 py-2.5 rounded-lg border bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                      newPublication.prestataire_id
+                        ? 'border-green-400 dark:border-green-600'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
+                  />
+                  {newPublication.prestataire_id > 0 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Check className="w-4 h-4 text-green-500" />
+                    </div>
+                  )}
+                </div>
                 {showPrestataireDropdown && filteredPrestataires.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredPrestataires.map(prestataire => (
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-56 overflow-y-auto">
+                    {filteredPrestataires.slice(0, 10).map(prestataire => (
                       <button
                         key={prestataire.id}
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => selectPrestataire(prestataire)}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700 dark:text-gray-300"
+                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 transition-colors"
                       >
-                        {prestataire.nom_commercial}
+                        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                          {prestataire.photo_profil ? (
+                            <img src={prestataire.photo_profil} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            prestataire.nom_commercial?.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            {prestataire.nom_commercial}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {prestataire.ville || 'Côte d\'Ivoire'}
+                            {typeof prestataire.note_moyenne === 'number' && prestataire.note_moyenne > 0 && (
+                              <span> · ★ {prestataire.note_moyenne.toFixed(1)}</span>
+                            )}
+                          </p>
+                        </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                {showPrestataireDropdown && prestataireInput.trim().length > 0 && filteredPrestataires.length === 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Aucun prestataire trouvé
                   </div>
                 )}
               </div>
