@@ -40,11 +40,6 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
   const navigate = useNavigate();
 
   const handleTabSelect = (tabId: string) => {
-    if (!isAuthenticated && tabId !== 'home') {
-      showToast('Connectez-vous pour accéder à cette section', 'info');
-      navigate('/login');
-      return;
-    }
     setCurrentTab(tabId);
   };
 

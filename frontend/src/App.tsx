@@ -168,15 +168,12 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated && currentTab !== 'home') {
-      setCurrentTab('home');
-    }
-  }, [isAuthenticated, currentTab, setCurrentTab]);
+  // No longer force guests to home — let them explore all tabs
 
   const renderCurrentTab = () => {
     if (!isAuthenticated || !role) {
-      return <HomeTab {...homeTabProps} />;
+      // Guest users can browse all client tabs
+      return <ClientTabRenderer currentTab={currentTab} homeTabProps={homeTabProps} />;
     }
 
     if (role.nom === 'client') {

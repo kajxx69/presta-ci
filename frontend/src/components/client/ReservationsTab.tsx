@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, MapPin, Phone, Star, MessageCircle, RefreshCw, Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
 import RatingModal from './RatingModal';
 import { SearchInput } from '../ui/SearchInput';
@@ -45,6 +47,38 @@ function ReservationsSkeleton() {
 
 export default function ReservationsTab() {
   const { showToast } = useAppStore();
+  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 max-w-lg lg:max-w-5xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Calendar className="w-8 h-8 text-blue-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vos réservations</h2>
+          <p className="text-gray-500 dark:text-gray-400 max-w-xs">
+            Connectez-vous pour voir et gérer vos réservations de services.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg"
+            >
+              Se connecter
+            </button>
+            <button
+              onClick={() => navigate('/register')}
+              className="px-6 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold"
+            >
+              S'inscrire
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

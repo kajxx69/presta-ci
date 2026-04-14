@@ -18,6 +18,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import CommentsModal from './CommentsModal';
+import AuthPromptModal from '../common/AuthPromptModal';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -32,7 +33,7 @@ interface PublicationInput {
 
 export default function PublicationsTab() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const { addNotification } = useAppStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,6 +56,8 @@ export default function PublicationsTab() {
   const [shareMenuOpen, setShareMenuOpen] = useState<number | null>(null);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
   const [commentingPublicationId, setCommentingPublicationId] = useState<number | null>(null);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
   const [search, setSearch] = useState('');
   const [filterMedia, setFilterMedia] = useState<'all' | 'photos' | 'videos'>('all');
   const [visibleCount, setVisibleCount] = useState(5);
@@ -91,6 +94,11 @@ export default function PublicationsTab() {
   };
 
   const handleToggleLike = async (publicationId: number, liked: boolean) => {
+    if (!isAuthenticated) {
+      setAuthPromptMessage('Connectez-vous pour aimer cette publication.');
+      setAuthPromptOpen(true);
+      return;
+    }
     setFeed(currentFeed =>
       currentFeed.map(p =>
         p.id === publicationId
@@ -375,7 +383,14 @@ export default function PublicationsTab() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Publications</h1>
             </div>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  setAuthPromptMessage('Connectez-vous pour créer une publication.');
+                  setAuthPromptOpen(true);
+                  return;
+                }
+                setShowCreateModal(true);
+              }}
               className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -539,8 +554,15 @@ export default function PublicationsTab() {
                       <span className="text-sm">{publication.nombre_likes}</span>
                     </button>
                     
-                    <button 
-                      onClick={() => setCommentingPublicationId(publication.id)}
+                    <button
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          setAuthPromptMessage('Connectez-vous pour commenter.');
+                          setAuthPromptOpen(true);
+                          return;
+                        }
+                        setCommentingPublicationId(publication.id);
+                      }}
                       className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-blue-500 transition-colors"
                     >
                       <MessageCircle className="w-5 h-5" />
@@ -625,6 +647,8 @@ export default function PublicationsTab() {
           }}
         />
       )}
+
+      <AuthPromptModal open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} message={authPromptMessage} />
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

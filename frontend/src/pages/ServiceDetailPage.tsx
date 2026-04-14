@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
+import AuthPromptModal from '../components/common/AuthPromptModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -40,10 +41,7 @@ export default function ServiceDetailPage() {
   const navigate = useNavigate();
   const { showToast } = useAppStore();
   const { isAuthenticated } = useAuthStore();
-  const redirectToLogin = () => {
-    showToast('Connectez-vous pour réserver ce service', 'info');
-    navigate('/login');
-  };
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
 
   const [service, setService] = useState<any>(null);
   const [prestataire, setPrestataire] = useState<any>(null);
@@ -149,7 +147,7 @@ export default function ServiceDetailPage() {
 
   const openReservation = () => {
     if (!isAuthenticated) {
-      redirectToLogin();
+      setAuthPromptOpen(true);
       return;
     }
     setShowReservationModal(true);
@@ -342,6 +340,12 @@ export default function ServiceDetailPage() {
           onReservationSuccess={() => showToast('Réservation envoyée au prestataire', 'success')}
         />
       )}
+
+      <AuthPromptModal
+        open={authPromptOpen}
+        onClose={() => setAuthPromptOpen(false)}
+        message="Connectez-vous pour réserver ce service."
+      />
     </Layout>
   );
 }

@@ -19,6 +19,7 @@ import {
 import ReservationModal from '../components/client/ReservationModal';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
+import AuthPromptModal from '../components/common/AuthPromptModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -67,6 +68,8 @@ export default function PrestataireDetailPage() {
   const [favoriteProviders, setFavoriteProviders] = useState<number[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
 
   const prestataireId = Number(id);
 
@@ -115,6 +118,11 @@ export default function PrestataireDetailPage() {
 
   const toggleFavorite = async () => {
     if (!prestataire) return;
+    if (!isAuthenticated) {
+      setAuthPromptMessage('Connectez-vous pour ajouter ce prestataire à vos favoris.');
+      setAuthPromptOpen(true);
+      return;
+    }
     try {
       const isFavorite = favoriteProviders.includes(prestataire.id);
       if (isFavorite) {
@@ -131,14 +139,10 @@ export default function PrestataireDetailPage() {
     }
   };
 
-  const redirectToLogin = () => {
-    showToast('Connectez-vous pour réserver ce service', 'info');
-    navigate('/login');
-  };
-
   const openReservation = (service: ApiService) => {
     if (!isAuthenticated) {
-      redirectToLogin();
+      setAuthPromptMessage('Connectez-vous pour réserver ce service.');
+      setAuthPromptOpen(true);
       return;
     }
     setSelectedService(service);
@@ -242,14 +246,12 @@ export default function PrestataireDetailPage() {
             </button>
           </div>
 
-          {isAuthenticated && (
-            <button
-              onClick={toggleFavorite}
-              className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
-            >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-red-500' : ''}`} />
-            </button>
-          )}
+          <button
+            onClick={toggleFavorite}
+            className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
+          >
+            <Heart className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-red-500' : ''}`} />
+          </button>
         </div>
 
         <div className="-mt-16 px-4 relative z-10">
@@ -437,6 +439,12 @@ export default function PrestataireDetailPage() {
           onReservationSuccess={() => showToast('Réservation envoyée au prestataire', 'success')}
         />
       )}
+
+      <AuthPromptModal
+        open={authPromptOpen}
+        onClose={() => setAuthPromptOpen(false)}
+        message={authPromptMessage}
+      />
     </Layout>
   );
 }

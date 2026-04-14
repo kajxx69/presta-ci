@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -53,8 +54,39 @@ interface ProfileInsights {
 }
 
 export default function ProfileTab() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const { isDarkMode, toggleDarkMode, showToast } = useAppStore();
+  const navigate = useNavigate();
+
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 max-w-lg lg:max-w-5xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <span className="text-white text-3xl font-bold">?</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Mon profil</h2>
+          <p className="text-gray-500 dark:text-gray-400 max-w-xs">
+            Connectez-vous pour accéder à votre profil et vos paramètres.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg"
+            >
+              Se connecter
+            </button>
+            <button
+              onClick={() => navigate('/register')}
+              className="px-6 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold"
+            >
+              S'inscrire
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);

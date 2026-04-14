@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import ReservationModal from './ReservationModal';
 import MapView from '../map/MapView';
+import AuthPromptModal from '../common/AuthPromptModal';
 import { api, ApiCategory, ApiSubCategory, ApiPrestataire, ApiService } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
@@ -77,9 +78,16 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  const redirectToLogin = (message: string) => {
-    showToast(message, 'info');
-    navigate('/login');
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [authPromptMessage, setAuthPromptMessage] = useState('');
+
+  const requireAuth = (message: string, callback: () => void) => {
+    if (!isAuthenticated) {
+      setAuthPromptMessage(message);
+      setAuthPromptOpen(true);
+      return;
+    }
+    callback();
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -237,7 +245,8 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   const handleToggleFavorite = async (prestataire_id: number) => {
     if (!isAuthenticated) {
-      redirectToLogin('Connectez-vous pour gérer vos favoris');
+      setAuthPromptMessage('Connectez-vous pour ajouter ce prestataire à vos favoris.');
+      setAuthPromptOpen(true);
       return;
     }
     try {
@@ -269,6 +278,8 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   return (
     <>
+      <AuthPromptModal open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} message={authPromptMessage} />
+
       {isReservationModalOpen && selectedServiceForReservation && (
         <ReservationModal
           service={selectedServiceForReservation}
@@ -473,12 +484,10 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
                           prestataire={prestataire}
                           onSelect={() => onSelectService(service.id)}
                           onReserve={() => {
-                            if (!isAuthenticated) {
-                              redirectToLogin('Connectez-vous pour réserver');
-                              return;
-                            }
-                            setSelectedServiceForReservation(service);
-                            setIsReservationModalOpen(true);
+                            requireAuth('Connectez-vous pour réserver ce service.', () => {
+                              setSelectedServiceForReservation(service);
+                              setIsReservationModalOpen(true);
+                            });
                           }}
                         />
                       </StaggerItem>
