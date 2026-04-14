@@ -206,11 +206,9 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <Layout showBottomNav={false}>
-                <div className="min-h-screen flex items-center justify-center px-4 py-8">
-                  <LoginForm />
-                </div>
-              </Layout>
+              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+                <LoginForm />
+              </div>
             )
           }
         />
@@ -221,11 +219,9 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <Layout showBottomNav={false}>
-                <div className="min-h-screen flex items-center justify-center px-4 py-8">
-                  <RegisterForm />
-                </div>
-              </Layout>
+              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-6">
+                <RegisterForm />
+              </div>
             )
           }
         />
