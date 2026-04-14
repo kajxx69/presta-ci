@@ -17,9 +17,10 @@ function safeArray(data: any): any[] {
 // GET /api/publications?mine=0|1
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const userId = await getUserIdFromSession(req);
-    if (!userId) return res.status(401).json({ error: 'Non authentifié' });
+    const userId = await getUserIdFromSession(req).catch(() => null);
+
     const mine = String(req.query.mine || '0') === '1';
+    if (mine && !userId) return res.status(401).json({ error: 'Non authentifié' });
 
     const filter: any = {};
     if (mine) filter.client_id = userId;
@@ -30,7 +31,7 @@ router.get('/', async (req: Request, res: Response) => {
       const user = await User.findById(pub.client_id).select('prenom nom photo_profil');
       const prestataire = pub.prestataire_id ? await Prestataire.findById(pub.prestataire_id) : null;
       const service = pub.service_id ? await Service.findById(pub.service_id) : null;
-      const liked = await Like.exists({ publication_id: pub._id, user_id: userId });
+      const liked = userId ? await Like.exists({ publication_id: pub._id, user_id: userId }) : false;
       const nombre_commentaires = await CommentairePublication.countDocuments({ publication_id: pub._id });
 
       return {
