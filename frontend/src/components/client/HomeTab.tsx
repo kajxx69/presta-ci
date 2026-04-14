@@ -198,6 +198,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
           title: p.nom_commercial,
           subtitle: (p.ville || '') + distLabel,
           rating: typeof p.note_moyenne === 'number' ? p.note_moyenne : parseFloat(String(p.note_moyenne || 0)),
+          type: 'prestataire' as const,
         };
       });
   }, [filteredPrestataires, userLocation, distanceKm, formatDistance]);

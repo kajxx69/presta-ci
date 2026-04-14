@@ -17,7 +17,25 @@ export interface MapMarker {
   title: string;
   subtitle?: string;
   rating?: number;
+  type?: 'prestataire' | 'default';
 }
+
+const shopIcon = L.divIcon({
+  className: '',
+  html: `<div style="
+    width:36px;height:36px;border-radius:50%;
+    background:#2563EB;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid #fff;
+  ">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor: [0, -36],
+});
 
 interface MapViewProps {
   center: [number, number];
@@ -120,7 +138,7 @@ export default function MapView({ center, zoom = 12, markers, className, style, 
           </>
         )}
         {markers.map(m => (
-          <Marker key={m.id} position={m.position} eventHandlers={onMarkerClick ? { click: () => onMarkerClick(m) } : undefined}>
+          <Marker key={m.id} position={m.position} icon={m.type === 'prestataire' ? shopIcon : undefined} eventHandlers={onMarkerClick ? { click: () => onMarkerClick(m) } : undefined}>
             <Popup>
               <div className="space-y-1">
                 <div className="font-semibold">{m.title}</div>
