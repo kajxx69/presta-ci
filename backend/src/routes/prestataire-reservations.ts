@@ -53,6 +53,7 @@ router.get('/', async (req: Request, res: Response) => {
         notes_client: r.notes_client,
         a_domicile: r.a_domicile,
         adresse_rdv: r.adresse_rdv,
+        client_id: r.client_id,
         client_nom: client?.nom || null,
         client_prenom: client?.prenom || null,
         client_telephone: client?.telephone || null,

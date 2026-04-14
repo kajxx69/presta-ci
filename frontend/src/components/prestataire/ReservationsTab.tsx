@@ -16,13 +16,16 @@ import {
   List,
   Filter,
   TrendingUp,
-  Info
+  Info,
+  Flag
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
+import SignalementModal from '../common/SignalementModal';
 
 interface Reservation {
   id: number;
+  client_id?: number;
   client_nom: string;
   client_prenom: string;
   client_telephone?: string;
@@ -59,6 +62,7 @@ export default function ReservationsTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [signalementTarget, setSignalementTarget] = useState<{ id: number; nom: string } | null>(null);
   const [dragState, setDragState] = useState<{ draggedId: number | null; dragOverId: number | null }>({
     draggedId: null,
     dragOverId: null
@@ -922,6 +926,21 @@ export default function ReservationsTab() {
             </div>
 
             <div className="flex flex-wrap gap-3">
+              {selectedReservation.client_id && (
+                <button
+                  onClick={() => {
+                    setSelectedReservation(null);
+                    setSignalementTarget({
+                      id: selectedReservation.client_id!,
+                      nom: `${selectedReservation.client_prenom} ${selectedReservation.client_nom}`
+                    });
+                  }}
+                  className="w-full px-4 py-2 rounded-2xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <Flag className="w-4 h-4" />
+                  Signaler ce client
+                </button>
+              )}
               {selectedReservation.client_telephone && (
                 <button
                   onClick={() => window.open(`tel:${selectedReservation.client_telephone}`, '_self')}
@@ -951,6 +970,14 @@ export default function ReservationsTab() {
           </div>
         </div>
       )}
+
+      <SignalementModal
+        open={!!signalementTarget}
+        onClose={() => setSignalementTarget(null)}
+        typeCible="utilisateur"
+        cibleId={signalementTarget?.id ?? 0}
+        cibleNom={signalementTarget?.nom}
+      />
     </div>
   );
 }
