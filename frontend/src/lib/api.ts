@@ -418,6 +418,21 @@ export const api = {
       getStats: (): Promise<any> => http('/api/admin/plans/stats/overview')
     },
     
+    signalements: {
+      getAll: (params?: { statut?: string; type_cible?: string; page?: number; limit?: number }): Promise<any> => {
+        const query = new URLSearchParams();
+        if (params?.statut) query.append('statut', params.statut);
+        if (params?.type_cible) query.append('type_cible', params.type_cible);
+        if (params?.page) query.append('page', params.page.toString());
+        if (params?.limit) query.append('limit', params.limit.toString());
+        const queryString = query.toString();
+        return http(`/api/admin/signalements${queryString ? '?' + queryString : ''}`);
+      },
+      getById: (id: number): Promise<any> => http(`/api/admin/signalements/${id}`),
+      getStats: (): Promise<any> => http('/api/admin/signalements/stats'),
+      traiter: (id: number, data: { statut: string; resolution_note?: string; action_prise?: string }): Promise<any> =>
+        http(`/api/admin/signalements/${id}/traiter`, { method: 'PUT', body: JSON.stringify(data) }),
+    },
     maintenance: {
       getStatus: (): Promise<any> => http('/api/admin/maintenance/status'),
       clearCache: (cacheType: 'all' | 'database' | 'sessions' | 'notifications' | 'logs' = 'all'): Promise<any> =>
@@ -447,6 +462,11 @@ export const api = {
           body: JSON.stringify({ enabled, ...(options || {}) })
         })
     }
+  },
+  signalements: {
+    create: (payload: { type_cible: string; cible_id: number; motif: string; description: string; preuves?: string[] }): Promise<{ ok: boolean; id: number; message: string }> =>
+      http('/api/signalements', { method: 'POST', body: JSON.stringify(payload) }),
+    mine: (): Promise<any[]> => http('/api/signalements/mine'),
   },
   avis: {
     create: (payload: { reservation_id: number; note: number; commentaire?: string; photos?: string[] }): Promise<{ ok: boolean; id: number; message: string }> =>

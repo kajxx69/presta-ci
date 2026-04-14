@@ -14,12 +14,14 @@ import {
   MessageCircle,
   RefreshCw,
   Shield,
-  Compass
+  Compass,
+  Flag
 } from 'lucide-react';
 import ReservationModal from '../components/client/ReservationModal';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
 import AuthPromptModal from '../components/common/AuthPromptModal';
+import SignalementModal from '../components/common/SignalementModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -70,6 +72,7 @@ export default function PrestataireDetailPage() {
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [authPromptMessage, setAuthPromptMessage] = useState('');
+  const [signalementOpen, setSignalementOpen] = useState(false);
 
   const prestataireId = Number(id);
 
@@ -246,12 +249,28 @@ export default function PrestataireDetailPage() {
             </button>
           </div>
 
-          <button
-            onClick={toggleFavorite}
-            className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
-          >
-            <Heart className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-red-500' : ''}`} />
-          </button>
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  setAuthPromptMessage('Connectez-vous pour signaler un problème.');
+                  setAuthPromptOpen(true);
+                } else {
+                  setSignalementOpen(true);
+                }
+              }}
+              className="bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
+              title="Signaler"
+            >
+              <Flag className="w-5 h-5" />
+            </button>
+            <button
+              onClick={toggleFavorite}
+              className="bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
+            >
+              <Heart className={`w-5 h-5 ${isFavorite ? 'text-red-500 fill-red-500' : ''}`} />
+            </button>
+          </div>
         </div>
 
         <div className="-mt-16 px-4 relative z-10">
@@ -444,6 +463,14 @@ export default function PrestataireDetailPage() {
         open={authPromptOpen}
         onClose={() => setAuthPromptOpen(false)}
         message={authPromptMessage}
+      />
+
+      <SignalementModal
+        open={signalementOpen}
+        onClose={() => setSignalementOpen(false)}
+        typeCible="prestataire"
+        cibleId={prestataireId}
+        cibleNom={prestataire?.nom_commercial}
       />
     </Layout>
   );

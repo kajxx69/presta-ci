@@ -13,11 +13,13 @@ import {
   Home,
   RefreshCw,
   Shield,
-  Info
+  Info,
+  Flag
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
 import AuthPromptModal from '../components/common/AuthPromptModal';
+import SignalementModal from '../components/common/SignalementModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -42,6 +44,7 @@ export default function ServiceDetailPage() {
   const { showToast } = useAppStore();
   const { isAuthenticated } = useAuthStore();
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [signalementOpen, setSignalementOpen] = useState(false);
 
   const [service, setService] = useState<any>(null);
   const [prestataire, setPrestataire] = useState<any>(null);
@@ -185,6 +188,20 @@ export default function ServiceDetailPage() {
               {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </button>
           </div>
+
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                setAuthPromptOpen(true);
+              } else {
+                setSignalementOpen(true);
+              }
+            }}
+            className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
+            title="Signaler"
+          >
+            <Flag className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="px-4 -mt-10 relative z-10">
@@ -345,6 +362,14 @@ export default function ServiceDetailPage() {
         open={authPromptOpen}
         onClose={() => setAuthPromptOpen(false)}
         message="Connectez-vous pour réserver ce service."
+      />
+
+      <SignalementModal
+        open={signalementOpen}
+        onClose={() => setSignalementOpen(false)}
+        typeCible="service"
+        cibleId={serviceId}
+        cibleNom={service?.nom}
       />
     </Layout>
   );

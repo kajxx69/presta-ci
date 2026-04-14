@@ -34,6 +34,8 @@ import adminNotificationsRoutes from './routes/admin-notifications.js';
 import adminStatisticsRoutes from './routes/admin-statistics.js';
 import adminPlansRoutes from './routes/admin-plans.js';
 import adminMaintenanceRoutes from './routes/admin-maintenance.js';
+import signalementsRoutes from './routes/signalements.js';
+import adminSignalementsRoutes from './routes/admin-signalements.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
 
@@ -150,6 +152,8 @@ app.use('/api/admin/notifications', adminNotificationsRoutes);
 app.use('/api/admin/statistics', adminStatisticsRoutes);
 app.use('/api/admin/plans', adminPlansRoutes);
 app.use('/api/admin/maintenance', adminMaintenanceRoutes);
+app.use('/api/signalements', signalementsRoutes);
+app.use('/api/admin/signalements', adminSignalementsRoutes);
 
 // Root endpoint with API info
 app.get('/', (_req, res) => res.json({ 

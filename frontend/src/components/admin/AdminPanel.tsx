@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, TrendingUp, Crown, Settings, Wrench,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -23,10 +23,11 @@ import AdminPlans from './AdminPlans';
 import AdminSettings from './AdminSettings';
 import AdminMaintenance from './AdminMaintenance';
 import AdminProfile from './AdminProfile';
+import AdminSignalements from './AdminSignalements';
 
 type AdminTab =
   | 'dashboard' | 'users' | 'services' | 'categories'
-  | 'reservations' | 'avis' | 'payments' | 'notifications'
+  | 'reservations' | 'avis' | 'signalements' | 'payments' | 'notifications'
   | 'statistics' | 'plans' | 'settings' | 'maintenance' | 'profile';
 
 interface NavItem {
@@ -61,6 +62,7 @@ const navGroups: NavGroup[] = [
     title: 'Modération',
     items: [
       { id: 'avis', label: 'Avis', icon: Star },
+      { id: 'signalements', label: 'Signalements', icon: ShieldAlert },
       { id: 'payments', label: 'Paiements', icon: CreditCard },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
@@ -82,6 +84,7 @@ const tabComponents: Record<AdminTab, React.ComponentType> = {
   categories: AdminCategories,
   reservations: AdminReservations,
   avis: AdminAvis,
+  signalements: AdminSignalements,
   payments: AdminPayments,
   notifications: AdminNotifications,
   statistics: AdminStatistics,

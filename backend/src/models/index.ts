@@ -12,3 +12,4 @@ export { FavorisPrestataire, FavorisService, FavorisPublication } from './Favori
 export { TransactionWave } from './Transaction.js';
 export { PushToken, NotificationTemplate, Notification, NotificationPreference } from './Notification.js';
 export { Configuration, SystemLog } from './Settings.js';
+export { Signalement } from './Signalement.js';
