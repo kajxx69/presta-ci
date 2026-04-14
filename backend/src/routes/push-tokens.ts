@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PushToken } from '../models/index.js';
+import { getNextId } from '../models/Counter.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -15,11 +16,21 @@ router.post('/', async (req: Request, res: Response) => {
     const existing = await PushToken.findOne({ user_id: userId, token });
     if (existing) {
       await PushToken.updateOne({ _id: existing._id }, { device_type, device_id, is_active: true, updated_at: new Date() });
-      return res.json({ ok: true, message: 'Token mis à jour' });
+      return res.json({ ok: true, id: existing._id, message: 'Token mis à jour' });
     }
 
-    const pt = await PushToken.create({ user_id: userId, token, device_type, device_id });
-    res.json({ ok: true, id: pt._id, message: 'Token enregistré' });
+    // Retry loop in case counter is out of sync with existing _id values
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const newId = await getNextId('push_tokens');
+      try {
+        await PushToken.collection.insertOne({ _id: newId as any, user_id: userId, token, device_type, device_id, is_active: true, created_at: new Date(), updated_at: new Date() });
+        return res.json({ ok: true, id: newId, message: 'Token enregistré' });
+      } catch (err: any) {
+        if (err.code !== 11000) throw err;
+        // duplicate _id, counter was behind — retry with next id
+      }
+    }
+    throw new Error('Impossible de créer le token après plusieurs tentatives');
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
