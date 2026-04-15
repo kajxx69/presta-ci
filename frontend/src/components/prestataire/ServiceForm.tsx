@@ -18,7 +18,10 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
     is_domicile: service?.is_domicile || false,
     is_active: service?.is_active !== undefined ? service.is_active : true,
     photos: service?.photos || [],
-    devise: service?.devise || 'FCFA'
+    devise: service?.devise || 'FCFA',
+    unite: service?.unite || '',
+    quantite_min: service?.quantite_min || 1,
+    quantite_max: service?.quantite_max || '',
   });
 
   const [errors, setErrors] = useState<any>({});
@@ -114,7 +117,10 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
         sous_categorie_id: parseInt(formData.sous_categorie_id),
         prix: parseFloat(formData.prix),
         duree_minutes: parseInt(formData.duree_minutes.toString()),
-        devise: formData.devise || 'FCFA'
+        devise: formData.devise || 'FCFA',
+        unite: formData.unite || null,
+        quantite_min: Number(formData.quantite_min) || 1,
+        quantite_max: formData.quantite_max ? Number(formData.quantite_max) : null,
       });
     }
   };
@@ -268,6 +274,57 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
                 />
               </div>
               {errors.duree_minutes && <p className="text-red-500 text-xs mt-1">{errors.duree_minutes}</p>}
+            </div>
+          </div>
+
+          {/* Unité & Quantités */}
+          <div className="space-y-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Prix par unité (optionnel)</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Permet au client de choisir une quantité. Ex : "500 cartes → 5 000 FCFA par carte"
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Unité
+                </label>
+                <input
+                  type="text"
+                  name="unite"
+                  value={formData.unite}
+                  onChange={handleChange}
+                  placeholder="ex: carte, séance, kg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Qté min
+                </label>
+                <input
+                  type="number"
+                  name="quantite_min"
+                  value={formData.quantite_min}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="1"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Qté max (optionnel)
+                </label>
+                <input
+                  type="number"
+                  name="quantite_max"
+                  value={formData.quantite_max}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="illimitée"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
             </div>
           </div>
 

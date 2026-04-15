@@ -35,6 +35,7 @@ const reservationSchema = new mongoose.Schema({
   heure_fin: { type: String, required: true },
   prix_final: { type: Number, required: true },
   prix_total: Number,
+  quantite: { type: Number, default: 1 },
   notes_client: String,
   notes_prestataire: String,
   publication_id: { type: Number, default: null, ref: 'Publication' },

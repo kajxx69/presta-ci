@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -99,6 +99,7 @@ export default function ProfileTab() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const editSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -280,7 +281,15 @@ export default function ProfileTab() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm">
+        <div
+          className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm ${profileCompletion.percent < 80 ? 'cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors' : ''}`}
+          onClick={() => {
+            if (profileCompletion.percent < 80) {
+              setIsEditing(true);
+              setTimeout(() => editSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+            }
+          }}
+        >
           <p className="text-sm text-gray-500 dark:text-gray-400">Statut du profil</p>
           <p className="text-xl font-semibold text-gray-900 dark:text-white mt-1">
             {profileCompletion.percent >= 80 ? 'Professionnel' : 'À compléter'}
@@ -288,7 +297,7 @@ export default function ProfileTab() {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
             {profileCompletion.percent >= 80
               ? 'Votre profil inspire confiance.'
-              : 'Ajoutez les informations manquantes pour débloquer tout le potentiel.'}
+              : 'Cliquez pour compléter vos informations.'}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm">
@@ -309,7 +318,7 @@ export default function ProfileTab() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div ref={editSectionRef} className="grid lg:grid-cols-3 gap-6">
         <div className="space-y-6 lg:col-span-2">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">

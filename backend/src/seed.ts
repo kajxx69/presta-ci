@@ -123,32 +123,60 @@ async function seed() {
   // --- Catégories ---
   await Category.deleteMany({});
   const categories = [
-    { _id: 1, nom: 'Beauté', description: 'Services de beauté et esthétique', icone: 'beauty.svg', couleur: '#FF69B4', ordre_affichage: 1 },
+    { _id: 1, nom: 'Beauté & Esthétique', description: 'Maquillage, épilation, soins du visage', icone: 'beauty.svg', couleur: '#FF69B4', ordre_affichage: 1 },
     { _id: 2, nom: 'Bien-être', description: 'Services de détente et bien-être', icone: 'wellness.svg', couleur: '#9370DB', ordre_affichage: 2 },
-    { _id: 3, nom: 'Coiffure', description: 'Services de coiffure et coupe', icone: 'hair.svg', couleur: '#FFD700', ordre_affichage: 3 },
+    { _id: 3, nom: 'Coiffure Femme', description: 'Tresses, défrisage, extensions, coloration', icone: 'hair.svg', couleur: '#EC4899', ordre_affichage: 3 },
     { _id: 4, nom: 'Ongles', description: 'Services de manucure et pédicure', icone: 'nails.svg', couleur: '#FF6347', ordre_affichage: 4 },
     { _id: 5, nom: 'Massage', description: 'Services de massage thérapeutique', icone: 'massage.svg', couleur: '#32CD32', ordre_affichage: 5 },
-    { _id: 6, nom: 'Fitness', description: 'Services de remise en forme', icone: 'fitness.svg', couleur: '#FF4500', ordre_affichage: 6 }
+    { _id: 6, nom: 'Coiffure Homme', description: 'Coupe, dégradé, barbe, rasage', icone: 'hair.svg', couleur: '#6366F1', ordre_affichage: 6 },
+    { _id: 7, nom: 'Imprimerie & Design', description: 'Cartes de visite, flyers, infographie, logo', icone: 'photography.svg', couleur: '#3B82F6', ordre_affichage: 7 },
+    { _id: 8, nom: 'Traiteur & Restauration', description: 'Buffets, plats cuisinés, pâtisserie', icone: 'cooking.svg', couleur: '#F59E0B', ordre_affichage: 8 },
+    { _id: 9, nom: 'Fleuriste & Décoration', description: 'Compositions florales, décoration événementielle', icone: 'wellness.svg', couleur: '#10B981', ordre_affichage: 9 },
+    { _id: 10, nom: 'Nettoyage & Ménage', description: 'Entretien domicile, bureaux, pressing', icone: 'cleaning.svg', couleur: '#14B8A6', ordre_affichage: 10 },
+    { _id: 11, nom: 'Fitness', description: 'Services de remise en forme', icone: 'fitness.svg', couleur: '#FF4500', ordre_affichage: 11 },
   ];
   await Category.insertMany(categories);
-  await Counter.findByIdAndUpdate('categories', { seq: 6 }, { upsert: true });
+  await Counter.findByIdAndUpdate('categories', { seq: 11 }, { upsert: true });
   console.log('✅ Catégories seeded');
 
   // --- Sous-catégories ---
   await SubCategory.deleteMany({});
   const sousCategories = [
+    // Beauté & Esthétique (1)
     { _id: 1, categorie_id: 1, nom: 'Maquillage', description: 'Services de maquillage professionnel', ordre_affichage: 1 },
     { _id: 2, categorie_id: 1, nom: 'Épilation', description: "Services d'épilation", ordre_affichage: 2 },
     { _id: 3, categorie_id: 1, nom: 'Soins du visage', description: 'Nettoyage et soins faciaux', ordre_affichage: 3 },
-    { _id: 4, categorie_id: 3, nom: 'Coupe homme', description: 'Coupe et coiffure masculine', ordre_affichage: 1 },
-    { _id: 5, categorie_id: 3, nom: 'Coupe femme', description: 'Coupe et coiffure féminine', ordre_affichage: 2 },
+    // Coiffure Femme (3)
+    { _id: 4, categorie_id: 3, nom: 'Tresses & Nattes', description: 'Tresses africaines, vanilles, box braids', ordre_affichage: 1 },
+    { _id: 5, categorie_id: 3, nom: 'Défrisage & Extensions', description: 'Lissage, défrisage, pose de rajouts', ordre_affichage: 2 },
     { _id: 6, categorie_id: 3, nom: 'Coloration', description: 'Coloration et mèches', ordre_affichage: 3 },
-    { _id: 7, categorie_id: 4, nom: 'Manucure', description: 'Soins des mains et ongles', ordre_affichage: 1 },
-    { _id: 8, categorie_id: 4, nom: 'Pédicure', description: 'Soins des pieds et ongles', ordre_affichage: 2 },
-    { _id: 9, categorie_id: 4, nom: 'Nail art', description: "Décoration d'ongles artistique", ordre_affichage: 3 }
+    { _id: 7, categorie_id: 3, nom: 'Tissage & Perruques', description: 'Pose tissage, entretien perruques', ordre_affichage: 4 },
+    // Ongles (4)
+    { _id: 8, categorie_id: 4, nom: 'Manucure', description: 'Soins des mains et ongles', ordre_affichage: 1 },
+    { _id: 9, categorie_id: 4, nom: 'Pédicure', description: 'Soins des pieds et ongles', ordre_affichage: 2 },
+    { _id: 10, categorie_id: 4, nom: 'Nail art', description: "Décoration d'ongles artistique", ordre_affichage: 3 },
+    // Coiffure Homme (6)
+    { _id: 11, categorie_id: 6, nom: 'Coupe & Dégradé', description: 'Coupes masculines classiques et modernes', ordre_affichage: 1 },
+    { _id: 12, categorie_id: 6, nom: 'Barbe & Rasage', description: 'Taille de barbe, rasage traditionnel', ordre_affichage: 2 },
+    // Imprimerie & Design (7)
+    { _id: 13, categorie_id: 7, nom: 'Cartes de visite', description: 'Conception et impression de cartes de visite', ordre_affichage: 1 },
+    { _id: 14, categorie_id: 7, nom: 'Flyers & Affiches', description: 'Flyers, affiches publicitaires, kakémonos', ordre_affichage: 2 },
+    { _id: 15, categorie_id: 7, nom: 'Logo & Identité visuelle', description: 'Création de logo, charte graphique', ordre_affichage: 3 },
+    { _id: 16, categorie_id: 7, nom: 'Infographie', description: 'Retouches photo, montages, bannières réseaux sociaux', ordre_affichage: 4 },
+    // Traiteur & Restauration (8)
+    { _id: 17, categorie_id: 8, nom: 'Buffet & Réception', description: 'Organisation de buffets pour événements', ordre_affichage: 1 },
+    { _id: 18, categorie_id: 8, nom: 'Plats cuisinés à domicile', description: 'Cuisine à domicile, repas livrés', ordre_affichage: 2 },
+    { _id: 19, categorie_id: 8, nom: 'Pâtisserie & Gâteaux', description: 'Gâteaux de fête, wedding cake, viennoiseries', ordre_affichage: 3 },
+    // Fleuriste & Décoration (9)
+    { _id: 20, categorie_id: 9, nom: 'Bouquets & Compositions', description: 'Fleurs fraîches et artificielles', ordre_affichage: 1 },
+    { _id: 21, categorie_id: 9, nom: 'Décoration événementielle', description: 'Scénographie mariage, anniversaire, inauguration', ordre_affichage: 2 },
+    // Nettoyage & Ménage (10)
+    { _id: 22, categorie_id: 10, nom: 'Ménage à domicile', description: 'Entretien régulier du domicile', ordre_affichage: 1 },
+    { _id: 23, categorie_id: 10, nom: 'Nettoyage après travaux', description: 'Grand nettoyage post-chantier', ordre_affichage: 2 },
+    { _id: 24, categorie_id: 10, nom: 'Pressing & Blanchisserie', description: 'Lavage, repassage, pressing vêtements', ordre_affichage: 3 },
   ];
   await SubCategory.insertMany(sousCategories);
-  await Counter.findByIdAndUpdate('sous_categories', { seq: 9 }, { upsert: true });
+  await Counter.findByIdAndUpdate('sous_categories', { seq: 24 }, { upsert: true });
   console.log('✅ Sous-catégories seeded');
 
   // --- Templates de notifications ---

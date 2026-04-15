@@ -9,6 +9,9 @@ const serviceSchema = new mongoose.Schema({
   description: String,
   prix: { type: Number, required: true },
   devise: { type: String, default: 'FCFA' },
+  unite: { type: String, default: null },       // ex: "coiffure", "carte", "séance"
+  quantite_min: { type: Number, default: 1 },   // quantité minimum par défaut
+  quantite_max: { type: Number, default: null }, // null = illimitée
   duree_minutes: { type: Number, required: true },
   photos: { type: mongoose.Schema.Types.Mixed, default: null },
   is_domicile: { type: Boolean, default: false },

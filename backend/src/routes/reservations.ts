@@ -128,7 +128,7 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { service_id, date_reservation, heure_debut, notes_client, a_domicile, adresse_rdv, publication_id } = req.body;
+    const { service_id, date_reservation, heure_debut, notes_client, a_domicile, adresse_rdv, publication_id, quantite } = req.body;
 
     const service = await Service.findOne({ _id: service_id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
@@ -158,6 +158,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     const enAttenteStatut = await StatutReservation.findOne({ nom: 'en_attente' });
     if (!enAttenteStatut) return res.status(500).json({ error: 'Statut par défaut introuvable' });
 
+    const qty = Math.max(1, Number(quantite) || 1);
     const reservation = await Reservation.create({
       client_id: userId,
       prestataire_id: service.prestataire_id,
@@ -167,6 +168,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       heure_debut,
       heure_fin,
       prix_final: service.prix,
+      prix_total: service.prix * qty,
+      quantite: qty,
       notes_client,
       a_domicile,
       adresse_rdv: a_domicile ? adresse_rdv : undefined,

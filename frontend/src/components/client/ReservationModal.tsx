@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Clock, Home, MessageSquare, ArrowRight, ChevronLeft, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Home, MessageSquare, ArrowRight, ChevronLeft, CheckCircle, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -25,9 +25,13 @@ export default function ReservationModal({ service, onClose, onReservationSucces
   const [notes, setNotes] = useState('');
   const [isDomicile, setIsDomicile] = useState(false);
   const [adresseRdv, setAdresseRdv] = useState('');
+  const [quantite, setQuantite] = useState<number>(service.quantite_min || 1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const prixTotal = (service.prix || 0) * quantite;
+  const quantiteMax = service.quantite_max || 99;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -50,6 +54,7 @@ export default function ReservationModal({ service, onClose, onReservationSucces
         a_domicile: isDomicile,
         adresse_rdv: isDomicile ? adresseRdv : '',
         publication_id: publicationId || null,
+        quantite,
       });
       setSuccess(true);
       setTimeout(() => {
@@ -89,14 +94,46 @@ export default function ReservationModal({ service, onClose, onReservationSucces
       {!success && (
         <>
           {/* Service summary */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4 flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-900 dark:text-white text-sm">{service.nom}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{service.duree_minutes}min</p>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">{service.nom}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{service.duree_minutes}min</p>
+              </div>
+              <div className="text-right">
+                <span className="text-lg font-bold text-gradient">
+                  {prixTotal.toLocaleString()} {service.devise || 'XOF'}
+                </span>
+                {quantite > 1 && (
+                  <p className="text-xs text-gray-400">
+                    {service.prix?.toLocaleString()} × {quantite}{service.unite ? ` ${service.unite}` : ''}
+                  </p>
+                )}
+              </div>
             </div>
-            <span className="text-lg font-bold text-gradient">
-              {service.prix?.toLocaleString()} {service.devise || 'XOF'}
-            </span>
+            {/* Quantity selector */}
+            <div className="mt-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-3">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                Quantité{service.unite ? ` (${service.unite})` : ''}
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantite(q => Math.max(service.quantite_min || 1, q - 1))}
+                  disabled={quantite <= (service.quantite_min || 1)}
+                  className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center disabled:opacity-40 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <span className="w-8 text-center font-bold text-gray-900 dark:text-white text-sm">{quantite}</span>
+                <button
+                  onClick={() => setQuantite(q => Math.min(quantiteMax, q + 1))}
+                  disabled={quantite >= quantiteMax}
+                  className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center disabled:opacity-40 hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Step indicator */}
@@ -259,7 +296,7 @@ export default function ReservationModal({ service, onClose, onReservationSucces
               </Button>
             ) : (
               <Button fullWidth loading={loading} onClick={handleSubmit}>
-                Confirmer — {service.prix?.toLocaleString()} {service.devise || 'XOF'}
+                Confirmer — {prixTotal.toLocaleString()} {service.devise || 'XOF'}
               </Button>
             )}
           </div>

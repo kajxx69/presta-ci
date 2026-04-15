@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw } from 'lucide-react';
+import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import ReservationModal from './ReservationModal';
@@ -19,20 +19,20 @@ import { StaggerContainer, StaggerItem } from '../ui/PageTransition';
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
   'beauty.svg': '💄',
-  'wellness.svg': '🧘',
+  'wellness.svg': '🌿',
   'hair.svg': '✂️',
   'nails.svg': '💅',
   'massage.svg': '💆',
   'fitness.svg': '💪',
   'cleaning.svg': '🧹',
-  'cooking.svg': '🍳',
+  'cooking.svg': '🍽️',
   'plumbing.svg': '🔧',
   'electricity.svg': '⚡',
   'security.svg': '🔒',
   'transport.svg': '🚗',
   'education.svg': '📚',
   'health.svg': '🏥',
-  'photography.svg': '📷',
+  'photography.svg': '🖨️',
   'music.svg': '🎵',
 };
 
@@ -80,6 +80,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [authPromptMessage, setAuthPromptMessage] = useState('');
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const requireAuth = (message: string, callback: () => void) => {
     if (!isAuthenticated) {
@@ -138,6 +139,16 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   useEffect(() => { loadInitialData(); }, [loadInitialData]);
 
+  // Auto-scroll to results when search query changes
+  useEffect(() => {
+    if (searchQuery.trim() && resultsRef.current) {
+      const timeout = setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 350);
+      return () => clearTimeout(timeout);
+    }
+  }, [searchQuery]);
+
   useEffect(() => {
     if (!('geolocation' in navigator)) return;
     navigator.geolocation.getCurrentPosition(
@@ -169,23 +180,31 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   const formatDistance = useCallback((d: number) => d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`, []);
 
-  const filteredPrestataires = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return prestataires.filter(p => !q || (p.nom_commercial || '').toLowerCase().includes(q));
-  }, [prestataires, searchQuery]);
-
   const filteredServices = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return services.filter(s => {
       const prestataire = prestataires.find(p => p.id === s.prestataire_id);
+      const subCat = subCategories.find(sc => sc.id === s.sous_categorie_id);
       const matchesQuery = !q ||
         (s.nom || '').toLowerCase().includes(q) ||
         (s.description || '').toLowerCase().includes(q) ||
-        (prestataire?.nom_commercial || '').toLowerCase().includes(q);
+        (prestataire?.nom_commercial || '').toLowerCase().includes(q) ||
+        (subCat?.nom || '').toLowerCase().includes(q);
       const matchesSub = !selectedSubCategory || s.sous_categorie_id === selectedSubCategory.id;
       return matchesQuery && matchesSub;
     });
-  }, [services, prestataires, searchQuery, selectedSubCategory]);
+  }, [services, prestataires, subCategories, searchQuery, selectedSubCategory]);
+
+  const filteredPrestataires = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return prestataires;
+    // Match by name OR by having at least one matching service
+    const serviceMatchIds = new Set(filteredServices.map(s => s.prestataire_id));
+    return prestataires.filter(p =>
+      (p.nom_commercial || '').toLowerCase().includes(q) ||
+      serviceMatchIds.has(p.id)
+    );
+  }, [prestataires, filteredServices, searchQuery]);
 
   const getSubCategoriesByCategory = (categoryId: number) =>
     subCategories.filter(sc => sc.categorie_id === categoryId);
@@ -349,6 +368,18 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
           </div>
         )}
 
+        {/* Scroll hint below map */}
+        {!searchQuery.trim() && !selectedCategory && (
+          <button
+            onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="w-full flex flex-col items-center gap-1 py-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+            aria-label="Voir les résultats"
+          >
+            <span className="text-xs font-medium">Voir les prestataires</span>
+            <ChevronDown className="w-4 h-4 animate-bounce" />
+          </button>
+        )}
+
         {/* Error state */}
         {dataError && (
           <EmptyState
@@ -361,7 +392,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
         {/* Search results */}
         {searchQuery.trim() && !dataError && (
-          <section className="space-y-4">
+          <section ref={resultsRef} className="space-y-4">
             {/* Services results */}
             {filteredServices.length > 0 && (
               <div>
@@ -573,7 +604,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
         {/* Popular providers */}
         {!searchQuery.trim() && !selectedCategory && !dataError && (
-          <section>
+          <section ref={resultsRef}>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
               Prestataires populaires
             </h2>
@@ -650,9 +681,16 @@ function ServiceCard({
         )}
 
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-gradient">
-            {service.prix?.toLocaleString()} {service.devise || 'XOF'}
-          </span>
+          <div>
+            <span className="text-lg font-bold text-gradient">
+              {service.prix?.toLocaleString()} {service.devise || 'XOF'}
+            </span>
+            {(service as any).unite && (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                par {(service as any).unite}
+              </p>
+            )}
+          </div>
           {service.note_moyenne != null && (
             <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
               <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />

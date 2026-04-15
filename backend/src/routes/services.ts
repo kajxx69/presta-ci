@@ -37,7 +37,7 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       return res.status(403).json({ error: `Limite de services atteinte (${plan.max_services})` });
     }
 
-    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile } = req.body || {};
+    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, unite, quantite_min, quantite_max } = req.body || {};
     if (!sous_categorie_id || !nom || !prix || !duree_minutes) {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
@@ -47,6 +47,9 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       sous_categorie_id, nom,
       description: description || null,
       prix, devise: devise || 'FCFA',
+      unite: unite || null,
+      quantite_min: quantite_min || 1,
+      quantite_max: quantite_max || null,
       duree_minutes,
       photos: photos || null,
       is_domicile: is_domicile || false
@@ -73,7 +76,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Vous n'avez pas les droits pour modifier ce service" });
     }
 
-    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, is_active } = req.body || {};
+    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, is_active, unite, quantite_min, quantite_max } = req.body || {};
 
     const update: any = { updated_at: new Date() };
     if (sous_categorie_id !== undefined) update.sous_categorie_id = sous_categorie_id;
@@ -85,6 +88,9 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     if (photos !== undefined) update.photos = photos;
     if (is_domicile !== undefined) update.is_domicile = is_domicile;
     if (is_active !== undefined) update.is_active = is_active;
+    if (unite !== undefined) update.unite = unite;
+    if (quantite_min !== undefined) update.quantite_min = quantite_min;
+    if (quantite_max !== undefined) update.quantite_max = quantite_max;
 
     await Service.updateOne({ _id: id, prestataire_id: prestataireId }, update);
     res.json({ ok: true });
