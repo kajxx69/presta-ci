@@ -1,16 +1,38 @@
 /**
  * Migration: Add missing categories and subcategories
- * Run: npx ts-node --esm src/migrations/add-missing-categories.ts
+ * Run: npx ts-node src/migrations/add-missing-categories.ts
  * Safe to re-run (upserts by _id)
  */
 import dotenv from 'dotenv';
 dotenv.config();
 
-import mongoose from 'mongoose';
-import { Counter } from '../models/Counter.js';
-import { Category, SubCategory } from '../models/Category.js';
+import mongoose, { Schema } from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prestation';
+
+// Inline schemas — no local model imports needed
+const CounterSchema = new Schema({ _id: String, seq: Number });
+const CategorySchema = new Schema({
+  _id: Number,
+  nom: String,
+  description: String,
+  icone: String,
+  couleur: String,
+  ordre_affichage: Number,
+  is_active: Boolean,
+}, { _id: false });
+const SubCategorySchema = new Schema({
+  _id: Number,
+  categorie_id: Number,
+  nom: String,
+  description: String,
+  ordre_affichage: Number,
+  is_active: Boolean,
+}, { _id: false });
+
+const Counter = mongoose.model('Counter', CounterSchema, 'counters');
+const Category = mongoose.model('Category', CategorySchema, 'categories');
+const SubCategory = mongoose.model('SubCategory', SubCategorySchema, 'sous_categories');
 
 async function run() {
   await mongoose.connect(MONGODB_URI);
