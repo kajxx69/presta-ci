@@ -79,7 +79,7 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
               icon={<UserCheck className="w-5 h-5 text-purple-600" />}
               step="1"
               title="Créez votre profil pro"
-              desc='Inscrivez-vous puis accédez à l\'espace "Pro". Renseignez votre nom commercial, vos spécialités, votre zone d\'intervention et vos tarifs.'
+              desc={"Inscrivez-vous puis accédez à l'espace Pro. Renseignez votre nom commercial, vos spécialités, votre zone d'intervention et vos tarifs."}
               color="purple"
             />
             <StepCard
