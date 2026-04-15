@@ -13,3 +13,5 @@ export { TransactionWave } from './Transaction.js';
 export { PushToken, NotificationTemplate, Notification, NotificationPreference } from './Notification.js';
 export { Configuration, SystemLog } from './Settings.js';
 export { Signalement } from './Signalement.js';
+export { AvisClient } from './AvisClient.js';
+export { TicketSupport, MessageTicket } from './TicketSupport.js';

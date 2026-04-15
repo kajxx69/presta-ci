@@ -17,7 +17,8 @@ import {
   Filter,
   TrendingUp,
   Info,
-  Flag
+  Flag,
+  Star
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -34,7 +35,7 @@ interface Reservation {
   date_reservation: string;
   heure_debut: string;
   heure_fin: string;
-  statut: 'en_attente' | 'confirmee' | 'annulee' | 'terminee';
+  statut: 'en_attente' | 'confirmee' | 'annulee' | 'terminee' | 'en_attente_confirmation';
   prix?: number;
   prix_final?: number;
   montant_total?: number;
@@ -63,6 +64,8 @@ export default function ReservationsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [signalementTarget, setSignalementTarget] = useState<{ id: number; nom: string } | null>(null);
+  const [clientRating, setClientRating] = useState<{ reservationId: number; note: number; hover: number; submitted: boolean }>({ reservationId: 0, note: 0, hover: 0, submitted: false });
+  const [clientRatingLoading, setClientRatingLoading] = useState(false);
   const [dragState, setDragState] = useState<{ draggedId: number | null; dragOverId: number | null }>({
     draggedId: null,
     dragOverId: null
@@ -168,6 +171,12 @@ export default function ReservationsTab() {
           text: 'text-red-800 dark:text-red-200',
           border: 'border-red-200 dark:border-red-800'
         };
+      case 'en_attente_confirmation':
+        return {
+          bg: 'from-purple-100 to-violet-100 dark:from-purple-900/20 dark:to-violet-900/20',
+          text: 'text-purple-800 dark:text-purple-200',
+          border: 'border-purple-200 dark:border-purple-800'
+        };
       default:
         return {
           bg: 'from-gray-100 to-gray-100 dark:from-gray-900/20 dark:to-gray-900/20',
@@ -195,6 +204,7 @@ export default function ReservationsTab() {
       case 'confirmee': return '✓ Confirmée';
       case 'terminee': return '✓ Terminée';
       case 'annulee': return '✕ Annulée';
+      case 'en_attente_confirmation': return '⏳ Confirmation client';
       default: return statut;
     }
   };
@@ -965,6 +975,59 @@ export default function ReservationsTab() {
               <div className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4">
                 <p className="text-xs text-gray-500 mb-1">Note du client</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300">{selectedReservation.notes_client}</p>
+              </div>
+            )}
+
+            {/* Noter le client */}
+            {['terminee', 'en_attente_confirmation'].includes(selectedReservation.statut) && selectedReservation.client_id && (
+              <div className="rounded-2xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+                {clientRating.reservationId === selectedReservation.id && clientRating.submitted ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="w-5 h-5" />
+                    <span className="text-sm font-medium">Client noté avec {clientRating.note}/5 étoiles</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
+                      Évaluez ce client
+                    </p>
+                    <div className="flex gap-1 mb-3">
+                      {[1, 2, 3, 4, 5].map(star => {
+                        const active = clientRating.reservationId === selectedReservation.id;
+                        const filled = (active ? clientRating.hover || clientRating.note : 0) >= star;
+                        return (
+                          <button
+                            key={star}
+                            onMouseEnter={() => setClientRating(cr => ({ ...cr, reservationId: selectedReservation.id, hover: star }))}
+                            onMouseLeave={() => setClientRating(cr => ({ ...cr, hover: 0 }))}
+                            onClick={() => setClientRating(cr => ({ ...cr, reservationId: selectedReservation.id, note: star }))}
+                            className="transition-transform hover:scale-110"
+                          >
+                            <Star className={`w-7 h-7 ${filled ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      disabled={clientRatingLoading || clientRating.reservationId !== selectedReservation.id || clientRating.note === 0}
+                      onClick={async () => {
+                        setClientRatingLoading(true);
+                        try {
+                          await api.avisClient.create({ reservation_id: selectedReservation.id, note: clientRating.note });
+                          setClientRating(cr => ({ ...cr, submitted: true }));
+                          showToast('Client évalué avec succès', 'success');
+                        } catch (e: any) {
+                          showToast(e.message?.includes('déjà noté') ? 'Vous avez déjà noté ce client' : 'Erreur lors de la notation', 'error');
+                        } finally {
+                          setClientRatingLoading(false);
+                        }
+                      }}
+                      className="w-full py-2 rounded-xl bg-yellow-500 text-white text-sm font-semibold disabled:opacity-50 hover:bg-yellow-600 transition-colors"
+                    >
+                      {clientRatingLoading ? 'Envoi...' : 'Soumettre la note'}
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

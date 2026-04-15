@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
   ville: String,
   photo_profil: String,
   is_active: { type: Boolean, default: true },
+  note_moyenne_client: { type: Number, default: null },
+  nombre_avis_client: { type: Number, default: 0 },
   email_verified: { type: Boolean, default: false },
   email_verification_token: String,
   reset_password_token: String,

@@ -155,6 +155,8 @@ router.put('/:id/reject', async (req: Request, res: Response) => {
 });
 
 // PUT /api/prestataire/reservations/:id/complete
+// Le prestataire marque la prestation comme terminée → statut "en_attente_confirmation"
+// Le client doit ensuite confirmer pour que la prestation soit réellement "terminee"
 router.put('/:id/complete', async (req: Request, res: Response) => {
   try {
     const prestataireId = await getPrestataireIdByUserId(req.userId!);
@@ -167,13 +169,23 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
     const currentStatut = await StatutReservation.findById(reservation.statut_id);
     if (currentStatut?.nom !== 'confirmee') return res.status(400).json({ error: 'Seules les réservations confirmées peuvent être marquées comme terminées' });
 
-    const termineeId = await getStatutId('terminee');
-    if (!termineeId) return res.status(500).json({ error: 'Statut terminee introuvable' });
+    // Créer le statut en_attente_confirmation s'il n'existe pas
+    let attentConfirmStatut = await StatutReservation.findOne({ nom: 'en_attente_confirmation' });
+    if (!attentConfirmStatut) {
+      attentConfirmStatut = await StatutReservation.create({
+        nom: 'en_attente_confirmation',
+        couleur: '#9B59B6',
+        description: 'Service terminé par le prestataire, en attente de confirmation client'
+      });
+    }
+    const attentConfirmId = attentConfirmStatut._id as number;
 
-    await Reservation.updateOne({ _id: reservationId }, { statut_id: termineeId, updated_at: new Date() });
+    await Reservation.updateOne({ _id: reservationId }, { statut_id: attentConfirmId, updated_at: new Date() });
     await HistoriqueReservation.create({
       reservation_id: reservationId, ancien_statut_id: reservation.statut_id,
-      nouveau_statut_id: termineeId, commentaire: 'Service terminé', changed_by_user_id: req.userId
+      nouveau_statut_id: attentConfirmId,
+      commentaire: 'Prestataire a marqué le service comme terminé - en attente de confirmation client',
+      changed_by_user_id: req.userId
     });
 
     try {
@@ -186,7 +198,7 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
       await ClientInAppNotifications.serviceTermine(reservation.client_id, prestNom, serviceNom);
     } catch { /* ne pas bloquer */ }
 
-    res.json({ ok: true, message: 'Réservation marquée comme terminée' });
+    res.json({ ok: true, message: 'Prestation marquée comme terminée. En attente de confirmation du client.' });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

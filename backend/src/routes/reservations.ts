@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis } from '../models/index.js';
+import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis, User } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -49,7 +49,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         prestataire_nom: prestataire?.nom_commercial || null,
         prestataire_adresse: prestataire?.adresse || null,
         prestataire_telephone: prestataire?.telephone_pro || null,
-        a_laisse_avis
+        a_laisse_avis,
+        peut_confirmer_fin: statut?.nom === 'en_attente_confirmation'
       };
     }));
 
@@ -91,6 +92,38 @@ router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/reservations/:id/confirm-completion — le client confirme que la prestation est terminée
+router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const id = Number(req.params.id);
+
+    const reservation = await Reservation.findOne({ _id: id, client_id: userId });
+    if (!reservation) return res.status(404).json({ error: 'Réservation introuvable' });
+
+    const statut = await StatutReservation.findById(reservation.statut_id);
+    if (statut?.nom !== 'en_attente_confirmation') {
+      return res.status(400).json({ error: 'Cette réservation n\'est pas en attente de confirmation' });
+    }
+
+    let termineeStatut = await StatutReservation.findOne({ nom: 'terminee' });
+    if (!termineeStatut) return res.status(500).json({ error: 'Statut terminee introuvable' });
+
+    await Reservation.updateOne({ _id: id }, { statut_id: termineeStatut._id as number, updated_at: new Date() });
+    await HistoriqueReservation.create({
+      reservation_id: id,
+      ancien_statut_id: reservation.statut_id,
+      nouveau_statut_id: termineeStatut._id as number,
+      commentaire: 'Prestation confirmée par le client',
+      changed_by_user_id: userId
+    });
+
+    res.json({ ok: true, message: 'Prestation confirmée. Vous pouvez maintenant laisser un avis.' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/reservations
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -99,6 +132,23 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     const service = await Service.findOne({ _id: service_id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
+
+    // Vérification de réputation: si le client a une mauvaise note (< 2.5) et le prestataire est bien noté (≥ 4)
+    const clientUser = await User.findById(userId).select('note_moyenne_client nombre_avis_client');
+    const prestataire = await Prestataire.findById(service.prestataire_id).select('note_moyenne nombre_avis');
+    if (
+      clientUser &&
+      (clientUser as any).note_moyenne_client !== null &&
+      (clientUser as any).nombre_avis_client >= 3 &&
+      (clientUser as any).note_moyenne_client < 2.5 &&
+      prestataire &&
+      prestataire.note_moyenne >= 4 &&
+      prestataire.nombre_avis >= 5
+    ) {
+      return res.status(403).json({
+        error: 'Votre réputation sur la plateforme ne vous permet pas de réserver chez ce prestataire très bien noté. Améliorez votre comportement pour accéder à ces prestataires.'
+      });
+    }
 
     // Calculate end time
     const startTime = new Date(`${date_reservation}T${heure_debut}`);

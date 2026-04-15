@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, MapPin, Phone, Star, MessageCircle, RefreshCw, Info, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone, Star, RefreshCw, Info, CheckCircle2, Headphones } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
 import RatingModal from './RatingModal';
+import SupportTicketModal from '../common/SupportTicketModal';
 import { SearchInput } from '../ui/SearchInput';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -88,6 +89,7 @@ export default function ReservationsTab() {
   const [ratingModal, setRatingModal] = useState<{ isOpen: boolean; reservation: any }>({ isOpen: false, reservation: null });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReservation, setSelectedReservation] = useState<any | null>(null);
+  const [ticketModal, setTicketModal] = useState<{ open: boolean; reservationId: number | null; reservationNom: string | null }>({ open: false, reservationId: null, reservationNom: null });
 
   const loadReservations = useCallback(async () => {
     try {
@@ -141,9 +143,24 @@ export default function ReservationsTab() {
     loadReservations();
   };
 
+  const handleConfirmCompletion = async (id: number) => {
+    if (!confirm('Confirmez-vous que la prestation a bien été effectuée ?')) return;
+    try {
+      setActionLoading(id);
+      await api.reservations.confirmCompletion(id);
+      await loadReservations();
+      showToast('Prestation confirmée ! Vous pouvez maintenant laisser un avis.', 'success');
+    } catch {
+      showToast('Erreur lors de la confirmation', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const statusMeta = useMemo(() => (reservation: any) => ({
     canCancel: reservation.can_cancel ?? ['en_attente', 'confirmee'].includes(reservation.statut_nom),
     canRate: reservation.statut_nom === 'terminee' && !reservation.a_laisse_avis,
+    canConfirmEnd: reservation.peut_confirmer_fin === true,
   }), []);
 
   const summary = useMemo(() => ({
@@ -319,6 +336,17 @@ export default function ReservationsTab() {
                       {reservation.prix_final?.toLocaleString()} {reservation.devise}
                     </span>
                     <div className="flex gap-1.5">
+                      {meta.canConfirmEnd && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          loading={actionLoading === reservation.id}
+                          onClick={(e) => { e.stopPropagation(); handleConfirmCompletion(reservation.id); }}
+                          icon={CheckCircle2}
+                        >
+                          Confirmer
+                        </Button>
+                      )}
                       {meta.canRate && (
                         <Button
                           variant="outline"
@@ -410,6 +438,29 @@ export default function ReservationsTab() {
               </span>
             </div>
 
+            {/* Confirmation de fin */}
+            {selectedReservation.peut_confirmer_fin && (
+              <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4">
+                <p className="text-sm text-purple-700 dark:text-purple-300 font-medium mb-2">
+                  Le prestataire a marqué la prestation comme terminée.
+                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                  Confirmez si la prestation a bien été réalisée pour valider le service.
+                </p>
+                <Button
+                  fullWidth
+                  loading={actionLoading === selectedReservation.id}
+                  onClick={() => {
+                    setSelectedReservation(null);
+                    handleConfirmCompletion(selectedReservation.id);
+                  }}
+                  icon={CheckCircle2}
+                >
+                  Confirmer la fin de prestation
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-2">
               {selectedReservation.prestataire_telephone && (
                 <Button
@@ -435,9 +486,32 @@ export default function ReservationsTab() {
                 Itinéraire
               </Button>
             </div>
+
+            {/* Ouvrir un ticket support */}
+            <button
+              onClick={() => {
+                setSelectedReservation(null);
+                setTicketModal({ open: true, reservationId: selectedReservation.id, reservationNom: selectedReservation.service_nom });
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-gray-200 dark:border-gray-700"
+            >
+              <Headphones className="w-4 h-4" />
+              Signaler un problème avec cette réservation
+            </button>
           </div>
         )}
       </Modal>
+
+      {/* Support ticket modal */}
+      {ticketModal.open && (
+        <SupportTicketModal
+          open={ticketModal.open}
+          onClose={() => setTicketModal({ open: false, reservationId: null, reservationNom: null })}
+          reservationId={ticketModal.reservationId}
+          reservationNom={ticketModal.reservationNom}
+          onSuccess={() => showToast('Votre ticket a été créé. Notre équipe vous répondra rapidement.', 'success')}
+        />
+      )}
 
       {/* Rating modal */}
       <RatingModal

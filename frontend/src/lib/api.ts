@@ -102,8 +102,10 @@ export const api = {
       http(`/api/reservations${filter ? `?filter=${filter}` : ''}`),
     cancel: (id: number): Promise<{ ok: boolean }> =>
       http(`/api/reservations/${id}/cancel`, { method: 'PUT' }),
-    create: (data: any): Promise<{ id: number }> => 
+    create: (data: any): Promise<{ id: number }> =>
       http('/api/reservations', { method: 'POST', body: JSON.stringify(data) }),
+    confirmCompletion: (id: number): Promise<{ ok: boolean; message: string }> =>
+      http(`/api/reservations/${id}/confirm-completion`, { method: 'PUT' }),
   },
   publications: {
     list: (mine?: boolean): Promise<any[]> => http(`/api/publications${mine ? '?mine=1' : ''}`),
@@ -433,6 +435,23 @@ export const api = {
       traiter: (id: number, data: { statut: string; resolution_note?: string; action_prise?: string }): Promise<any> =>
         http(`/api/admin/signalements/${id}/traiter`, { method: 'PUT', body: JSON.stringify(data) }),
     },
+    tickets: {
+      getAll: (params?: { statut?: string; page?: number; limit?: number }): Promise<{ tickets: any[]; pagination: any }> => {
+        const query = new URLSearchParams();
+        if (params?.statut) query.append('statut', params.statut);
+        if (params?.page) query.append('page', params.page.toString());
+        if (params?.limit) query.append('limit', params.limit.toString());
+        const queryString = query.toString();
+        return http(`/api/admin/tickets${queryString ? '?' + queryString : ''}`);
+      },
+      getById: (id: number): Promise<any> => http(`/api/admin/tickets/${id}`),
+      getStats: (): Promise<{ total: number; ouvert: number; en_cours: number; resolu: number; ferme: number }> =>
+        http('/api/admin/tickets/stats'),
+      update: (id: number, data: { statut?: string; priorite?: string }): Promise<{ ok: boolean }> =>
+        http(`/api/admin/tickets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      addMessage: (id: number, contenu: string): Promise<{ ok: boolean }> =>
+        http(`/api/admin/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ contenu }) }),
+    },
     maintenance: {
       getStatus: (): Promise<any> => http('/api/admin/maintenance/status'),
       clearCache: (cacheType: 'all' | 'database' | 'sessions' | 'notifications' | 'logs' = 'all'): Promise<any> =>
@@ -495,5 +514,21 @@ export const api = {
       http('/api/wave-transactions/my-transactions'),
     getStatus: (): Promise<{ hasTransaction: boolean; transaction?: any }> =>
       http('/api/wave-transactions/status')
-  }
+  },
+  avisClient: {
+    create: (payload: { reservation_id: number; note: number; commentaire?: string }): Promise<{ ok: boolean; id: number; message: string }> =>
+      http('/api/avis-client', { method: 'POST', body: JSON.stringify(payload) }),
+    checkReservation: (reservationId: number): Promise<{ a_note: boolean; note: number | null }> =>
+      http(`/api/avis-client/reservation/${reservationId}`),
+    getByClient: (clientId: number): Promise<any[]> =>
+      http(`/api/avis-client/client/${clientId}`),
+  },
+  tickets: {
+    create: (payload: { sujet: string; categorie: string; message: string; reservation_id?: number; priorite?: string }): Promise<{ ok: boolean; id: number; message: string }> =>
+      http('/api/tickets', { method: 'POST', body: JSON.stringify(payload) }),
+    list: (): Promise<any[]> => http('/api/tickets'),
+    getById: (id: number): Promise<{ ticket: any; messages: any[] }> => http(`/api/tickets/${id}`),
+    addMessage: (id: number, contenu: string): Promise<{ ok: boolean }> =>
+      http(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ contenu }) }),
+  },
 };

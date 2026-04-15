@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, TrendingUp, Crown, Settings, Wrench,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -24,10 +24,11 @@ import AdminSettings from './AdminSettings';
 import AdminMaintenance from './AdminMaintenance';
 import AdminProfile from './AdminProfile';
 import AdminSignalements from './AdminSignalements';
+import AdminTickets from './AdminTickets';
 
 type AdminTab =
   | 'dashboard' | 'users' | 'services' | 'categories'
-  | 'reservations' | 'avis' | 'signalements' | 'payments' | 'notifications'
+  | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'payments' | 'notifications'
   | 'statistics' | 'plans' | 'settings' | 'maintenance' | 'profile';
 
 interface NavItem {
@@ -63,6 +64,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'avis', label: 'Avis', icon: Star },
       { id: 'signalements', label: 'Signalements', icon: ShieldAlert },
+      { id: 'tickets', label: 'Support', icon: MessageCircle },
       { id: 'payments', label: 'Paiements', icon: CreditCard },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
@@ -85,6 +87,7 @@ const tabComponents: Record<AdminTab, React.ComponentType> = {
   reservations: AdminReservations,
   avis: AdminAvis,
   signalements: AdminSignalements,
+  tickets: AdminTickets,
   payments: AdminPayments,
   notifications: AdminNotifications,
   statistics: AdminStatistics,
