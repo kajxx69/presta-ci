@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
-import { Publication, Like, CommentairePublication, User, Prestataire, Service } from '../models/index.js';
+import { Publication, Like, CommentairePublication, User, Prestataire, Service, Notification } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
+import { getNextId } from '../models/Counter.js';
 
 const router = express.Router();
 
@@ -71,6 +72,21 @@ router.post('/', async (req: Request, res: Response) => {
       photos: photos || [],
       videos: videos || []
     });
+
+    // Notifier le prestataire tagué
+    const prestataire = await Prestataire.findById(prestataire_id).select('user_id nom_commercial');
+    if (prestataire?.user_id) {
+      const auteur = await User.findById(userId).select('prenom nom');
+      const auteurNom = auteur ? `${auteur.prenom} ${auteur.nom}` : 'Un utilisateur';
+      await Notification.create({
+        _id: await getNextId('notifications'),
+        user_id: prestataire.user_id,
+        titre: 'Vous avez été tagué dans une publication',
+        message: `${auteurNom} vous a mentionné dans une publication.`,
+        type: 'info',
+        data: { publication_id: pub._id }
+      });
+    }
 
     res.json({ id: pub._id });
   } catch (e: any) {
