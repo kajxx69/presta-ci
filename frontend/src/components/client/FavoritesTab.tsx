@@ -312,7 +312,7 @@ export default function FavoritesTab() {
           onReservationSuccess={() => showToast('Réservation en attente de confirmation', 'success')}
         />
       )}
-      <div className="p-4 space-y-5 max-w-lg lg:max-w-5xl mx-auto">
+      <div className="p-4 pb-24 space-y-5 max-w-lg lg:max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -342,24 +342,34 @@ export default function FavoritesTab() {
 
         {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={clsx(
-                'flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5',
-                activeTab === tab.key
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400',
-              )}
-            >
-              <tab.icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-              <Badge variant={activeTab === tab.key ? 'info' : 'default'} size="sm">
-                {tab.key === 'providers' ? counts.providers : tab.key === 'services' ? counts.services : counts.publications}
-              </Badge>
-            </button>
-          ))}
+          {tabs.map(tab => {
+            const count = tab.key === 'providers' ? counts.providers : tab.key === 'services' ? counts.services : counts.publications;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={clsx(
+                  'flex-1 min-w-0 py-2 px-1 rounded-lg text-xs font-medium transition-all flex flex-col items-center justify-center gap-0.5',
+                  activeTab === tab.key
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400',
+                )}
+              >
+                <div className="flex items-center gap-1">
+                  <tab.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{tab.label}</span>
+                </div>
+                <span className={clsx(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                  activeTab === tab.key
+                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Error */}
