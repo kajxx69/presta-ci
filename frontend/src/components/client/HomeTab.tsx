@@ -175,13 +175,17 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
   }, [prestataires, searchQuery]);
 
   const filteredServices = useMemo(() => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase().trim();
     return services.filter(s => {
-      const matchesQuery = !q || (s.nom || '').toLowerCase().includes(q);
+      const prestataire = prestataires.find(p => p.id === s.prestataire_id);
+      const matchesQuery = !q ||
+        (s.nom || '').toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q) ||
+        (prestataire?.nom_commercial || '').toLowerCase().includes(q);
       const matchesSub = !selectedSubCategory || s.sous_categorie_id === selectedSubCategory.id;
       return matchesQuery && matchesSub;
     });
-  }, [services, searchQuery, selectedSubCategory]);
+  }, [services, prestataires, searchQuery, selectedSubCategory]);
 
   const getSubCategoriesByCategory = (categoryId: number) =>
     subCategories.filter(sc => sc.categorie_id === categoryId);
@@ -355,8 +359,76 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
           />
         )}
 
+        {/* Search results */}
+        {searchQuery.trim() && !dataError && (
+          <section className="space-y-4">
+            {/* Services results */}
+            {filteredServices.length > 0 && (
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">
+                  Services <span className="text-sm font-normal text-gray-400">({filteredServices.length})</span>
+                </h2>
+                <StaggerContainer className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
+                  {filteredServices.map(service => {
+                    const prestataire = prestataires.find(p => p.id === service.prestataire_id);
+                    return (
+                      <StaggerItem key={service.id}>
+                        <ServiceCard
+                          service={service}
+                          prestataire={prestataire}
+                          onSelect={() => onSelectService(service.id)}
+                          onReserve={() => {
+                            requireAuth('Connectez-vous pour réserver ce service.', () => {
+                              setSelectedServiceForReservation(service);
+                              setIsReservationModalOpen(true);
+                            });
+                          }}
+                        />
+                      </StaggerItem>
+                    );
+                  })}
+                </StaggerContainer>
+              </div>
+            )}
+
+            {/* Prestataires results */}
+            {filteredPrestataires.length > 0 && (
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-2">
+                  Prestataires <span className="text-sm font-normal text-gray-400">({filteredPrestataires.length})</span>
+                </h2>
+                <StaggerContainer className="space-y-3 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
+                  {filteredPrestataires.map(prestataire => (
+                    <StaggerItem key={prestataire.id}>
+                      <ProviderCard
+                        prestataire={prestataire}
+                        isFavorite={favoriteProviders.includes(prestataire.id)}
+                        distance={
+                          userLocation && typeof prestataire.latitude === 'number' && typeof prestataire.longitude === 'number'
+                            ? formatDistance(distanceKm(userLocation, [prestataire.latitude as number, prestataire.longitude as number]))
+                            : null
+                        }
+                        onSelect={() => onSelectProvider(prestataire.id)}
+                        onToggleFavorite={() => handleToggleFavorite(prestataire.id)}
+                      />
+                    </StaggerItem>
+                  ))}
+                </StaggerContainer>
+              </div>
+            )}
+
+            {filteredServices.length === 0 && filteredPrestataires.length === 0 && (
+              <EmptyState
+                icon={RefreshCw}
+                title="Aucun résultat"
+                description={`Aucun service ou prestataire ne correspond à "${searchQuery}".`}
+              />
+            )}
+          </section>
+        )}
+
         {/* Categories */}
-        {!selectedCategory && !dataError && (
+        {!searchQuery.trim() && !selectedCategory && !dataError && (
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
               Catégories
@@ -395,7 +467,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
         {/* Sub-categories */}
         <AnimatePresence mode="wait">
-          {selectedCategory && !selectedSubCategory && (
+          {!searchQuery.trim() && selectedCategory && !selectedSubCategory && (
             <motion.section
               key="subcategories"
               initial={{ opacity: 0, x: 20 }}
@@ -446,7 +518,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
         {/* Services list */}
         <AnimatePresence mode="wait">
-          {selectedSubCategory && (
+          {!searchQuery.trim() && selectedSubCategory && (
             <motion.section
               key="services"
               initial={{ opacity: 0, x: 20 }}
@@ -500,7 +572,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
         </AnimatePresence>
 
         {/* Popular providers */}
-        {!selectedCategory && !dataError && (
+        {!searchQuery.trim() && !selectedCategory && !dataError && (
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
               Prestataires populaires
