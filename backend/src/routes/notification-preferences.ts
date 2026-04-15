@@ -5,11 +5,19 @@ import { requireAuth } from '../middleware/auth.js';
 const router = express.Router();
 
 const DEFAULT_PREFS = {
-  email_notifications: true,
   push_notifications: true,
+  email_notifications: true,
   sms_notifications: false,
+  new_reservation: true,
+  reservation_confirmed: true,
+  reservation_cancelled: true,
   reservation_updates: true,
+  new_publication: false,
+  new_like: false,
+  new_comment: false,
+  new_follower: false,
   promotions: true,
+  tips: true,
   newsletter: false
 };
 
@@ -31,15 +39,17 @@ router.get('/', requireAuth, async (req, res) => {
 router.put('/', requireAuth, async (req, res) => {
   try {
     const user_id = req.user!.id;
-    const { email_notifications, push_notifications, sms_notifications, reservation_updates, promotions, newsletter } = req.body;
+    const fields = [
+      'push_notifications', 'email_notifications', 'sms_notifications',
+      'new_reservation', 'reservation_confirmed', 'reservation_cancelled', 'reservation_updates',
+      'new_publication', 'new_like', 'new_comment', 'new_follower',
+      'promotions', 'tips', 'newsletter'
+    ];
 
     const update: any = { updated_at: new Date() };
-    if (email_notifications !== undefined) update.email_notifications = email_notifications;
-    if (push_notifications !== undefined) update.push_notifications = push_notifications;
-    if (sms_notifications !== undefined) update.sms_notifications = sms_notifications;
-    if (reservation_updates !== undefined) update.reservation_updates = reservation_updates;
-    if (promotions !== undefined) update.promotions = promotions;
-    if (newsletter !== undefined) update.newsletter = newsletter;
+    for (const field of fields) {
+      if (req.body[field] !== undefined) update[field] = req.body[field];
+    }
 
     const prefs = await NotificationPreference.findOneAndUpdate(
       { user_id },

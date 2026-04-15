@@ -50,9 +50,9 @@ export default function NotificationsSettingsTab({ onBack }: { onBack: () => voi
         
         // Mapper les données backend vers le state frontend
         setSettings({
-          push_enabled: Boolean(preferences.push_enabled),
-          email_enabled: Boolean(preferences.email_enabled),
-          sms_enabled: Boolean(preferences.sms_enabled),
+          push_enabled: Boolean(preferences.push_notifications),
+          email_enabled: Boolean(preferences.email_notifications),
+          sms_enabled: Boolean(preferences.sms_notifications),
           new_reservation: Boolean(preferences.new_reservation),
           reservation_confirmed: Boolean(preferences.reservation_confirmed),
           reservation_cancelled: Boolean(preferences.reservation_cancelled),
@@ -77,7 +77,21 @@ export default function NotificationsSettingsTab({ onBack }: { onBack: () => voi
   const handleSave = async () => {
     try {
       setLoading(true);
-      const response = await api.notificationPreferences.update(settings);
+      const payload = {
+        push_notifications: settings.push_enabled,
+        email_notifications: settings.email_enabled,
+        sms_notifications: settings.sms_enabled,
+        new_reservation: settings.new_reservation,
+        reservation_confirmed: settings.reservation_confirmed,
+        reservation_cancelled: settings.reservation_cancelled,
+        new_publication: settings.new_publication,
+        new_like: settings.new_like,
+        new_comment: settings.new_comment,
+        new_follower: settings.new_follower,
+        promotions: settings.promotions,
+        tips: settings.tips
+      };
+      const response = await api.notificationPreferences.update(payload);
       
       if (response.ok) {
         showToast('Préférences sauvegardées avec succès', 'success');
@@ -105,9 +119,9 @@ export default function NotificationsSettingsTab({ onBack }: { onBack: () => voi
       if (response.ok && response.preferences) {
         // Mettre à jour le state avec les nouvelles préférences
         setSettings({
-          push_enabled: Boolean(response.preferences.push_enabled),
-          email_enabled: Boolean(response.preferences.email_enabled),
-          sms_enabled: Boolean(response.preferences.sms_enabled),
+          push_enabled: Boolean(response.preferences.push_notifications),
+          email_enabled: Boolean(response.preferences.email_notifications),
+          sms_enabled: Boolean(response.preferences.sms_notifications),
           new_reservation: Boolean(response.preferences.new_reservation),
           reservation_confirmed: Boolean(response.preferences.reservation_confirmed),
           reservation_cancelled: Boolean(response.preferences.reservation_cancelled),

@@ -89,11 +89,23 @@ export const Notification = mongoose.model('Notification', notificationSchema);
 const notificationPreferenceSchema = new mongoose.Schema({
   _id: { type: Number },
   user_id: { type: Number, required: true, unique: true, ref: 'User' },
-  email_notifications: { type: Boolean, default: true },
+  // Canaux
   push_notifications: { type: Boolean, default: true },
+  email_notifications: { type: Boolean, default: true },
   sms_notifications: { type: Boolean, default: false },
+  // Réservations
+  new_reservation: { type: Boolean, default: true },
+  reservation_confirmed: { type: Boolean, default: true },
+  reservation_cancelled: { type: Boolean, default: true },
   reservation_updates: { type: Boolean, default: true },
+  // Activité sociale
+  new_publication: { type: Boolean, default: false },
+  new_like: { type: Boolean, default: false },
+  new_comment: { type: Boolean, default: false },
+  new_follower: { type: Boolean, default: false },
+  // Autres
   promotions: { type: Boolean, default: true },
+  tips: { type: Boolean, default: true },
   newsletter: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
