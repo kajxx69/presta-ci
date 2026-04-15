@@ -65,6 +65,7 @@ export const api = {
     const qs = q.toString();
     return http(`/api/services${qs ? `?${qs}` : ''}`);
   },
+  getServiceById: (id: number): Promise<ApiService> => http(`/api/services/${id}`),
   auth: {
     register: (payload: { email: string; password: string; nom: string; prenom: string; telephone?: string; role_id: number; nom_commercial?: string; ville?: string; adresse?: string; latitude?: number; longitude?: number }): Promise<{ user: any }> =>
       http('/api/auth/register', { method: 'POST', body: JSON.stringify(payload) }),

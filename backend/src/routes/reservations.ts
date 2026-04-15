@@ -128,7 +128,7 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { service_id, date_reservation, heure_debut, notes_client, a_domicile, adresse_rdv } = req.body;
+    const { service_id, date_reservation, heure_debut, notes_client, a_domicile, adresse_rdv, publication_id } = req.body;
 
     const service = await Service.findOne({ _id: service_id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
@@ -169,7 +169,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       prix_final: service.prix,
       notes_client,
       a_domicile,
-      adresse_rdv: a_domicile ? adresse_rdv : undefined
+      adresse_rdv: a_domicile ? adresse_rdv : undefined,
+      publication_id: publication_id || null
     });
 
     await HistoriqueReservation.create({

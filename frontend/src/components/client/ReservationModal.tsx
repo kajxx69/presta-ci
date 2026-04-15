@@ -18,7 +18,7 @@ const ratingLabels: Record<number, string> = {
   1: 'Très insatisfait', 2: 'Insatisfait', 3: 'Correct', 4: 'Satisfait', 5: 'Excellent !',
 };
 
-export default function ReservationModal({ service, onClose, onReservationSuccess }: any) {
+export default function ReservationModal({ service, onClose, onReservationSuccess, publicationId }: any) {
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -49,6 +49,7 @@ export default function ReservationModal({ service, onClose, onReservationSucces
         notes_client: notes,
         a_domicile: isDomicile,
         adresse_rdv: isDomicile ? adresseRdv : '',
+        publication_id: publicationId || null,
       });
       setSuccess(true);
       setTimeout(() => {

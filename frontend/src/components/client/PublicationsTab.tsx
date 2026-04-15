@@ -15,10 +15,12 @@ import {
   Filter,
   Image as ImageIcon,
   Video,
-  RefreshCw
+  RefreshCw,
+  CalendarPlus
 } from 'lucide-react';
 import CommentsModal from './CommentsModal';
 import AuthPromptModal from '../common/AuthPromptModal';
+import ReservationModal from './ReservationModal';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -62,6 +64,9 @@ export default function PublicationsTab() {
   const [filterMedia, setFilterMedia] = useState<'all' | 'photos' | 'videos'>('all');
   const [visibleCount, setVisibleCount] = useState(5);
   const [refreshing, setRefreshing] = useState(false);
+  const [bookingPublication, setBookingPublication] = useState<any | null>(null);
+  const [bookingService, setBookingService] = useState<any | null>(null);
+  const [bookingServiceLoading, setBookingServiceLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -154,6 +159,30 @@ export default function PublicationsTab() {
         break;
     }
     setShareMenuOpen(null);
+  };
+
+  const handleBookFromPublication = async (publication: any) => {
+    if (!isAuthenticated) {
+      setAuthPromptMessage('Connectez-vous pour réserver ce service.');
+      setAuthPromptOpen(true);
+      return;
+    }
+    if (!publication.service_id) return;
+    setBookingServiceLoading(true);
+    setBookingPublication(publication);
+    try {
+      const service = await api.getServiceById(publication.service_id);
+      setBookingService(service);
+    } catch {
+      addNotification({
+        id: Date.now(), user_id: user?.id,
+        titre: 'Erreur', message: 'Impossible de charger le service.',
+        type: 'error', is_read: false, created_at: new Date().toISOString()
+      });
+      setBookingPublication(null);
+    } finally {
+      setBookingServiceLoading(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -525,15 +554,29 @@ export default function PublicationsTab() {
                     </div>
                     
                     {publication.service_nom && (
-                      <button 
-                        onClick={() => navigate(`/services/${publication.service_id}`)}
-                        className="flex items-center space-x-2 mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-left hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                      >
-                        <Tag className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                          {publication.service_nom}
-                        </span>
-                      </button>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <button
+                          onClick={() => navigate(`/services/${publication.service_id}`)}
+                          className="flex items-center space-x-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-left hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          <Tag className="w-3 h-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate max-w-[140px]">
+                            {publication.service_nom}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleBookFromPublication(publication)}
+                          disabled={bookingServiceLoading && bookingPublication?.id === publication.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                        >
+                          {bookingServiceLoading && bookingPublication?.id === publication.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <CalendarPlus className="w-3 h-3" />
+                          )}
+                          Réserver ce service
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -649,6 +692,32 @@ export default function PublicationsTab() {
       )}
 
       <AuthPromptModal open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} message={authPromptMessage} />
+
+      {bookingService && bookingPublication && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute top-0 left-0 right-0 z-10 flex justify-center pt-3 px-4 pointer-events-none">
+            <div className="bg-purple-600 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 pointer-events-none">
+              <Tag className="w-3 h-3" />
+              Inspiré de la publication de {bookingPublication.client_prenom} {bookingPublication.client_nom}
+            </div>
+          </div>
+          <ReservationModal
+            service={bookingService}
+            publicationId={bookingPublication.id}
+            onClose={() => { setBookingService(null); setBookingPublication(null); }}
+            onReservationSuccess={() => {
+              addNotification({
+                id: Date.now(), user_id: user?.id,
+                titre: 'Réservation créée',
+                message: `Réservation pour "${bookingService.nom}" en attente de confirmation.`,
+                type: 'success', is_read: false, created_at: new Date().toISOString()
+              });
+              setBookingService(null);
+              setBookingPublication(null);
+            }}
+          />
+        </div>
+      )}
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

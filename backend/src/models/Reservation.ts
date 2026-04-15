@@ -37,6 +37,7 @@ const reservationSchema = new mongoose.Schema({
   prix_total: Number,
   notes_client: String,
   notes_prestataire: String,
+  publication_id: { type: Number, default: null, ref: 'Publication' },
   a_domicile: { type: Boolean, default: false },
   adresse_rdv: String,
   created_at: { type: Date, default: Date.now },
