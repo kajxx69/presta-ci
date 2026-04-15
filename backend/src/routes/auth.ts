@@ -173,6 +173,74 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/auth/forgot-password — génère un token de réinitialisation
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+
+    const user = await User.findOne({ email });
+    // Ne pas révéler si l'email existe ou non (sécurité)
+    if (!user) {
+      return res.json({ ok: true, message: 'Si cet email existe, vous recevrez un lien de réinitialisation.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
+
+    await User.updateOne({ _id: user._id }, {
+      reset_password_token: token,
+      reset_password_expires: expires
+    });
+
+    // Pas de service email configuré — on retourne le token directement (mode démo)
+    // En production, envoyer un email avec le lien
+    res.json({
+      ok: true,
+      message: 'Lien de réinitialisation généré.',
+      reset_token: token // À retirer en production et envoyer par email
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/auth/reset-password — réinitialise le mot de passe avec le token
+router.post('/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { token, new_password } = req.body;
+    if (!token || !new_password) {
+      return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+    }
+
+    const user = await User.findOne({
+      reset_password_token: token,
+      reset_password_expires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Lien invalide ou expiré. Veuillez refaire une demande.' });
+    }
+
+    const password_hash = await bcrypt.hash(new_password, 10);
+    await User.updateOne({ _id: user._id }, {
+      password_hash,
+      reset_password_token: null,
+      reset_password_expires: null
+    });
+
+    // Invalider toutes les sessions existantes
+    await UserSession.deleteMany({ user_id: user._id });
+
+    res.json({ ok: true, message: 'Mot de passe réinitialisé avec succès.' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.post('/logout', async (req: Request, res: Response) => {
   try {
     const token = (req as any).cookies?.session_token;

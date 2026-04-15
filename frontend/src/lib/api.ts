@@ -72,6 +72,10 @@ export const api = {
       http('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
     me: (): Promise<{ user: any }> => http('/api/auth/me'),
     logout: (): Promise<{ ok: boolean }> => http('/api/auth/logout', { method: 'POST' }),
+    forgotPassword: (email: string): Promise<{ ok: boolean; message: string; reset_token?: string }> =>
+      http('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (token: string, new_password: string): Promise<{ ok: boolean; message: string }> =>
+      http('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password }) }),
   },
   prestataires: {
     setup: (payload: {

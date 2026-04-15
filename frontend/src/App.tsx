@@ -10,6 +10,7 @@ import ToastContainer from './components/ToastContainer';
 // ─── Lazy: Auth (léger, chargé uniquement si non connecté) ───
 const LoginForm = lazy(() => import('./components/auth/LoginForm'));
 const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 // ─── Lazy: Layout shell (chargé dès qu'on est client/prestataire) ───
 const Layout = lazy(() => import('./components/Layout'));
@@ -267,6 +268,9 @@ function App() {
             )
           }
         />
+
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ForgotPasswordPage />} />
 
         <Route path="/prestataires/:id" element={<PrestataireDetailPage />} />
         <Route path="/services/:id" element={<ServiceDetailPage />} />
