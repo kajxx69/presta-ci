@@ -105,8 +105,12 @@ export default function RegisterForm() {
     try {
       await register(formData as any);
       navigate('/app', { replace: true });
-    } catch {
-      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
+    } catch (err: any) {
+      if (err?.message?.includes('already') || err?.message?.includes('existe') || err?.message?.includes('duplicate') || err?.message?.includes('409')) {
+        setError('Un compte existe déjà avec cet email. Essayez de vous connecter.');
+      } else {
+        setError('Impossible de créer le compte. Vérifiez votre connexion et réessayez.');
+      }
     } finally {
       setIsLoading(false);
     }

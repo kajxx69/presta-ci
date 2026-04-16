@@ -31,12 +31,12 @@ export default function LoginForm() {
     try {
       const success = await login(email, password);
       if (!success) {
-        setError('Email ou mot de passe incorrect');
+        setError('Email ou mot de passe incorrect. Vérifiez vos informations et réessayez.');
       } else {
         navigate('/app', { replace: true });
       }
     } catch {
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      setError('Impossible de se connecter. Vérifiez votre connexion internet et réessayez.');
     } finally {
       setIsLoading(false);
     }

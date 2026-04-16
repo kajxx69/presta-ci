@@ -22,14 +22,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
 
   login: async (email: string, _password: string) => {
-    const response = await api.auth.login({ email, password: _password }) as any;
-    const { user, token } = response;
-    const nomRole = user?.role_nom || (user?.role_id === 1 ? 'client' : user?.role_id === 2 ? 'prestataire' : user?.role_id === 3 ? 'admin' : '');
-    const role: Role | null = user?.role_id ? { id: user.role_id, nom: nomRole, description: '', created_at: '' } : null;
-    
-    set({ user, role, token, isAuthenticated: true });
-    localStorage.setItem('prestaci-auth', JSON.stringify({ user, role, token }));
-    return true;
+    try {
+      const response = await api.auth.login({ email, password: _password }) as any;
+      const { user, token } = response;
+      const nomRole = user?.role_nom || (user?.role_id === 1 ? 'client' : user?.role_id === 2 ? 'prestataire' : user?.role_id === 3 ? 'admin' : '');
+      const role: Role | null = user?.role_id ? { id: user.role_id, nom: nomRole, description: '', created_at: '' } : null;
+      set({ user, role, token, isAuthenticated: true });
+      localStorage.setItem('prestaci-auth', JSON.stringify({ user, role, token }));
+      return true;
+    } catch (err: any) {
+      if (err?.message?.includes('401') || err?.message?.includes('UNAUTHORIZED') || err?.message?.includes('Invalid') || err?.message?.includes('incorrect')) {
+        return false;
+      }
+      throw err;
+    }
   },
 
   logout: () => {
