@@ -146,7 +146,10 @@ export default function FavoritesTab() {
 
   const removeFavoritePublication = (publicationId: number) => removeWithConfirm(
     async () => {
-      await api.favorites.removePublication(publicationId);
+      await Promise.all([
+        api.favorites.removePublication(publicationId),
+        api.publications.unlike(publicationId).catch(() => {}),
+      ]);
       setFavoritePublicationsData(prev => prev.filter(p => p.id !== publicationId));
     },
     'Publication retirée des favoris',

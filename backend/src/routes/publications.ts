@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { Publication, Like, CommentairePublication, User, Prestataire, Service, Notification } from '../models/index.js';
+import { Publication, Like, CommentairePublication, User, Prestataire, Service, Notification, FavorisPublication } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
 
@@ -106,6 +106,12 @@ router.post('/:id/like', async (req: Request, res: Response) => {
       await Like.create({ publication_id: pubId, user_id: userId });
       const count = await Like.countDocuments({ publication_id: pubId });
       await Publication.updateOne({ _id: pubId }, { nombre_likes: count });
+      // Ajouter automatiquement aux publications favorites
+      await FavorisPublication.findOneAndUpdate(
+        { client_id: userId, publication_id: pubId },
+        { client_id: userId, publication_id: pubId },
+        { upsert: true }
+      );
     }
     res.json({ ok: true });
   } catch (e: any) {
@@ -124,6 +130,8 @@ router.delete('/:id/like', async (req: Request, res: Response) => {
     if (result.deletedCount > 0) {
       const count = await Like.countDocuments({ publication_id: pubId });
       await Publication.updateOne({ _id: pubId }, { nombre_likes: count });
+      // Retirer des publications favorites
+      await FavorisPublication.deleteOne({ client_id: userId, publication_id: pubId });
     }
     res.json({ ok: true });
   } catch (e: any) {
