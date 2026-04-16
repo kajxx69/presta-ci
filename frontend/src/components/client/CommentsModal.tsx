@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 
 interface Comment {
   id: number;
@@ -23,6 +23,7 @@ export default function CommentsModal({ publicationId, onClose, onCommentAdded }
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -40,14 +41,17 @@ export default function CommentsModal({ publicationId, onClose, onCommentAdded }
   }, [publicationId]);
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || sending) return;
     try {
+      setSending(true);
       const addedComment = await api.publications.addComment(publicationId, newComment);
       setComments(prev => [...prev, addedComment]);
       setNewComment('');
       onCommentAdded();
     } catch (error) {
       console.error('Erreur lors de l\'ajout du commentaire', error);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -109,14 +113,15 @@ export default function CommentsModal({ publicationId, onClose, onCommentAdded }
               onChange={e => setNewComment(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && handleAddComment()}
               placeholder="Ajouter un commentaire..."
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              disabled={sending}
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60"
             />
             <button
               onClick={handleAddComment}
-              disabled={!newComment.trim()}
+              disabled={!newComment.trim() || sending}
               className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
             >
-              <Send className="w-5 h-5" />
+              {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>
         </div>
