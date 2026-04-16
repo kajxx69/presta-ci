@@ -4,7 +4,7 @@
  */
 import dotenv from 'dotenv';
 dotenv.config();
-import mongoose from 'mongoose';
+import mongoose, { ObjectId } from 'mongoose';
 
 async function run() {
   await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/prestation');
@@ -15,13 +15,13 @@ async function run() {
 
   console.log(`Total commentaires: ${all.length}`);
 
-  const seen = new Map<string, number>();
-  const toDelete: number[] = [];
+  const seen = new Map<string, unknown>();
+  const toDelete: ObjectId[] = [];
 
   for (const c of all) {
     const key = `${c.publication_id}|${c.user_id}|${c.contenu}`;
     if (seen.has(key)) {
-      toDelete.push(c._id);
+      toDelete.push(c._id as ObjectId);
       console.log(`  Doublon trouvé: [${c._id}] pub:${c.publication_id} user:${c.user_id} "${c.contenu}"`);
     } else {
       seen.set(key, c._id);
