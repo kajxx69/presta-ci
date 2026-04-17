@@ -224,7 +224,8 @@ router.post('/rebuild-subcategories', async (_req, res) => {
       { _id: 33, categorie_id: 11, nom: 'Cours collectifs', description: 'Zumba, yoga, pilates et sports collectifs', ordre_affichage: 2 },
       { _id: 34, categorie_id: 11, nom: 'Nutrition & Diététique', description: 'Conseils nutritionnels et plans alimentaires', ordre_affichage: 3 },
     ];
-    const col = mongoose.connection.db!.collection('sous_categories');
+    // Mongoose pluralises 'SubCategory' → 'subcategories'
+    const col = mongoose.connection.db!.collection('subcategories');
     // Use bulkWrite with replaceOne+upsert to handle existing _id conflicts
     const ops = SUBCATEGORIES.map(s => ({
       replaceOne: {

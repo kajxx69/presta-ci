@@ -55,7 +55,8 @@ const SUBCATEGORIES = [
 
 async function bootstrapSubCategories() {
   try {
-    const col = mongoose.connection.db!.collection('sous_categories');
+    // Mongoose pluralises 'SubCategory' → 'subcategories'
+    const col = mongoose.connection.db!.collection('subcategories');
     const count = await col.countDocuments();
     // Check if DB already has the correct data
     const sample = await col.findOne({ _id: 18 as any });
@@ -63,8 +64,12 @@ async function bootstrapSubCategories() {
     if (isCorrect) return;
 
     console.log(`[bootstrap] Rebuilding sous_categories (found ${count}, expected 34 with correct data)...`);
-    await col.deleteMany({});
-    await col.insertMany(SUBCATEGORIES.map(s => ({ ...s, is_active: true })) as any);
+    const ops = SUBCATEGORIES.map(s => ({
+      replaceOne: { filter: { _id: s._id as any }, replacement: { ...s, is_active: true }, upsert: true }
+    }));
+    await col.bulkWrite(ops as any, { ordered: false });
+    const validIds = SUBCATEGORIES.map(s => s._id);
+    await col.deleteMany({ _id: { $nin: validIds as any } });
     await mongoose.connection.db!.collection('counters').findOneAndUpdate(
       { _id: 'sous_categories' as any },
       { $set: { seq: 34 } },
