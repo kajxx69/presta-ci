@@ -226,7 +226,7 @@ router.post('/rebuild-subcategories', async (_req, res) => {
     ];
     const col = mongoose.connection.db!.collection('sous_categories');
     await col.deleteMany({});
-    await col.insertMany(SUBCATEGORIES.map(s => ({ ...s, is_active: true })));
+    await col.insertMany(SUBCATEGORIES.map(s => ({ ...s, is_active: true })) as any);
     await mongoose.connection.db!.collection('counters').findOneAndUpdate(
       { _id: 'sous_categories' as any },
       { $set: { seq: 34 } },
