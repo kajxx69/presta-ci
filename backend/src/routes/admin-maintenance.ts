@@ -225,14 +225,25 @@ router.post('/rebuild-subcategories', async (_req, res) => {
       { _id: 34, categorie_id: 11, nom: 'Nutrition & Diététique', description: 'Conseils nutritionnels et plans alimentaires', ordre_affichage: 3 },
     ];
     const col = mongoose.connection.db!.collection('sous_categories');
-    await col.deleteMany({});
-    await col.insertMany(SUBCATEGORIES.map(s => ({ ...s, is_active: true })) as any);
+    // Use bulkWrite with replaceOne+upsert to handle existing _id conflicts
+    const ops = SUBCATEGORIES.map(s => ({
+      replaceOne: {
+        filter: { _id: s._id as any },
+        replacement: { ...s, is_active: true },
+        upsert: true
+      }
+    }));
+    await col.bulkWrite(ops as any, { ordered: false });
+    // Delete any stray entries not in our list
+    const validIds = SUBCATEGORIES.map(s => s._id);
+    await col.deleteMany({ _id: { $nin: validIds as any } });
     await mongoose.connection.db!.collection('counters').findOneAndUpdate(
       { _id: 'sous_categories' as any },
       { $set: { seq: 34 } },
       { upsert: true }
     );
-    res.json({ success: true, count: SUBCATEGORIES.length, message: '34 sous-catégories reconstruites' });
+    const finalCount = await col.countDocuments();
+    res.json({ success: true, count: finalCount, message: `${finalCount} sous-catégories reconstruites` });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
