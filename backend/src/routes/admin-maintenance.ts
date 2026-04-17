@@ -185,6 +185,59 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+// POST /api/admin/maintenance/rebuild-subcategories
+router.post('/rebuild-subcategories', async (_req, res) => {
+  try {
+    const SUBCATEGORIES = [
+      { _id: 1, categorie_id: 1, nom: 'Maquillage', description: 'Services de maquillage professionnel', ordre_affichage: 1 },
+      { _id: 2, categorie_id: 1, nom: 'Épilation', description: "Services d'épilation", ordre_affichage: 2 },
+      { _id: 3, categorie_id: 1, nom: 'Soins du visage', description: 'Nettoyage et soins faciaux', ordre_affichage: 3 },
+      { _id: 4, categorie_id: 2, nom: 'Relaxation & Détente', description: 'Soins de relaxation et détente profonde', ordre_affichage: 1 },
+      { _id: 5, categorie_id: 2, nom: 'Soins corporels', description: 'Enveloppements, gommages et soins du corps', ordre_affichage: 2 },
+      { _id: 6, categorie_id: 2, nom: 'Aromathérapie', description: "Thérapies par les huiles essentielles", ordre_affichage: 3 },
+      { _id: 7, categorie_id: 3, nom: 'Coupe & Brushing', description: 'Coupe de cheveux et mise en forme', ordre_affichage: 1 },
+      { _id: 8, categorie_id: 3, nom: 'Tresses & Nattes', description: 'Tresses africaines, vanilles, box braids', ordre_affichage: 2 },
+      { _id: 9, categorie_id: 3, nom: 'Défrisage & Extensions', description: 'Lissage, défrisage, pose de rajouts', ordre_affichage: 3 },
+      { _id: 10, categorie_id: 3, nom: 'Coloration', description: 'Coloration et mèches', ordre_affichage: 4 },
+      { _id: 11, categorie_id: 3, nom: 'Tissage & Perruques', description: 'Pose tissage, entretien perruques', ordre_affichage: 5 },
+      { _id: 12, categorie_id: 4, nom: 'Manucure', description: 'Soins des mains et ongles', ordre_affichage: 1 },
+      { _id: 13, categorie_id: 4, nom: 'Pédicure', description: 'Soins des pieds et ongles', ordre_affichage: 2 },
+      { _id: 14, categorie_id: 4, nom: 'Nail art', description: "Décoration d'ongles artistique", ordre_affichage: 3 },
+      { _id: 15, categorie_id: 5, nom: 'Massage relaxant', description: 'Massage doux pour la détente et le stress', ordre_affichage: 1 },
+      { _id: 16, categorie_id: 5, nom: 'Massage thérapeutique', description: 'Massage ciblé pour douleurs et tensions musculaires', ordre_affichage: 2 },
+      { _id: 17, categorie_id: 5, nom: 'Réflexologie', description: 'Stimulation des points réflexes des pieds et des mains', ordre_affichage: 3 },
+      { _id: 18, categorie_id: 6, nom: 'Coupe & Dégradé', description: 'Coupes masculines classiques et modernes', ordre_affichage: 1 },
+      { _id: 19, categorie_id: 6, nom: 'Barbe & Rasage', description: 'Taille de barbe, rasage traditionnel', ordre_affichage: 2 },
+      { _id: 20, categorie_id: 7, nom: 'Cartes de visite', description: 'Conception et impression de cartes de visite', ordre_affichage: 1 },
+      { _id: 21, categorie_id: 7, nom: 'Flyers & Affiches', description: 'Flyers, affiches publicitaires, kakémonos', ordre_affichage: 2 },
+      { _id: 22, categorie_id: 7, nom: 'Logo & Identité visuelle', description: 'Création de logo, charte graphique', ordre_affichage: 3 },
+      { _id: 23, categorie_id: 7, nom: 'Infographie', description: 'Retouches photo, montages, bannières réseaux sociaux', ordre_affichage: 4 },
+      { _id: 24, categorie_id: 8, nom: 'Buffet & Réception', description: 'Organisation de buffets pour événements', ordre_affichage: 1 },
+      { _id: 25, categorie_id: 8, nom: 'Plats cuisinés à domicile', description: 'Cuisine à domicile, repas livrés', ordre_affichage: 2 },
+      { _id: 26, categorie_id: 8, nom: 'Pâtisserie & Gâteaux', description: 'Gâteaux de fête, wedding cake, viennoiseries', ordre_affichage: 3 },
+      { _id: 27, categorie_id: 9, nom: 'Bouquets & Compositions', description: 'Fleurs fraîches et artificielles', ordre_affichage: 1 },
+      { _id: 28, categorie_id: 9, nom: 'Décoration événementielle', description: 'Scénographie mariage, anniversaire, inauguration', ordre_affichage: 2 },
+      { _id: 29, categorie_id: 10, nom: 'Ménage à domicile', description: 'Entretien régulier du domicile', ordre_affichage: 1 },
+      { _id: 30, categorie_id: 10, nom: 'Nettoyage après travaux', description: 'Grand nettoyage post-chantier', ordre_affichage: 2 },
+      { _id: 31, categorie_id: 10, nom: 'Pressing & Blanchisserie', description: 'Lavage, repassage, pressing vêtements', ordre_affichage: 3 },
+      { _id: 32, categorie_id: 11, nom: 'Coaching personnel', description: 'Accompagnement sportif personnalisé', ordre_affichage: 1 },
+      { _id: 33, categorie_id: 11, nom: 'Cours collectifs', description: 'Zumba, yoga, pilates et sports collectifs', ordre_affichage: 2 },
+      { _id: 34, categorie_id: 11, nom: 'Nutrition & Diététique', description: 'Conseils nutritionnels et plans alimentaires', ordre_affichage: 3 },
+    ];
+    const col = mongoose.connection.db!.collection('sous_categories');
+    await col.deleteMany({});
+    await col.insertMany(SUBCATEGORIES.map(s => ({ ...s, is_active: true })));
+    await mongoose.connection.db!.collection('counters').findOneAndUpdate(
+      { _id: 'sous_categories' as any },
+      { $set: { seq: 34 } },
+      { upsert: true }
+    );
+    res.json({ success: true, count: SUBCATEGORIES.length, message: '34 sous-catégories reconstruites' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/admin/maintenance/mode
 router.post('/mode', async (req, res) => {
   try {
