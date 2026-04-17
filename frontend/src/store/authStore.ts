@@ -39,21 +39,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    try { 
-      // Appeler l'API de déconnexion pour invalider les cookies côté serveur
-      void api.auth.logout(); 
-    } catch {}
-    
-    // Nettoyer l'état local
-    set({ user: null, role: null, token: null, isAuthenticated: false });
+    try { void api.auth.logout(); } catch {}
     localStorage.removeItem('prestaci-auth');
-    
-    // Forcer la suppression des cookies côté client
     document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    // Redirection vers la page de connexion pour s'assurer de la déconnexion
-    window.location.href = '/login';
+    // Reload clears all React state and lands on /login cleanly
+    window.location.replace('/login');
   },
 
   register: async (userData: Partial<User>) => {
