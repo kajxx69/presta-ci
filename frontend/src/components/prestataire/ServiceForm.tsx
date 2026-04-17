@@ -73,8 +73,8 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
   };
 
   const filteredSubCategories = useMemo(() => {
-    if (!selectedCategoryId) return subCategories;
-    return subCategories.filter(sc => sc.categorie_id === Number(selectedCategoryId));
+    if (!selectedCategoryId) return [];
+    return subCategories.filter(sc => Number(sc.categorie_id) === Number(selectedCategoryId));
   }, [selectedCategoryId, subCategories]);
 
   const validate = () => {

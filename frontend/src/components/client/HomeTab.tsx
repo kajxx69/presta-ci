@@ -207,7 +207,7 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
   }, [prestataires, filteredServices, searchQuery]);
 
   const getSubCategoriesByCategory = (categoryId: number) =>
-    subCategories.filter(sc => sc.categorie_id === categoryId);
+    subCategories.filter(sc => Number(sc.categorie_id) === Number(categoryId));
 
   const resetFilters = () => {
     setSelectedCategory(null);
