@@ -51,6 +51,10 @@ router.get('/', async (req: Request, res: Response) => {
         heure_fin: r.heure_fin,
         prix_final: r.prix_final,
         notes_client: r.notes_client,
+        specifications: (r as any).specifications || null,
+        booking_type: (r as any).booking_type || 'appointment',
+        quantite: (r as any).quantite || 1,
+        prix_total: (r as any).prix_total ?? r.prix_final,
         a_domicile: r.a_domicile,
         adresse_rdv: r.adresse_rdv,
         client_id: r.client_id,
@@ -167,7 +171,7 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
     if (!reservation) return res.status(404).json({ error: 'Réservation introuvable' });
 
     const currentStatut = await StatutReservation.findById(reservation.statut_id);
-    if (currentStatut?.nom !== 'confirmee') return res.status(400).json({ error: 'Seules les réservations confirmées peuvent être marquées comme terminées' });
+    if (!['confirmee', 'acceptee'].includes(currentStatut?.nom || '')) return res.status(400).json({ error: 'Seules les réservations confirmées peuvent être marquées comme terminées' });
 
     // Créer le statut en_attente_confirmation s'il n'existe pas
     let attentConfirmStatut = await StatutReservation.findOne({ nom: 'en_attente_confirmation' });

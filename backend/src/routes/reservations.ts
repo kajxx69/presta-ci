@@ -50,6 +50,10 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         prestataire_nom: prestataire?.nom_commercial || null,
         prestataire_adresse: prestataire?.adresse || null,
         prestataire_telephone: prestataire?.telephone_pro || null,
+        booking_type: rObj.booking_type || 'appointment',
+        quantite: rObj.quantite || 1,
+        prix_total: rObj.prix_total ?? rObj.prix_final,
+        specifications: rObj.specifications || null,
         a_laisse_avis,
         peut_confirmer_fin: statut?.nom === 'en_attente_confirmation'
       };

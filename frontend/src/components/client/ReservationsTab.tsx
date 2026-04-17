@@ -158,7 +158,7 @@ export default function ReservationsTab() {
   };
 
   const statusMeta = useMemo(() => (reservation: any) => ({
-    canCancel: reservation.can_cancel ?? ['en_attente', 'confirmee'].includes(reservation.statut_nom),
+    canCancel: reservation.can_cancel ?? ['en_attente', 'confirmee', 'acceptee'].includes(reservation.statut_nom),
     canRate: reservation.statut_nom === 'terminee' && !reservation.a_laisse_avis,
     canConfirmEnd: reservation.peut_confirmer_fin === true,
   }), []);
@@ -313,10 +313,18 @@ export default function ReservationsTab() {
                       <Calendar className="w-3.5 h-3.5 text-blue-500" />
                       <span>{formatDate(reservation.date_reservation)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-blue-500" />
-                      <span>{reservation.heure_debut} - {reservation.heure_fin}</span>
-                    </div>
+                    {reservation.booking_type !== 'order' && reservation.heure_debut && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-blue-500" />
+                        <span>{reservation.heure_debut}{reservation.heure_fin ? ` - ${reservation.heure_fin}` : ''}</span>
+                      </div>
+                    )}
+                    {reservation.booking_type === 'order' && reservation.quantite && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-blue-500" />
+                        <span>{reservation.quantite} unité{reservation.quantite > 1 ? 's' : ''}</span>
+                      </div>
+                    )}
                     {reservation.prestataire_adresse && !reservation.a_domicile && (
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-blue-500" />
@@ -333,7 +341,7 @@ export default function ReservationsTab() {
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700/60">
                     <span className="text-lg font-bold text-gradient">
-                      {reservation.prix_final?.toLocaleString()} {reservation.devise}
+                      {(reservation.prix_total ?? reservation.prix_final)?.toLocaleString()} {reservation.devise}
                     </span>
                     <div className="flex gap-1.5">
                       {meta.canConfirmEnd && (
@@ -405,10 +413,18 @@ export default function ReservationsTab() {
                 <Calendar className="w-4 h-4 text-blue-500" />
                 <span>{formatDate(selectedReservation.date_reservation)}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-500" />
-                <span>{selectedReservation.heure_debut} - {selectedReservation.heure_fin}</span>
-              </div>
+              {selectedReservation.booking_type !== 'order' && selectedReservation.heure_debut && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span>{selectedReservation.heure_debut}{selectedReservation.heure_fin ? ` - ${selectedReservation.heure_fin}` : ''}</span>
+                </div>
+              )}
+              {selectedReservation.booking_type === 'order' && selectedReservation.quantite && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span>Quantité : {selectedReservation.quantite}</span>
+                </div>
+              )}
               {(selectedReservation.prestataire_adresse || selectedReservation.adresse_rdv) && (
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-blue-500 mt-0.5" />
@@ -427,7 +443,7 @@ export default function ReservationsTab() {
               <div>
                 <p className="text-xs uppercase text-gray-500 font-medium">Total</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {selectedReservation.prix_final?.toLocaleString()} {selectedReservation.devise}
+                  {(selectedReservation.prix_total ?? selectedReservation.prix_final)?.toLocaleString()} {selectedReservation.devise}
                 </p>
               </div>
               <span

@@ -94,9 +94,8 @@ export default function ReservationModal({ service, onClose, onReservationSucces
     ? !!selectedDate && !!selectedTime
     : !!selectedDate;
 
-  const canSubmit = bookingType === 'order'
-    ? specifications.trim().length > 0
-    : true;
+  const canSubmit = (bookingType === 'order' ? specifications.trim().length > 0 : true)
+    && (!isDomicile || adresseRdv.trim().length > 0);
 
   const totalSteps = 2;
 
@@ -328,13 +327,18 @@ export default function ReservationModal({ service, onClose, onReservationSucces
                       </span>
                     </label>
                     {isDomicile && (
-                      <input
-                        type="text"
-                        value={adresseRdv}
-                        onChange={e => setAdresseRdv(e.target.value)}
-                        placeholder="Votre adresse complète"
-                        className="mt-2 w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                      <>
+                        <input
+                          type="text"
+                          value={adresseRdv}
+                          onChange={e => setAdresseRdv(e.target.value)}
+                          placeholder="Votre adresse complète"
+                          className="mt-2 w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        {adresseRdv.trim().length === 0 && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">L'adresse est requise.</p>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
