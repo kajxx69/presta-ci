@@ -1,5 +1,5 @@
 export interface ApiCategory { id: number; nom: string; description: string; icone?: string; couleur?: string; ordre_affichage?: number; is_active?: number; }
-export interface ApiSubCategory { id: number; categorie_id: number; nom: string; description?: string; icone?: string; ordre_affichage?: number; is_active?: number; }
+export interface ApiSubCategory { id: number; categorie_id: number; nom: string; description?: string; icone?: string; ordre_affichage?: number; is_active?: number; booking_type?: 'appointment' | 'order'; }
 export interface ApiPrestataire { id: number; nom_commercial: string; ville?: string; adresse?: string; latitude?: number; longitude?: number; note_moyenne?: number; nombre_avis?: number; is_verified?: number; photos_etablissement?: any; }
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; duree_minutes: number; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 

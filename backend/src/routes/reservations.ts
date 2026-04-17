@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis, User } from '../models/index.js';
+import { SubCategory } from '../models/Category.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -128,12 +129,24 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { service_id, date_reservation, heure_debut, notes_client, a_domicile, adresse_rdv, publication_id, quantite } = req.body;
+    const { service_id, date_reservation, heure_debut, notes_client, specifications, a_domicile, adresse_rdv, publication_id, quantite } = req.body;
+
+    if (!service_id || !date_reservation) {
+      return res.status(400).json({ error: 'service_id et date_reservation sont requis' });
+    }
 
     const service = await Service.findOne({ _id: service_id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
 
-    // Vérification de réputation: si le client a une mauvaise note (< 2.5) et le prestataire est bien noté (≥ 4)
+    // Déterminer le booking_type depuis la sous-catégorie
+    const subCat = await SubCategory.findById(service.sous_categorie_id);
+    const bookingType: 'appointment' | 'order' = (subCat as any)?.booking_type === 'order' ? 'order' : 'appointment';
+
+    if (bookingType === 'appointment' && !heure_debut) {
+      return res.status(400).json({ error: 'heure_debut est requise pour un rendez-vous' });
+    }
+
+    // Vérification de réputation
     const clientUser = await User.findById(userId).select('note_moyenne_client nombre_avis_client');
     const prestataire = await Prestataire.findById(service.prestataire_id).select('note_moyenne nombre_avis');
     if (
@@ -146,32 +159,38 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       prestataire.nombre_avis >= 5
     ) {
       return res.status(403).json({
-        error: 'Votre réputation sur la plateforme ne vous permet pas de réserver chez ce prestataire très bien noté. Améliorez votre comportement pour accéder à ces prestataires.'
+        error: 'Votre réputation sur la plateforme ne vous permet pas de réserver chez ce prestataire très bien noté.'
       });
     }
-
-    // Calculate end time
-    const startTime = new Date(`${date_reservation}T${heure_debut}`);
-    const endTime = new Date(startTime.getTime() + service.duree_minutes * 60000);
-    const heure_fin = endTime.toTimeString().slice(0, 5);
 
     const enAttenteStatut = await StatutReservation.findOne({ nom: 'en_attente' });
     if (!enAttenteStatut) return res.status(500).json({ error: 'Statut par défaut introuvable' });
 
     const qty = Math.max(1, Number(quantite) || 1);
+
+    // Calcul heure_fin uniquement pour les rendez-vous
+    let heure_fin: string | undefined;
+    if (bookingType === 'appointment' && heure_debut) {
+      const startTime = new Date(`${date_reservation}T${heure_debut}`);
+      const endTime = new Date(startTime.getTime() + service.duree_minutes * 60000);
+      heure_fin = endTime.toTimeString().slice(0, 5);
+    }
+
     const reservation = await Reservation.create({
       client_id: userId,
       prestataire_id: service.prestataire_id,
       service_id,
+      booking_type: bookingType,
       statut_id: enAttenteStatut._id as number,
       date_reservation: new Date(date_reservation),
-      heure_debut,
-      heure_fin,
+      heure_debut: heure_debut || undefined,
+      heure_fin: heure_fin || undefined,
       prix_final: service.prix,
       prix_total: service.prix * qty,
       quantite: qty,
-      notes_client,
-      a_domicile,
+      notes_client: notes_client || undefined,
+      specifications: specifications || undefined,
+      a_domicile: !!a_domicile,
       adresse_rdv: a_domicile ? adresse_rdv : undefined,
       publication_id: publication_id || null
     });

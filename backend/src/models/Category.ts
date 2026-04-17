@@ -36,6 +36,7 @@ const subCategorySchema = new mongoose.Schema({
   icone: String,
   ordre_affichage: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },
+  booking_type: { type: String, enum: ['appointment', 'order'], default: 'appointment' },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 }, {
