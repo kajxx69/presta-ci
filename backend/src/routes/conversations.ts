@@ -403,7 +403,7 @@ router.put('/:id/devis/:messageId', async (req: Request, res: Response) => {
       let heure_fin: string | undefined;
       if (devis.heure) {
         const startTime = new Date(`${devis.date}T${devis.heure}`);
-        const endTime = new Date(startTime.getTime() + service.duree_minutes * 60000);
+        const endTime = new Date(startTime.getTime() + (service.duree_minutes || 0) * 60000);
         heure_fin = endTime.toTimeString().slice(0, 5);
         const conflict = await hasSlotConflict(conversation.prestataire_id, startTime, devis.heure, heure_fin);
         if (conflict) {

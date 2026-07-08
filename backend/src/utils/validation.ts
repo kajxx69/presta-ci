@@ -82,10 +82,13 @@ export const validateUpdateUser = (req: Request, res: Response, next: NextFuncti
 };
 
 export const validateCreateService = (req: Request, res: Response, next: NextFunction) => {
-  const { sous_categorie_id, nom, prix, duree_minutes }: CreateServiceRequest = req.body;
+  const { sous_categorie_id, nom, prix, duree_minutes, type_service, stock }: CreateServiceRequest = req.body;
+  const isProduit = type_service === 'produit';
 
-  if (!sous_categorie_id || !nom || prix === undefined || !duree_minutes) {
-    return res.status(400).json({ error: 'Champs requis: sous_categorie_id, nom, prix, duree_minutes' });
+  if (!sous_categorie_id || !nom || prix === undefined || (!isProduit && !duree_minutes)) {
+    return res.status(400).json({ error: isProduit
+      ? 'Champs requis: sous_categorie_id, nom, prix'
+      : 'Champs requis: sous_categorie_id, nom, prix, duree_minutes' });
   }
 
   if (typeof sous_categorie_id !== 'number' || sous_categorie_id <= 0) {
@@ -100,8 +103,12 @@ export const validateCreateService = (req: Request, res: Response, next: NextFun
     return res.status(400).json({ error: 'Le prix doit être un nombre positif' });
   }
 
-  if (typeof duree_minutes !== 'number' || duree_minutes <= 0) {
+  if (!isProduit && (typeof duree_minutes !== 'number' || duree_minutes <= 0)) {
     return res.status(400).json({ error: 'La durée doit être un nombre positif en minutes' });
+  }
+
+  if (isProduit && stock !== undefined && stock !== null && (typeof stock !== 'number' || stock < 0)) {
+    return res.status(400).json({ error: 'Le stock doit être un nombre positif ou nul (illimité)' });
   }
 
   next();

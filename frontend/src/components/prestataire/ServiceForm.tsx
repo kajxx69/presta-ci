@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { X, MapPin, Clock, DollarSign, Tag, Image as ImageIcon, Layers, Grid3X3 } from 'lucide-react';
+import { X, MapPin, Clock, DollarSign, Tag, Image as ImageIcon, Layers, Grid3X3, Package, Wrench } from 'lucide-react';
 import { api, ApiCategory, ApiSubCategory } from '../../lib/api';
 
 interface ServiceFormProps {
@@ -22,7 +22,11 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
     unite: service?.unite || '',
     quantite_min: service?.quantite_min || 1,
     quantite_max: service?.quantite_max || '',
+    type_service: service?.type_service || 'prestation',
+    stock: service?.stock ?? '',
   });
+
+  const isProduit = formData.type_service === 'produit';
 
   const [errors, setErrors] = useState<any>({});
   const [categories, setCategories] = useState<ApiCategory[]>([]);
@@ -89,8 +93,11 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
     if (!formData.prix || parseFloat(formData.prix) <= 0) {
       newErrors.prix = 'Le prix doit être supérieur à 0';
     }
-    if (!formData.duree_minutes || parseInt(formData.duree_minutes.toString()) <= 0) {
+    if (!isProduit && (!formData.duree_minutes || parseInt(formData.duree_minutes.toString()) <= 0)) {
       newErrors.duree_minutes = 'La durée doit être supérieure à 0';
+    }
+    if (isProduit && formData.stock !== '' && Number(formData.stock) < 0) {
+      newErrors.stock = 'Le stock doit être positif ou nul';
     }
     if (!selectedCategoryId) {
       newErrors.category = 'Choisissez une catégorie';
@@ -116,7 +123,9 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
         ...formData,
         sous_categorie_id: parseInt(formData.sous_categorie_id),
         prix: parseFloat(formData.prix),
-        duree_minutes: parseInt(formData.duree_minutes.toString()),
+        type_service: isProduit ? 'produit' : 'prestation',
+        stock: isProduit && formData.stock !== '' ? Number(formData.stock) : null,
+        duree_minutes: isProduit ? (formData.duree_minutes ? parseInt(formData.duree_minutes.toString()) : null) : parseInt(formData.duree_minutes.toString()),
         devise: formData.devise || 'FCFA',
         unite: formData.unite || null,
         quantite_min: Number(formData.quantite_min) || 1,
@@ -132,10 +141,10 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {service ? 'Modifier le service' : 'Nouveau service'}
+              {service ? (isProduit ? "Modifier l'article" : 'Modifier le service') : (isProduit ? 'Nouvel article' : 'Nouveau service')}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Remplissez les informations de votre service
+              {isProduit ? 'Remplissez les informations de votre article' : 'Remplissez les informations de votre service'}
             </p>
           </div>
           <button
@@ -148,10 +157,41 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Type: prestation ou article */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Que proposez-vous ? *
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, type_service: 'prestation' }))}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${!isProduit ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+              >
+                <Wrench className={`w-6 h-6 ${!isProduit ? 'text-blue-600' : 'text-gray-400'}`} />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Une prestation</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Coiffure, ménage, réparation…</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, type_service: 'produit' }))}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${isProduit ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}
+              >
+                <Package className={`w-6 h-6 ${isProduit ? 'text-blue-600' : 'text-gray-400'}`} />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Un article en boutique</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Vêtement, accessoire, produit…</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Nom du service */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nom du service *
+              {isProduit ? "Nom de l'article *" : "Nom du service *"}
             </label>
             <div className="relative">
               <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -161,7 +201,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
                 value={formData.nom}
                 onChange={handleChange}
                 className={`w-full pl-11 pr-4 py-3 border ${errors.nom ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all`}
-                placeholder="Ex: Coupe + Brushing"
+                placeholder={isProduit ? 'Ex: T-shirt col rond' : 'Ex: Coupe + Brushing'}
               />
             </div>
             {errors.nom && <p className="text-red-500 text-xs mt-1">{errors.nom}</p>}
@@ -229,7 +269,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
               onChange={handleChange}
               rows={4}
               className={`w-full px-4 py-3 border ${errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all resize-none`}
-              placeholder="Décrivez votre service en détail..."
+              placeholder={isProduit ? "Décrivez l'article en détail (matière, taille, couleur...)" : 'Décrivez votre service en détail...'}
             />
             {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
           </div>
@@ -256,32 +296,56 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
               {errors.prix && <p className="text-red-500 text-xs mt-1">{errors.prix}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Durée (minutes) *
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="number"
-                  name="duree_minutes"
-                  value={formData.duree_minutes}
-                  onChange={handleChange}
-                  min="5"
-                  step="5"
-                  className={`w-full pl-11 pr-4 py-3 border ${errors.duree_minutes ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all`}
-                  placeholder="60"
-                />
+            {isProduit ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Stock disponible
+                </label>
+                <div className="relative">
+                  <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    min="0"
+                    step="1"
+                    className={`w-full pl-11 pr-4 py-3 border ${errors.stock ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all`}
+                    placeholder="Laisser vide = illimité"
+                  />
+                </div>
+                {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock}</p>}
               </div>
-              {errors.duree_minutes && <p className="text-red-500 text-xs mt-1">{errors.duree_minutes}</p>}
-            </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Durée (minutes) *
+                </label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="duree_minutes"
+                    value={formData.duree_minutes}
+                    onChange={handleChange}
+                    min="5"
+                    step="5"
+                    className={`w-full pl-11 pr-4 py-3 border ${errors.duree_minutes ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all`}
+                    placeholder="60"
+                  />
+                </div>
+                {errors.duree_minutes && <p className="text-red-500 text-xs mt-1">{errors.duree_minutes}</p>}
+              </div>
+            )}
           </div>
 
           {/* Unité & Quantités */}
           <div className="space-y-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Prix par unité (optionnel)</p>
             <p className="text-xs text-blue-600 dark:text-blue-400">
-              Permet au client de choisir une quantité. Ex : "500 cartes → 5 000 FCFA par carte"
+              {isProduit
+                ? 'Permet au client de commander plusieurs exemplaires. Ex : "1 pièce → 5 000 FCFA"'
+                : 'Permet au client de choisir une quantité. Ex : "500 cartes → 5 000 FCFA par carte"'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
@@ -342,8 +406,8 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
               <label htmlFor="is_domicile" className="flex items-center space-x-2 cursor-pointer">
                 <MapPin className="w-5 h-5 text-blue-600" />
                 <div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Service à domicile</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Je peux me déplacer chez le client</p>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{isProduit ? 'Livraison à domicile' : 'Service à domicile'}</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{isProduit ? 'Je peux livrer chez le client' : 'Je peux me déplacer chez le client'}</p>
                 </div>
               </label>
             </div>
@@ -358,8 +422,8 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
                 className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
               />
               <label htmlFor="is_active" className="cursor-pointer">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">Service actif</span>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Les clients peuvent réserver ce service</p>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{isProduit ? 'Article actif' : 'Service actif'}</span>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{isProduit ? 'Les clients peuvent commander cet article' : 'Les clients peuvent réserver ce service'}</p>
               </label>
             </div>
           </div>
@@ -367,7 +431,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
           {/* Upload Photos */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Photos du service (optionnel)
+              {isProduit ? "Photos de l'article (optionnel)" : 'Photos du service (optionnel)'}
             </label>
             <div className="space-y-4">
               {/* Preview Grid */}
@@ -436,7 +500,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
             onClick={handleSubmit}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           >
-            {service ? 'Enregistrer' : 'Créer le service'}
+            {service ? 'Enregistrer' : (isProduit ? "Créer l'article" : 'Créer le service')}
           </button>
         </div>
       </div>

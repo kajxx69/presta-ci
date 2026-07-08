@@ -154,7 +154,9 @@ export interface CreateServiceRequest {
   description?: string;
   prix: number;
   devise?: string;
-  duree_minutes: number;
+  type_service?: 'prestation' | 'produit';
+  stock?: number | null;
+  duree_minutes?: number;
   photos?: string[];
   is_domicile?: number;
 }

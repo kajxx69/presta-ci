@@ -40,8 +40,9 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       return res.status(403).json({ error: `Limite de services atteinte (${plan.max_services})` });
     }
 
-    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, unite, quantite_min, quantite_max } = req.body || {};
-    if (!sous_categorie_id || !nom || !prix || !duree_minutes) {
+    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, unite, quantite_min, quantite_max, type_service, stock } = req.body || {};
+    const isProduit = type_service === 'produit';
+    if (!sous_categorie_id || !nom || !prix || (!isProduit && !duree_minutes)) {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
@@ -50,10 +51,12 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       sous_categorie_id, nom,
       description: description || null,
       prix, devise: devise || 'FCFA',
+      type_service: isProduit ? 'produit' : 'prestation',
+      stock: isProduit && stock !== undefined && stock !== null ? Number(stock) : null,
       unite: unite || null,
       quantite_min: quantite_min || 1,
       quantite_max: quantite_max || null,
-      duree_minutes,
+      duree_minutes: isProduit ? (duree_minutes || null) : duree_minutes,
       photos: photos ? await materializePhotos(photos) : null,
       is_domicile: is_domicile || false
     });
@@ -79,7 +82,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Vous n'avez pas les droits pour modifier ce service" });
     }
 
-    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, is_active, unite, quantite_min, quantite_max } = req.body || {};
+    const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, is_active, unite, quantite_min, quantite_max, type_service, stock } = req.body || {};
 
     const update: any = { updated_at: new Date() };
     if (sous_categorie_id !== undefined) update.sous_categorie_id = sous_categorie_id;
@@ -94,6 +97,8 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     if (unite !== undefined) update.unite = unite;
     if (quantite_min !== undefined) update.quantite_min = quantite_min;
     if (quantite_max !== undefined) update.quantite_max = quantite_max;
+    if (type_service !== undefined) update.type_service = type_service === 'produit' ? 'produit' : 'prestation';
+    if (stock !== undefined) update.stock = stock === null || stock === '' ? null : Number(stock);
 
     await Service.updateOne({ _id: id, prestataire_id: prestataireId }, update);
     res.json({ ok: true });
@@ -167,6 +172,7 @@ router.get('/:id/slots', async (req: Request, res: Response) => {
 
     const service = await Service.findOne({ _id: id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
+    if (!service.duree_minutes) return res.status(400).json({ error: 'Ce service ne fonctionne pas par créneaux horaires' });
 
     const prestataire = await Prestataire.findById(service.prestataire_id);
     if (!prestataire) return res.status(404).json({ error: 'Prestataire introuvable' });

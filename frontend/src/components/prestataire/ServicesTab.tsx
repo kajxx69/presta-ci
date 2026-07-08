@@ -13,7 +13,8 @@ import {
   Crown,
   Check,
   Info,
-  ChevronRight
+  ChevronRight,
+  Package
 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import { useAppStore } from '../../store/appStore';
@@ -403,7 +404,7 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
                 )}
                 
                 {/* Status badge */}
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-2">
                   {service.is_active ? (
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg">
                       ✓ Actif
@@ -414,6 +415,13 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
                     </span>
                   )}
                 </div>
+                {service.type_service === 'produit' && (
+                  <div className="absolute top-3 right-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 dark:bg-gray-900/80 text-purple-700 dark:text-purple-300 shadow-lg">
+                      <Package className="w-3 h-3" /> Article
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -437,15 +445,27 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span>Durée</span>
+                  {service.type_service === 'produit' ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                        <Package className="w-4 h-4" />
+                        <span>Stock</span>
+                      </div>
+                      <span className={`font-medium ${service.stock === 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                        {service.stock === null || service.stock === undefined ? 'Illimité' : service.stock === 0 ? 'Épuisé' : `${service.stock} unité${service.stock > 1 ? 's' : ''}`}
+                      </span>
                     </div>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {service.duree_minutes} min
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                        <Clock className="w-4 h-4" />
+                        <span>Durée</span>
+                      </div>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {service.duree_minutes} min
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

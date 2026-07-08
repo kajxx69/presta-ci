@@ -157,6 +157,12 @@ router.put('/:id/reject', async (req: Request, res: Response) => {
       changed_by_user_id: req.userId
     });
 
+    // Restituer le stock si c'était une commande d'article suivi en stock
+    const refusedService = await Service.findById(reservation.service_id);
+    if (refusedService && refusedService.type_service === 'produit' && refusedService.stock !== null && refusedService.stock !== undefined) {
+      await Service.updateOne({ _id: reservation.service_id }, { $inc: { stock: reservation.quantite || 1 } });
+    }
+
     try {
       const prestataire = await Prestataire.findById(prestataireId);
       const prestUser = prestataire ? await User.findById(prestataire.user_id).select('nom prenom') : null;

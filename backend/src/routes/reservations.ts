@@ -111,6 +111,12 @@ router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
       changed_by_user_id: userId
     });
 
+    // Restituer le stock si c'était une commande d'article suivi en stock
+    const service = await Service.findById(reservation.service_id);
+    if (service && service.type_service === 'produit' && service.stock !== null && service.stock !== undefined) {
+      await Service.updateOne({ _id: reservation.service_id }, { $inc: { stock: reservation.quantite || 1 } });
+    }
+
     res.json({ ok: true });
   } catch (e: any) {
     serverError(res, e);
@@ -192,6 +198,18 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     const qty = Math.max(1, Number(quantite) || 1);
 
+    // Article en stock suivi : décrémenter atomiquement pour éviter la survente en cas de commandes concurrentes
+    const isProduitAvecStock = service.type_service === 'produit' && service.stock !== null && service.stock !== undefined;
+    if (isProduitAvecStock) {
+      const decremented = await Service.findOneAndUpdate(
+        { _id: service_id, stock: { $gte: qty } },
+        { $inc: { stock: -qty } }
+      );
+      if (!decremented) {
+        return res.status(409).json({ error: 'Stock insuffisant pour cette quantité.' });
+      }
+    }
+
     // Calcul heure_fin uniquement pour les rendez-vous
     let heure_fin: string | undefined;
     if (bookingType === 'appointment' && heure_debut) {
@@ -202,7 +220,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       if (startTime.getTime() < Date.now()) {
         return res.status(400).json({ error: 'Impossible de réserver un créneau dans le passé' });
       }
-      const endTime = new Date(startTime.getTime() + service.duree_minutes * 60000);
+      const endTime = new Date(startTime.getTime() + (service.duree_minutes || 0) * 60000);
       heure_fin = endTime.toTimeString().slice(0, 5);
 
       // Vérifier les horaires d'ouverture du prestataire (si définis)
