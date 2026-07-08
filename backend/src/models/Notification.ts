@@ -62,7 +62,16 @@ const notificationSchema = new mongoose.Schema({
   template_id: { type: Number, ref: 'NotificationTemplate' },
   titre: { type: String, required: true },
   message: { type: String, required: true },
-  type: { type: String, enum: ['info', 'success', 'warning', 'error', 'reservation', 'publication', 'abonnement'], default: 'info' },
+  type: {
+    type: String,
+    enum: [
+      'info', 'success', 'warning', 'error', 'reservation', 'publication', 'abonnement',
+      // Actions de modération admin (service/avis/réservation)
+      'service_suspended', 'service_deleted', 'new_avis', 'avis_deleted', 'avis_approved', 'avis_rejected',
+      'reservation_deleted', 'reservation_status_changed'
+    ],
+    default: 'info'
+  },
   is_read: { type: Boolean, default: false },
   data: { type: mongoose.Schema.Types.Mixed, default: null },
   sent_at: { type: Date, default: Date.now },

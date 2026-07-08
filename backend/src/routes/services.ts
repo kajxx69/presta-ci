@@ -35,7 +35,7 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
     if (prestataire.abonnement_expires_at && new Date(prestataire.abonnement_expires_at) < new Date()) {
       return res.status(402).json({ error: 'Abonnement expiré' });
     }
-    const count = await Service.countDocuments({ prestataire_id: prestataireId });
+    const count = await Service.countDocuments({ prestataire_id: prestataireId, deleted_at: null });
     if (plan.max_services >= 0 && count >= plan.max_services) {
       return res.status(403).json({ error: `Limite de services atteinte (${plan.max_services})` });
     }
