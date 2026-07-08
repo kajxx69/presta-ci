@@ -91,9 +91,28 @@ router.get('/stats/overview', async (req, res) => {
     }));
     topCategories.sort((a, b) => b.nombre_services - a.nombre_services);
 
+    // Top prestataires par nombre de services actifs
+    const servicesByPrestataire = await Service.aggregate([
+      { $match: { deleted_at: null, is_active: true } },
+      { $group: { _id: '$prestataire_id', nombre_services: { $sum: 1 } } },
+      { $sort: { nombre_services: -1 } },
+      { $limit: 5 }
+    ]);
+    const topPrestataires = await Promise.all(servicesByPrestataire.map(async (row) => {
+      const prestataire = await Prestataire.findById(row._id).select('nom_commercial note_moyenne user_id');
+      const user = prestataire?.user_id ? await User.findById(prestataire.user_id).select('email') : null;
+      return {
+        prestataire: prestataire?.nom_commercial || 'Prestataire inconnu',
+        email: user?.email || null,
+        nombre_services: row.nombre_services,
+        moyenne_avis: prestataire?.note_moyenne || 0
+      };
+    }));
+
     res.json({
       overview: { total_services: all, services_actifs: actifs, services_suspendus: all - actifs, nouveaux_ce_mois: nouveaux, prix_moyen: parseFloat(prix_moyen.toFixed(0)) },
-      topCategories: topCategories.slice(0, 5)
+      topCategories: topCategories.slice(0, 5),
+      topPrestataires
     });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });

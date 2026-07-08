@@ -1,18 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import mongoose from 'mongoose';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { Configuration, User, Service, Reservation, Notification } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 
 const router = Router();
-const BACKUP_DIR = path.resolve(process.cwd(), 'backups');
-const LOG_FILE = path.resolve(process.cwd(), 'logs/app.log');
-const CACHE_DIRS = [
-  path.resolve(process.cwd(), 'tmp/cache'),
-  path.resolve(process.cwd(), '.cache')
-];
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   try {
@@ -99,107 +90,11 @@ router.post('/settings/reset', requireAdmin, async (_req: Request, res: Response
   }
 });
 
-// GET /api/admin/maintenance/status
-router.get('/maintenance/status', requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    const modeRow = await Configuration.findOne({ cle: 'maintenance_mode' });
-    const backupRow = await Configuration.findOne({ cle: 'maintenance_last_backup' });
-    const cacheRow = await Configuration.findOne({ cle: 'maintenance_last_cache_clear' });
-
-    const maintenanceMode = (modeRow?.valeur || 'false') === 'true';
-    let lastBackupAt: string | null = null;
-    let lastBackupFile: string | null = null;
-    if (backupRow?.valeur) {
-      try {
-        const parsed = JSON.parse(backupRow.valeur);
-        lastBackupAt = parsed.created_at || parsed.timestamp || null;
-        lastBackupFile = parsed.file || null;
-      } catch { lastBackupAt = backupRow.valeur; }
-    }
-    let lastCacheClearAt: string | null = null;
-    if (cacheRow?.valeur) {
-      try {
-        const parsed = JSON.parse(cacheRow.valeur);
-        lastCacheClearAt = parsed.cleared_at || parsed.timestamp || null;
-      } catch { lastCacheClearAt = cacheRow.valeur; }
-    }
-    res.json({ maintenanceMode, lastBackupAt, lastBackupFile, lastCacheClearAt });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
-
-// POST /api/admin/maintenance/clear-cache
-router.post('/maintenance/clear-cache', requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    for (const dir of CACHE_DIRS) {
-      await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
-      await fs.mkdir(dir, { recursive: true });
-    }
-    const clearedAt = new Date().toISOString();
-    await upsertSetting('maintenance_last_cache_clear', JSON.stringify({ cleared_at: clearedAt }), 'Dernier vidage du cache');
-    res.json({ ok: true, clearedAt });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
-
-// POST /api/admin/maintenance/backup
-router.post('/maintenance/backup', requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    await fs.mkdir(BACKUP_DIR, { recursive: true });
-    const timestamp = new Date().toISOString();
-    const safeName = timestamp.replace(/[:.]/g, '-');
-
-    const [userCount, serviceCount, reservationCount, configs] = await Promise.all([
-      User.countDocuments(),
-      Service.countDocuments({ deleted_at: null }),
-      Reservation.countDocuments(),
-      Configuration.find().sort({ cle: 1 })
-    ]);
-
-    const payload = {
-      generatedAt: timestamp,
-      settings: configs.map(c => ({ cle: c.cle, valeur: c.valeur, description: c.description })),
-      summary: { users: userCount, services: serviceCount, reservations: reservationCount }
-    };
-
-    const fileName = `admin-backup-${safeName}.json`;
-    const filePath = path.join(BACKUP_DIR, fileName);
-    await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf-8');
-    await upsertSetting('maintenance_last_backup', JSON.stringify({ file: fileName, created_at: timestamp }), 'Dernière sauvegarde');
-    res.json({ ok: true, file: fileName, createdAt: timestamp });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
-
-// GET /api/admin/maintenance/logs
-router.get('/maintenance/logs', requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    let logs = 'Aucun journal disponible';
-    try {
-      const content = await fs.readFile(LOG_FILE, 'utf-8');
-      const lines = content.trim().split(/\r?\n/);
-      logs = lines.slice(-200).join('\n') || logs;
-    } catch {}
-    res.json({ ok: true, logs });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
-
-// POST /api/admin/maintenance/maintenance-mode
-router.post('/maintenance/maintenance-mode', requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const { enabled } = req.body;
-    if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'Valeur booléenne requise' });
-    await upsertSetting('maintenance_mode', enabled ? 'true' : 'false', 'Mode maintenance global');
-    res.json({ ok: true, maintenanceMode: enabled });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
+// Note: les routes /maintenance/* (status, cache, backup, logs, mode) vivent
+// exclusivement dans admin-maintenance.ts, monté sur /api/admin/maintenance.
+// Ne pas les redéclarer ici : ce routeur est monté sur /api/admin en premier
+// et absorberait silencieusement ces requêtes avec une réponse différente
+// (shape incompatible avec ce qu'attend le frontend).
 
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {

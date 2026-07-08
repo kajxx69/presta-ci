@@ -53,7 +53,7 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
 router.put('/:id/validate', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const txId = parseInt(req.params.id);
-    const adminId = req.user!.id;
+    const adminId = req.userId!;
 
     const tx = await TransactionWave.findOne({ _id: txId, statut: 'en_attente' });
     if (!tx) return res.status(404).json({ error: 'Transaction non trouvée ou déjà traitée' });
@@ -75,7 +75,7 @@ router.put('/:id/validate', requireAuth, requireRole('admin'), async (req, res) 
 router.put('/:id/reject', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const txId = parseInt(req.params.id);
-    const adminId = req.user!.id;
+    const adminId = req.userId!;
     const { motif_rejet } = req.body;
 
     if (!motif_rejet?.trim()) return res.status(400).json({ error: 'Le motif de rejet est requis' });

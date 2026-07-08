@@ -17,11 +17,11 @@ interface Avis {
   service_nom: string;
   note: number;
   commentaire: string;
-  is_approved: boolean | null;
+  is_visible: boolean;
   created_at: string;
 }
 
-type AvisFilter = 'all' | 'pending' | 'approved' | 'rejected';
+type AvisFilter = 'all' | 'approved' | 'rejected';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,9 +73,8 @@ export default function AdminAvis() {
 
   const filtered = useMemo(() => {
     return avis.filter((a) => {
-      if (filter === 'pending') return a.is_approved === null;
-      if (filter === 'approved') return a.is_approved === true;
-      if (filter === 'rejected') return a.is_approved === false;
+      if (filter === 'approved') return a.is_visible === true;
+      if (filter === 'rejected') return a.is_visible === false;
       return true;
     });
   }, [avis, filter]);
@@ -83,9 +82,8 @@ export default function AdminAvis() {
   const counts = useMemo(() => {
     return {
       all: avis.length,
-      pending: avis.filter((a) => a.is_approved === null).length,
-      approved: avis.filter((a) => a.is_approved === true).length,
-      rejected: avis.filter((a) => a.is_approved === false).length,
+      approved: avis.filter((a) => a.is_visible === true).length,
+      rejected: avis.filter((a) => a.is_visible === false).length,
     };
   }, [avis]);
 
@@ -116,16 +114,15 @@ export default function AdminAvis() {
       {/* Header */}
       <SectionHeader
         title="Moderation des Avis"
-        subtitle={`${counts.all} avis au total — ${counts.pending} en attente de moderation`}
+        subtitle={`${counts.all} avis au total — ${counts.approved} visibles, ${counts.rejected} masques`}
       >
         <FilterSelect
           value={filter}
           onChange={(v) => setFilter(v as AvisFilter)}
           options={[
             { value: 'all', label: `Tous (${counts.all})` },
-            { value: 'pending', label: `En attente (${counts.pending})` },
-            { value: 'approved', label: `Approuves (${counts.approved})` },
-            { value: 'rejected', label: `Rejetes (${counts.rejected})` },
+            { value: 'approved', label: `Visibles (${counts.approved})` },
+            { value: 'rejected', label: `Masques (${counts.rejected})` },
           ]}
         />
         <RefreshButton onClick={loadAvis} loading={loading} />
@@ -167,27 +164,25 @@ export default function AdminAvis() {
 
                 {/* Right side: moderation */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {a.is_approved === null ? (
-                    <>
-                      <button
-                        onClick={() => handleModerate(a.id, true)}
-                        disabled={moderatingId === a.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Approuver
-                      </button>
-                      <button
-                        onClick={() => handleModerate(a.id, false)}
-                        disabled={moderatingId === a.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Rejeter
-                      </button>
-                    </>
+                  <StatusBadge status={a.is_visible ? 'approved' : 'rejected'} />
+                  {a.is_visible ? (
+                    <button
+                      onClick={() => handleModerate(a.id, false)}
+                      disabled={moderatingId === a.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Masquer
+                    </button>
                   ) : (
-                    <StatusBadge status={a.is_approved ? 'approved' : 'rejected'} />
+                    <button
+                      onClick={() => handleModerate(a.id, true)}
+                      disabled={moderatingId === a.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Rendre visible
+                    </button>
                   )}
                 </div>
               </div>

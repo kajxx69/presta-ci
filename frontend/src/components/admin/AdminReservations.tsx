@@ -57,7 +57,9 @@ export default function AdminReservations() {
   const loadReservations = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.admin.reservations.getAll();
+      // Le filtrage, tri et pagination se font côté client dans ce composant :
+      // il faut donc charger toutes les réservations, pas la page de 20 par défaut du backend.
+      const data = await api.admin.reservations.getAll({ limit: 500 });
       setReservations(Array.isArray(data) ? data : data?.data || data?.reservations || []);
     } catch (err: any) {
       showToast(err.message || 'Erreur lors du chargement des reservations', 'error');

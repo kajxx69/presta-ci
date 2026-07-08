@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
   try {
     const { statut = 'all', search = '', page = 1, limit = 20, date_debut, date_fin, prestataire_id, client_id } = req.query;
     const pageNum = Number(page);
-    const limitNum = Number(limit);
+    const limitNum = Math.min(Number(limit) || 20, 500);
     const offset = (pageNum - 1) * limitNum;
 
     const filter: any = {};

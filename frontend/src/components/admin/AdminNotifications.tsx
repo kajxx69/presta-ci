@@ -88,7 +88,7 @@ export default function AdminNotifications() {
     setSending(true);
     try {
       await api.admin.notifications.broadcast({
-        titre: title.trim(),
+        title: title.trim(),
         message: message.trim(),
         type,
         target_roles: Array.from(targetRoles),

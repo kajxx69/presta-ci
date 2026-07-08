@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
     let results = await Promise.all(avisList.map(async (a) => {
       const [client, service, reservation] = await Promise.all([
-        User.findById(a.client_id).select('nom email'),
+        User.findById(a.client_id).select('nom prenom email'),
         a.service_id ? Service.findById(a.service_id).select('nom') : null,
         Reservation.findById(a.reservation_id).select('prestataire_id')
       ]);
@@ -38,6 +38,7 @@ router.get('/', async (req, res) => {
       return {
         ...a.toJSON(),
         client_nom: client?.nom || null,
+        client_prenom: client?.prenom || null,
         client_email: client?.email || null,
         prestataire_nom: prestUser?.nom || null,
         prestataire_email: prestUser?.email || null,

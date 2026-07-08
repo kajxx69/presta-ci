@@ -137,6 +137,10 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Identifiants invalides' });
 
+    if (user.is_active === false) {
+      return res.status(403).json({ error: 'Ce compte a été suspendu. Contactez le support si vous pensez qu\'il s\'agit d\'une erreur.' });
+    }
+
     const role = await Role.findById(user.role_id);
 
     const token = crypto.randomBytes(48).toString('hex');

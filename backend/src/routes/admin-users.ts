@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { User, Role, Prestataire, Plan } from '../models/index.js';
+import { User, UserSession, Role, Prestataire, Plan } from '../models/index.js';
 
 const router = express.Router();
 
@@ -88,7 +88,7 @@ router.get('/stats', requireAuth, requireRole('admin'), async (req, res) => {
 router.put('/:id/toggle-status', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const adminId = req.user!.id;
+    const adminId = req.userId!;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
@@ -97,17 +97,21 @@ router.put('/:id/toggle-status', requireAuth, requireRole('admin'), async (req, 
     if (roleDoc?.nom === 'admin') return res.status(403).json({ error: "Impossible de modifier le statut d'un administrateur" });
     if (userId === adminId) return res.status(403).json({ error: 'Vous ne pouvez pas modifier votre propre statut' });
 
-    res.json({ ok: true, message: 'Statut utilisateur modifié avec succès' });
+    const newStatus = !user.is_active;
+    await User.updateOne({ _id: userId }, { is_active: newStatus });
+
+    res.json({ ok: true, is_active: newStatus, message: newStatus ? 'Utilisateur réactivé avec succès' : 'Utilisateur suspendu avec succès' });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// DELETE /api/admin/users/:id
+// DELETE /api/admin/users/:id — suppression douce (is_active=false) pour préserver
+// l'intégrité référentielle (réservations, avis, conversations pointent vers cet user_id)
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const adminId = req.user!.id;
+    const adminId = req.userId!;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
@@ -115,6 +119,9 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     const roleDoc = await Role.findById(user.role_id);
     if (roleDoc?.nom === 'admin') return res.status(403).json({ error: "Impossible de supprimer un administrateur" });
     if (userId === adminId) return res.status(403).json({ error: 'Vous ne pouvez pas supprimer votre propre compte' });
+
+    await User.updateOne({ _id: userId }, { is_active: false });
+    await UserSession.deleteMany({ user_id: userId });
 
     res.json({ ok: true, message: 'Utilisateur supprimé avec succès' });
   } catch (error) {

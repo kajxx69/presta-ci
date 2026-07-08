@@ -31,7 +31,7 @@ async function updateAverageRatings(prestataire_id: number, service_id: number) 
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { reservation_id, note, commentaire, photos } = req.body;
-    const client_id = req.user!.id;
+    const client_id = req.userId!;
 
     const reservation = await Reservation.findOne({ _id: reservation_id, client_id });
     if (!reservation) return res.status(404).json({ error: 'Réservation non trouvée' });
@@ -122,7 +122,7 @@ router.get('/service/:id', async (req, res) => {
 // GET /api/avis/client
 router.get('/client', requireAuth, async (req, res) => {
   try {
-    const client_id = req.user!.id;
+    const client_id = req.userId!;
     const avisList = await Avis.find({ client_id }).sort({ created_at: -1 });
 
     const results = await Promise.all(avisList.map(async (a) => {
@@ -151,7 +151,7 @@ router.get('/client', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const avis_id = parseInt(req.params.id);
-    const client_id = req.user!.id;
+    const client_id = req.userId!;
 
     const avis = await Avis.findOne({ _id: avis_id, client_id });
     if (!avis) return res.status(404).json({ error: 'Avis non trouvé' });

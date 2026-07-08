@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
 import { TicketSupport, MessageTicket, User, Notification } from '../models/index.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
 import { serverError } from '../utils/http.js';
 
 const router = express.Router();
-router.use(requireAuth);
+router.use(requireAuth, requireRole('admin'));
 
 // GET /api/admin/tickets — liste tickets avec filtres
 router.get('/', async (req: Request, res: Response) => {

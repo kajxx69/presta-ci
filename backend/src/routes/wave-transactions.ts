@@ -7,7 +7,7 @@ const router = express.Router();
 // POST /api/wave-transactions
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     const prestataire = await Prestataire.findOne({ user_id });
     if (!prestataire) return res.status(403).json({ error: "Votre compte n'est pas configuré comme prestataire." });
 
@@ -45,7 +45,7 @@ router.post('/', requireAuth, async (req, res) => {
 // GET /api/wave-transactions/my-transactions
 router.get('/my-transactions', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     const prestataire = await Prestataire.findOne({ user_id });
     if (!prestataire) return res.status(403).json({ error: 'Profil prestataire non trouvé.' });
 
@@ -80,7 +80,7 @@ router.get('/my-transactions', requireAuth, async (req, res) => {
 // GET /api/wave-transactions/status
 router.get('/status', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     const prestataire = await Prestataire.findOne({ user_id });
     if (!prestataire) return res.status(403).json({ error: 'Profil prestataire non trouvé.' });
 

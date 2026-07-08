@@ -50,9 +50,12 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    const user = await User.findById(userId).select('email nom prenom telephone ville photo_profil role_id');
+    const user = await User.findById(userId).select('email nom prenom telephone ville photo_profil role_id is_active');
+    if (!user || user.is_active === false) {
+      return res.status(403).json({ error: 'Ce compte a été suspendu.' });
+    }
     req.userId = userId;
-    req.user = user ? user.toJSON() : null;
+    req.user = user.toJSON();
     next();
   } catch (e: any) {
     serverError(res, e);

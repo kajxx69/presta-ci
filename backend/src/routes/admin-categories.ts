@@ -17,7 +17,11 @@ router.get('/', async (req, res) => {
       const subCats = await SubCategory.find({ categorie_id: c._id });
       const subIds = subCats.map(s => s._id);
       const serviceCount = await Service.countDocuments({ sous_categorie_id: { $in: subIds }, deleted_at: null });
-      return { ...c.toJSON(), nombre_sous_categories: subCats.length, nombre_services: serviceCount };
+      return {
+        ...c.toJSON(),
+        nombre_sous_categories: subCats.length, nombre_services: serviceCount,
+        sous_categories_count: subCats.length, services_count: serviceCount
+      };
     }));
 
     res.json(results);

@@ -24,7 +24,7 @@ const DEFAULT_PREFS = {
 // GET /api/notification-preferences
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     let prefs = await NotificationPreference.findOne({ user_id });
     if (!prefs) {
       prefs = await NotificationPreference.create({ user_id, ...DEFAULT_PREFS });
@@ -38,7 +38,7 @@ router.get('/', requireAuth, async (req, res) => {
 // PUT /api/notification-preferences
 router.put('/', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     const fields = [
       'push_notifications', 'email_notifications', 'sms_notifications',
       'new_reservation', 'reservation_confirmed', 'reservation_cancelled', 'reservation_updates',
@@ -66,7 +66,7 @@ router.put('/', requireAuth, async (req, res) => {
 // POST /api/notification-preferences/reset
 router.post('/reset', requireAuth, async (req, res) => {
   try {
-    const user_id = req.user!.id;
+    const user_id = req.userId!;
     const prefs = await NotificationPreference.findOneAndUpdate(
       { user_id },
       { ...DEFAULT_PREFS, updated_at: new Date() },
