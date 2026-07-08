@@ -75,7 +75,7 @@ function HomeSkeleton() {
 
 export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabProps) {
   const { showToast } = useAppStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
 
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
@@ -120,8 +120,8 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
       const [cats, subs, provs, servs, favProvs] = await Promise.all([
         api.getCategories(),
         api.getSubCategories(),
-        api.getPrestataires(),
-        api.getServices(),
+        api.getPrestataires({ limit: 100 }),
+        api.getServices({ limit: 100 }),
         favoritesPromise,
       ]);
       setCategories(cats);
@@ -149,6 +149,25 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
     }
   }, [searchQuery]);
 
+  // Recherche serveur (débouncée) : moteur intelligent (fautes de frappe, accents,
+  // synonymes, pertinence) — ses résultats priment sur le filtre local
+  const [serverResults, setServerResults] = useState<{ services: ApiService[]; prestataires: ApiPrestataire[] } | null>(null);
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setServerResults(null);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      try {
+        const geo = userLocation ? { lat: userLocation[0], lng: userLocation[1] } : undefined;
+        const res = await api.search(q, geo);
+        setServerResults(res);
+      } catch { /* réseau indisponible : le filtre local prend le relais */ }
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, userLocation]);
+
   useEffect(() => {
     if (!('geolocation' in navigator)) return;
     navigator.geolocation.getCurrentPosition(
@@ -157,6 +176,31 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 },
     );
   }, []);
+
+  // Quartier réel de l'utilisateur (reverse geocoding via le proxy backend)
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  useEffect(() => {
+    if (!userLocation) return;
+    api.geo.reverse(userLocation[0], userLocation[1])
+      .then(res => setLocationLabel(res.label_court))
+      .catch(() => {});
+  }, [userLocation]);
+
+  // Filtre "Près de moi" : requête $geoNear côté serveur (distances exactes, triées)
+  const [nearMe, setNearMe] = useState(false);
+  const [nearRadius, setNearRadius] = useState(10);
+  const [nearbyPrestataires, setNearbyPrestataires] = useState<ApiPrestataire[] | null>(null);
+  useEffect(() => {
+    if (!nearMe || !userLocation) {
+      setNearbyPrestataires(null);
+      return;
+    }
+    let cancelled = false;
+    api.getPrestataires({ lat: userLocation[0], lng: userLocation[1], radius_km: nearRadius, limit: 100 })
+      .then(rows => { if (!cancelled) setNearbyPrestataires(rows); })
+      .catch(() => { if (!cancelled) setNearbyPrestataires(null); });
+    return () => { cancelled = true; };
+  }, [nearMe, nearRadius, userLocation]);
 
   useEffect(() => {
     let mounted = true;
@@ -182,6 +226,14 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
   const filteredServices = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
+
+    // Résultats du moteur serveur (classés par pertinence) prioritaires
+    if (q.length >= 2 && serverResults) {
+      return serverResults.services.filter(
+        s => !selectedSubCategory || s.sous_categorie_id === selectedSubCategory.id
+      );
+    }
+
     return services.filter(s => {
       const prestataire = prestataires.find(p => p.id === s.prestataire_id);
       const subCat = subCategories.find(sc => sc.id === s.sous_categorie_id);
@@ -193,18 +245,28 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
       const matchesSub = !selectedSubCategory || s.sous_categorie_id === selectedSubCategory.id;
       return matchesQuery && matchesSub;
     });
-  }, [services, prestataires, subCategories, searchQuery, selectedSubCategory]);
+  }, [services, prestataires, subCategories, searchQuery, selectedSubCategory, serverResults]);
 
   const filteredPrestataires = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return prestataires;
+
+    // Résultats du moteur serveur, complétés par les propriétaires des services trouvés
+    if (q.length >= 2 && serverResults) {
+      const direct = serverResults.prestataires;
+      const directIds = new Set(direct.map(p => p.id));
+      const fromServices = new Set(filteredServices.map(s => s.prestataire_id));
+      const owners = prestataires.filter(p => fromServices.has(p.id) && !directIds.has(p.id));
+      return [...direct, ...owners];
+    }
+
     // Match by name OR by having at least one matching service
     const serviceMatchIds = new Set(filteredServices.map(s => s.prestataire_id));
     return prestataires.filter(p =>
       (p.nom_commercial || '').toLowerCase().includes(q) ||
       serviceMatchIds.has(p.id)
     );
-  }, [prestataires, filteredServices, searchQuery]);
+  }, [prestataires, filteredServices, searchQuery, serverResults]);
 
   const getSubCategoriesByCategory = (categoryId: number) =>
     subCategories.filter(sc => Number(sc.categorie_id) === Number(categoryId));
@@ -289,13 +351,15 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
   };
 
   const sortedPrestataires = useMemo(() => {
+    // "Près de moi" actif : résultats $geoNear du serveur (déjà triés par distance exacte)
+    if (nearMe && nearbyPrestataires) return nearbyPrestataires;
     if (!userLocation) return filteredPrestataires;
     const getDist = (p: ApiPrestataire) =>
       typeof p.latitude === 'number' && typeof p.longitude === 'number'
         ? distanceKm(userLocation, [p.latitude as number, p.longitude as number])
         : Number.POSITIVE_INFINITY;
     return [...filteredPrestataires].sort((a, b) => getDist(a) - getDist(b));
-  }, [filteredPrestataires, userLocation, distanceKm]);
+  }, [filteredPrestataires, userLocation, distanceKm, nearMe, nearbyPrestataires]);
 
   if (loadingData) return <HomeSkeleton />;
 
@@ -312,22 +376,91 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
       )}
 
       <div className="p-4 lg:p-6 space-y-5 max-w-lg lg:max-w-5xl mx-auto">
+        {/* Hero */}
+        <div className="pt-1 pb-1">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            {user?.prenom ? `Bonjour ${user.prenom} 👋` : 'Bienvenue sur PrestaCI 👋'}
+          </p>
+          <h1 className="mt-1 text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
+            Trouvez le bon <span className="text-gradient">prestataire</span>,<br className="lg:hidden" /> près de chez vous.
+          </h1>
+        </div>
+
         {/* Search */}
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Rechercher un service ou prestataire..."
+          placeholder="Coiffure, plomberie, traiteur…"
           debounceMs={300}
+          voice
+          onFetchSuggestions={async (q) => {
+            const geo = userLocation ? { lat: userLocation[0], lng: userLocation[1] } : undefined;
+            const res = await api.search(q, geo);
+            const dist = (d?: number) => (typeof d === 'number' ? ` · à ${d < 1 ? `${Math.round(d * 1000)} m` : `${d} km`}` : '');
+            return [
+              ...res.services.slice(0, 4).map(s => ({
+                id: `s-${s.id}`,
+                label: s.nom,
+                sublabel: `${(s.prix || 0).toLocaleString()} ${s.devise || 'FCFA'}${dist((s as any).distance_km)}`,
+                emoji: '🛠️',
+                onSelect: () => onSelectService(s.id),
+              })),
+              ...res.prestataires.slice(0, 3).map(p => ({
+                id: `p-${p.id}`,
+                label: p.nom_commercial,
+                sublabel: `${p.ville || ''}${dist((p as any).distance_km)}`.replace(/^ · /, '') || undefined,
+                emoji: '🏪',
+                onSelect: () => onSelectProvider(p.id),
+              })),
+            ];
+          }}
         />
 
-        {/* Location indicator */}
-        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3.5 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700/60">
-          <MapPin className="w-4 h-4 text-blue-500" />
-          <span className="text-sm font-medium">Abidjan, Côte d'Ivoire</span>
+        {/* Location indicator + filtre Près de moi */}
+        <div className="flex items-center gap-2 flex-wrap text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-800/70 backdrop-blur px-3.5 py-2.5 rounded-2xl border border-gray-100 dark:border-gray-700/60 shadow-soft">
+          <span className="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-4 h-4 text-blue-500" />
+          </span>
+          <span className="text-sm font-medium truncate">
+            {locationLabel || "Abidjan, Côte d'Ivoire"}
+          </span>
           {userLocation && (
             <Badge variant="success" size="sm">GPS actif</Badge>
           )}
+
+          {userLocation && (
+            <div className="ml-auto flex items-center gap-1.5">
+              <button
+                onClick={() => setNearMe(v => !v)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  nearMe
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-brand'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                📍 Près de moi
+              </button>
+              {nearMe && (
+                <select
+                  value={nearRadius}
+                  onChange={e => setNearRadius(Number(e.target.value))}
+                  className="px-2 py-1.5 text-xs font-semibold rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-0 focus:outline-none cursor-pointer"
+                >
+                  {[2, 5, 10, 25, 50].map(km => <option key={km} value={km}>{km} km</option>)}
+                </select>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Résumé Près de moi */}
+        {nearMe && nearbyPrestataires && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 px-1 -mt-2">
+            {nearbyPrestataires.length > 0
+              ? `${nearbyPrestataires.length} prestataire${nearbyPrestataires.length > 1 ? 's' : ''} dans un rayon de ${nearRadius} km, du plus proche au plus lointain.`
+              : `Aucun prestataire dans un rayon de ${nearRadius} km — élargissez le rayon.`}
+          </p>
+        )}
 
         {/* Map section */}
         <AnimatePresence>

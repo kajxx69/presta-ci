@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
 import { useAppStore } from './store/appStore';
@@ -27,6 +27,9 @@ const ProfileTab = lazy(() => import('./components/client/ProfileTab'));
 const PrestataireDetailPage = lazy(() => import('./pages/PrestataireDetailPage'));
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 
+// ─── Lazy: Messagerie (client & prestataire) ───
+const MessagesTab = lazy(() => import('./components/common/MessagesTab'));
+
 // ─── Lazy: Prestataire ───
 const DashboardTab = lazy(() => import('./components/prestataire/DashboardTab'));
 const ServicesTab = lazy(() => import('./components/prestataire/ServicesTab'));
@@ -41,7 +44,7 @@ const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
 // ─── Loading fallback ───
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-app">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
           <span className="text-white text-lg font-bold">P</span>
@@ -58,7 +61,7 @@ function LoadingFallback() {
 
 function SplashScreen() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-app">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -88,6 +91,7 @@ function ClientTabRenderer({ currentTab, homeTabProps }: {
     case 'home': return <HomeTab {...homeTabProps} />;
     case 'reservations': return <ReservationsTab />;
     case 'publications': return <PublicationsTab />;
+    case 'messages': return <MessagesTab />;
     case 'favorites': return <FavoritesTab />;
     case 'profile': return <ProfileTab />;
     default: return <HomeTab {...homeTabProps} />;
@@ -102,16 +106,36 @@ function PrestataireTabRenderer({ currentTab, setCurrentTab }: {
     case 'home': return <DashboardTab onNavigateToTab={setCurrentTab} />;
     case 'reservations': return <ReservationsTabP />;
     case 'services': return <ServicesTab onNavigateToTab={setCurrentTab} />;
+    case 'messages': return <MessagesTab />;
     case 'plans': return <PlansTab />;
     case 'profile': return <ProfileTabP />;
     default: return <DashboardTab onNavigateToTab={setCurrentTab} />;
   }
 }
 
-function App() {
+// Onglets valides par rôle (protège contre les URLs /app/nimportequoi)
+const VALID_TABS = new Set(['home', 'reservations', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
+
+/** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
+function AppShell() {
   const { isAuthenticated, role } = useAuthStore();
   const { currentTab, setCurrentTab } = useAppStore();
+  const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
+
+  // URL → store (navigation navigateur : retour/avant, lien partagé)
+  useEffect(() => {
+    if (tab && VALID_TABS.has(tab) && tab !== currentTab) {
+      setCurrentTab(tab);
+    }
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // store → URL (les composants appellent setCurrentTab)
+  useEffect(() => {
+    if (currentTab && tab !== currentTab) {
+      navigate(`/app/${currentTab}`, { replace: !tab });
+    }
+  }, [currentTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectService = useCallback((serviceId: number) => {
     navigate(`/services/${serviceId}`);
@@ -125,6 +149,47 @@ function App() {
     onSelectService: handleSelectService,
     onSelectProvider: handleSelectProvider,
   };
+
+  if (isAuthenticated && role?.nom === 'admin') {
+    return (
+      <div className={useAppStore.getState().isDarkMode ? 'dark' : ''}>
+        <AdminPanel />
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  const renderCurrentTab = () => {
+    if (!isAuthenticated || !role || role.nom === 'client') {
+      // Les visiteurs non connectés naviguent comme des clients
+      return <ClientTabRenderer currentTab={currentTab} homeTabProps={homeTabProps} />;
+    }
+    if (role.nom === 'prestataire') {
+      return <PrestataireTabRenderer currentTab={currentTab} setCurrentTab={setCurrentTab} />;
+    }
+    return null;
+  };
+
+  return (
+    <Layout>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentTab}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+        >
+          {renderCurrentTab()}
+        </motion.div>
+      </AnimatePresence>
+      <BottomNavigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
+    </Layout>
+  );
+}
+
+function App() {
+  const { isAuthenticated, role } = useAuthStore();
 
   const [authReady, setAuthReady] = useState(false);
   useEffect(() => {
@@ -169,29 +234,6 @@ function App() {
     }
   }, []);
 
-  // No longer force guests to home — let them explore all tabs
-
-  const renderCurrentTab = () => {
-    if (!isAuthenticated || !role) {
-      // Guest users can browse all client tabs
-      return <ClientTabRenderer currentTab={currentTab} homeTabProps={homeTabProps} />;
-    }
-
-    if (role.nom === 'client') {
-      return <ClientTabRenderer currentTab={currentTab} homeTabProps={homeTabProps} />;
-    }
-
-    if (role.nom === 'prestataire') {
-      return <PrestataireTabRenderer currentTab={currentTab} setCurrentTab={setCurrentTab} />;
-    }
-
-    if (role.nom === 'admin') {
-      return <AdminPanel />;
-    }
-
-    return null;
-  };
-
   if (!authReady) {
     return <SplashScreen />;
   }
@@ -207,7 +249,7 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+              <div className="min-h-screen flex items-center justify-center bg-app bg-aurora px-4 py-8">
                 <LoginForm />
               </div>
             )
@@ -220,39 +262,14 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-6">
+              <div className="min-h-screen flex items-center justify-center bg-app bg-aurora px-4 py-6">
                 <RegisterForm />
               </div>
             )
           }
         />
 
-        <Route
-          path="/app"
-          element={
-            isAuthenticated && role?.nom === 'admin' ? (
-              <div className={useAppStore.getState().isDarkMode ? 'dark' : ''}>
-                <AdminPanel />
-                <ToastContainer />
-              </div>
-            ) : (
-              <Layout>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentTab}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                  >
-                    {renderCurrentTab()}
-                  </motion.div>
-                </AnimatePresence>
-                <BottomNavigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
-              </Layout>
-            )
-          }
-        />
+        <Route path="/app/:tab?" element={<AppShell />} />
 
         <Route
           path="/pro"

@@ -1,6 +1,7 @@
 import express from 'express';
 import { Avis, Reservation, StatutReservation, Service, Prestataire, User } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { materializePhotos } from '../utils/uploads.js';
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ router.post('/', requireAuth, async (req, res) => {
       service_id: reservation.service_id,
       note,
       commentaire: commentaire || null,
-      photos: photos || null
+      photos: photos ? await materializePhotos(photos) : null
     });
 
     await updateAverageRatings(reservation.prestataire_id, reservation.service_id);

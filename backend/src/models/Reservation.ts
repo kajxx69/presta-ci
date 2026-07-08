@@ -43,6 +43,9 @@ const reservationSchema = new mongoose.Schema({
   publication_id: { type: Number, default: null, ref: 'Publication' },
   a_domicile: { type: Boolean, default: false },
   adresse_rdv: String,
+  adresse_rdv_lat: { type: Number, default: null },
+  adresse_rdv_lng: { type: Number, default: null },
+  rappel_envoye: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 }, {

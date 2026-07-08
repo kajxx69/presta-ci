@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
+import { serverError } from '../utils/http.js';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get('/', async (req: Request, res: Response) => {
     res.json(notifications);
   } catch (e: any) {
     console.error('Erreur récupération notifications:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -33,7 +34,7 @@ router.get('/count', async (req: Request, res: Response) => {
     res.json({ count });
   } catch (e: any) {
     console.error('Erreur comptage notifications:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -56,7 +57,7 @@ router.put('/:id/read', async (req: Request, res: Response) => {
     }
   } catch (e: any) {
     console.error('Erreur marquage notification lue:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -70,7 +71,7 @@ router.put('/read-all', async (req: Request, res: Response) => {
     res.json({ ok: true, count, message: `${count} notification(s) marquée(s) comme lue(s)` });
   } catch (e: any) {
     console.error('Erreur marquage toutes notifications lues:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -93,7 +94,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
   } catch (e: any) {
     console.error('Erreur suppression notification:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -117,7 +118,7 @@ router.post('/test', async (req: Request, res: Response) => {
     }
   } catch (e: any) {
     console.error('Erreur création notification test:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -135,7 +136,7 @@ router.post('/cleanup', async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.error('Erreur nettoyage notifications:', e);
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

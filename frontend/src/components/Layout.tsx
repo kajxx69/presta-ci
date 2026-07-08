@@ -15,7 +15,7 @@ export default function Layout({ children, showBottomNav = true }: LayoutProps) 
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+      <div className="min-h-screen bg-app text-gray-900 dark:text-white transition-colors duration-300">
         <div className="flex">
           {/* Sidebar - desktop only */}
           {showBottomNav && (

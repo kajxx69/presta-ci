@@ -8,11 +8,22 @@ import { api } from '../../lib/api';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 
-const availableTimes = Array.from({ length: 18 }, (_, i) => {
+// Grille par défaut, utilisée seulement si le prestataire n'a pas défini d'horaires
+const fallbackTimes = Array.from({ length: 18 }, (_, i) => {
   const hour = 8 + Math.floor((i * 30) / 60);
   const minute = (i * 30) % 60;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 });
+
+// Format YYYY-MM-DD en heure locale (toISOString décale la date selon le fuseau)
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+interface Slot { heure_debut: string; heure_fin: string; disponible: boolean }
 
 export default function ReservationModal({ service, onClose, onReservationSuccess, publicationId }: any) {
   // Determine booking type from subcategory (passed via service.booking_type or fetched)
@@ -42,6 +53,28 @@ export default function ReservationModal({ service, onClose, onReservationSucces
   const [quantite, setQuantite] = useState<number>(service.quantite_min || 1);
   const [isDomicile, setIsDomicile] = useState(false);
   const [adresseRdv, setAdresseRdv] = useState('');
+  const [adresseCoords, setAdresseCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  const handleUseMyPosition = () => {
+    if (!('geolocation' in navigator)) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setAdresseCoords({ lat: latitude, lng: longitude });
+        try {
+          const res = await api.geo.reverse(latitude, longitude);
+          setAdresseRdv(res.label);
+        } catch {
+          setAdresseRdv(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        }
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -49,6 +82,33 @@ export default function ReservationModal({ service, onClose, onReservationSucces
   // — Appointment-specific —
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
+  const [recurrent, setRecurrent] = useState(false);
+  const [recurrenceSemaines, setRecurrenceSemaines] = useState(4);
+  const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [horairesDefinis, setHorairesDefinis] = useState(true);
+
+  // Charger les créneaux réels dès qu'une date est choisie (rendez-vous uniquement)
+  useEffect(() => {
+    if (bookingType !== 'appointment' || !selectedDate || !service?.id) return;
+    let cancelled = false;
+    setSlotsLoading(true);
+    setSlots(null);
+    api.getServiceSlots(Number(service.id), toLocalDateString(selectedDate))
+      .then(res => {
+        if (cancelled) return;
+        setSlots(res.slots);
+        setHorairesDefinis(res.horaires_definis);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // En cas d'erreur réseau, on retombe sur la grille par défaut
+        setSlots(null);
+        setHorairesDefinis(false);
+      })
+      .finally(() => { if (!cancelled) setSlotsLoading(false); });
+    return () => { cancelled = true; };
+  }, [bookingType, selectedDate, service?.id]);
 
   // — Order-specific —
   const [specifications, setSpecifications] = useState('');
@@ -62,9 +122,11 @@ export default function ReservationModal({ service, onClose, onReservationSucces
     try {
       const payload: any = {
         service_id: service.id,
-        date_reservation: selectedDate!.toISOString().split('T')[0],
+        date_reservation: toLocalDateString(selectedDate!),
         a_domicile: isDomicile,
         adresse_rdv: isDomicile ? adresseRdv : '',
+        adresse_rdv_lat: isDomicile && adresseCoords ? adresseCoords.lat : undefined,
+        adresse_rdv_lng: isDomicile && adresseCoords ? adresseCoords.lng : undefined,
         publication_id: publicationId || null,
         quantite,
       };
@@ -72,6 +134,7 @@ export default function ReservationModal({ service, onClose, onReservationSucces
       if (bookingType === 'appointment') {
         payload.heure_debut = selectedTime;
         payload.notes_client = notes;
+        if (recurrent) payload.recurrence_semaines = recurrenceSemaines;
       } else {
         payload.specifications = specifications;
         payload.notes_client = notes;
@@ -231,21 +294,57 @@ export default function ReservationModal({ service, onClose, onReservationSucces
                       <Clock className="w-4 h-4 text-blue-500" />
                       <span className="text-sm font-semibold">Choisissez une heure</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {availableTimes.map(time => (
-                        <button
-                          key={time}
-                          onClick={() => setSelectedTime(time)}
-                          className={`px-2 py-2 text-sm rounded-lg font-medium transition-all ${
-                            selectedTime === time
-                              ? 'bg-blue-600 text-white shadow-md scale-105'
-                              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                          }`}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
+
+                    {slotsLoading && (
+                      <div className="flex items-center justify-center py-6 text-sm text-gray-400">
+                        Chargement des disponibilités…
+                      </div>
+                    )}
+
+                    {!slotsLoading && slots && slots.length > 0 && (
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {slots.map(slot => (
+                          <button
+                            key={slot.heure_debut}
+                            onClick={() => slot.disponible && setSelectedTime(slot.heure_debut)}
+                            disabled={!slot.disponible}
+                            className={`px-2 py-2 text-sm rounded-lg font-medium transition-all ${
+                              selectedTime === slot.heure_debut
+                                ? 'bg-blue-600 text-white shadow-md scale-105'
+                                : slot.disponible
+                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                : 'bg-gray-50 dark:bg-gray-800/50 text-gray-300 dark:text-gray-600 line-through cursor-not-allowed'
+                            }`}
+                          >
+                            {slot.heure_debut}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {!slotsLoading && slots && slots.length === 0 && horairesDefinis && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+                        Le prestataire est fermé ce jour-là. Choisissez une autre date.
+                      </p>
+                    )}
+
+                    {!slotsLoading && (!slots || slots.length === 0) && !horairesDefinis && (
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {fallbackTimes.map(time => (
+                          <button
+                            key={time}
+                            onClick={() => setSelectedTime(time)}
+                            className={`px-2 py-2 text-sm rounded-lg font-medium transition-all ${
+                              selectedTime === time
+                                ? 'bg-blue-600 text-white shadow-md scale-105'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                            }`}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
@@ -328,17 +427,63 @@ export default function ReservationModal({ service, onClose, onReservationSucces
                     </label>
                     {isDomicile && (
                       <>
-                        <input
-                          type="text"
-                          value={adresseRdv}
-                          onChange={e => setAdresseRdv(e.target.value)}
-                          placeholder="Votre adresse complète"
-                          className="mt-2 w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            type="text"
+                            value={adresseRdv}
+                            onChange={e => { setAdresseRdv(e.target.value); setAdresseCoords(null); }}
+                            placeholder="Votre adresse complète"
+                            className="flex-1 px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleUseMyPosition}
+                            disabled={locating}
+                            title="Utiliser ma position GPS"
+                            className="px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 flex-shrink-0"
+                          >
+                            {locating ? '…' : '📍 GPS'}
+                          </button>
+                        </div>
+                        {adresseCoords && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            ✓ Position GPS précise enregistrée — le prestataire aura l'itinéraire exact.
+                          </p>
+                        )}
                         {adresseRdv.trim().length === 0 && (
                           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">L'adresse est requise.</p>
                         )}
                       </>
+                    )}
+                  </div>
+                )}
+
+                {/* Récurrence hebdomadaire — rendez-vous uniquement */}
+                {bookingType === 'appointment' && (
+                  <div className="bg-blue-50/60 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/40 rounded-xl p-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={recurrent}
+                        onChange={e => setRecurrent(e.target.checked)}
+                        className="h-4 w-4 rounded text-blue-600"
+                      />
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                        🔁 Répéter chaque semaine, même jour et même heure
+                      </span>
+                    </label>
+                    {recurrent && (
+                      <div className="mt-2.5 flex items-center gap-2 pl-7">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Pendant</span>
+                        <select
+                          value={recurrenceSemaines}
+                          onChange={e => setRecurrenceSemaines(Number(e.target.value))}
+                          className="px-2.5 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                        >
+                          {[2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} semaines</option>)}
+                        </select>
+                        <span className="text-xs text-gray-400">(les créneaux déjà pris seront sautés)</span>
+                      </div>
                     )}
                   </div>
                 )}

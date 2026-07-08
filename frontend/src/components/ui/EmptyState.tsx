@@ -13,8 +13,8 @@ interface EmptyStateProps {
 export function EmptyState({ icon: Icon = Inbox, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 ring-1 ring-blue-100 dark:ring-blue-800/40 flex items-center justify-center mb-4">
+        <Icon className="w-8 h-8 text-blue-400 dark:text-blue-500" />
       </div>
       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">
         {title}

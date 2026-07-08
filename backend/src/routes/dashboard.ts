@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Prestataire, Reservation, StatutReservation, Service, Avis, User } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -52,7 +53,84 @@ router.get('/stats', async (req: Request, res: Response) => {
       revenus_mois
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
+  }
+});
+
+// GET /api/dashboard/analytics — statistiques enrichies du prestataire
+router.get('/analytics', async (req: Request, res: Response) => {
+  try {
+    const prestataire = await Prestataire.findOne({ user_id: req.userId });
+    if (!prestataire) return res.status(403).json({ error: 'Profil prestataire requis' });
+    const prestataireId = prestataire._id as number;
+
+    const allStatuts = await StatutReservation.find();
+    const statutMap: Record<string, number> = {};
+    allStatuts.forEach(s => { statutMap[s.nom] = s._id as number; });
+
+    const reservations = await Reservation.find({ prestataire_id: prestataireId })
+      .select('statut_id date_reservation heure_debut prix_final prix_total created_at');
+
+    const isTerminee = (r: any) => r.statut_id === statutMap['terminee'];
+    const montant = (r: any) => r.prix_total ?? r.prix_final ?? 0;
+
+    // Revenus des 6 derniers mois (réservations terminées)
+    const now = new Date();
+    const revenus_par_mois: Array<{ mois: string; revenus: number; reservations: number }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const duMois = reservations.filter(r => isTerminee(r) && r.date_reservation >= start && r.date_reservation < end);
+      revenus_par_mois.push({
+        mois: start.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+        revenus: duMois.reduce((s, r) => s + montant(r), 0),
+        reservations: duMois.length,
+      });
+    }
+
+    // Taux d'acceptation : (tout sauf refusée) / demandes traitées
+    const traitees = reservations.filter(r => r.statut_id !== statutMap['en_attente']);
+    const refusees = traitees.filter(r => r.statut_id === statutMap['refusee']).length;
+    const taux_acceptation = traitees.length > 0
+      ? Math.round(((traitees.length - refusees) / traitees.length) * 100)
+      : null;
+
+    // Créneaux les plus demandés
+    const parHeure: Record<string, number> = {};
+    reservations.forEach(r => {
+      if (r.heure_debut) {
+        const h = `${r.heure_debut.split(':')[0]}h`;
+        parHeure[h] = (parHeure[h] || 0) + 1;
+      }
+    });
+    const creneaux_populaires = Object.entries(parHeure)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([heure, count]) => ({ heure, count }));
+
+    // Comparaison mois courant vs précédent
+    const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
+    const debutMoisPrec = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const moisCourant = reservations.filter(r => r.created_at >= debutMois);
+    const moisPrecedent = reservations.filter(r => r.created_at >= debutMoisPrec && r.created_at < debutMois);
+    const revCourant = reservations.filter(r => isTerminee(r) && r.date_reservation >= debutMois).reduce((s, r) => s + montant(r), 0);
+    const revPrecedent = reservations.filter(r => isTerminee(r) && r.date_reservation >= debutMoisPrec && r.date_reservation < debutMois).reduce((s, r) => s + montant(r), 0);
+
+    res.json({
+      vues_profil: (prestataire as any).vues || 0,
+      taux_acceptation,
+      revenus_par_mois,
+      creneaux_populaires,
+      comparaison: {
+        reservations_mois_courant: moisCourant.length,
+        reservations_mois_precedent: moisPrecedent.length,
+        revenus_mois_courant: revCourant,
+        revenus_mois_precedent: revPrecedent,
+        evolution_revenus_pct: revPrecedent > 0 ? Math.round(((revCourant - revPrecedent) / revPrecedent) * 100) : null,
+      },
+    });
+  } catch (e: any) {
+    serverError(res, e);
   }
 });
 
@@ -91,7 +169,7 @@ router.get('/recent-reservations', async (req: Request, res: Response) => {
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

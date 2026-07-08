@@ -2,6 +2,10 @@ import express, { Request, Response } from 'express';
 import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis, User } from '../models/index.js';
 import { SubCategory } from '../models/Category.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
+import { hasSlotConflict, getHorairesForDate } from '../utils/availability.js';
+import { EmailNotifications } from '../services/email-notifications.js';
+import { InAppNotificationService } from '../services/in-app-notifications.js';
 
 const router = express.Router();
 
@@ -28,18 +32,34 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const reservations = await Reservation.find({ client_id: userId, ...statutFilter })
       .sort({ date_reservation: -1, heure_debut: -1 });
 
-    // Enrich with related data
-    const results = await Promise.all(reservations.map(async (r) => {
-      const statut = await StatutReservation.findById(r.statut_id);
-      const service = await Service.findById(r.service_id);
-      const prestataire = await Prestataire.findById(r.prestataire_id);
+    // Enrichissement par requêtes groupées (évite N+1)
+    const statutIds = [...new Set(reservations.map(r => r.statut_id))];
+    const serviceIds = [...new Set(reservations.map(r => r.service_id))];
+    const prestataireIds = [...new Set(reservations.map(r => r.prestataire_id))];
+    const reservationIds = reservations.map(r => r._id);
+
+    const [statuts, services, prestataires, avisList] = await Promise.all([
+      StatutReservation.find({ _id: { $in: statutIds } }),
+      Service.find({ _id: { $in: serviceIds } }),
+      Prestataire.find({ _id: { $in: prestataireIds } }),
+      Avis.find({ reservation_id: { $in: reservationIds } }).select('reservation_id'),
+    ]);
+    const statutById = new Map(statuts.map(s => [s._id as number, s]));
+    const serviceById = new Map(services.map(s => [s._id as number, s]));
+    const prestataireById = new Map(prestataires.map(p => [p._id as number, p]));
+    const avisByReservation = new Set(avisList.map(a => a.reservation_id));
+
+    const results = reservations.map((r) => {
+      const statut = statutById.get(r.statut_id) || null;
+      const service = serviceById.get(r.service_id) || null;
+      const prestataire = prestataireById.get(r.prestataire_id) || null;
 
       const rObj: any = r.toJSON();
       // Format date_reservation as YYYY-MM-DD string
       if (rObj.date_reservation instanceof Date) {
         rObj.date_reservation = rObj.date_reservation.toISOString().split('T')[0];
       }
-      const a_laisse_avis = !!(await Avis.exists({ reservation_id: r._id }));
+      const a_laisse_avis = avisByReservation.has(r._id as number);
       return {
         ...rObj,
         statut_nom: statut?.nom || null,
@@ -57,11 +77,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         a_laisse_avis,
         peut_confirmer_fin: statut?.nom === 'en_attente_confirmation'
       };
-    }));
+    });
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -93,7 +113,7 @@ router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
 
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -125,7 +145,7 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 
     res.json({ ok: true, message: 'Prestation confirmée. Vous pouvez maintenant laisser un avis.' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -133,7 +153,7 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { service_id, date_reservation, heure_debut, notes_client, specifications, a_domicile, adresse_rdv, publication_id, quantite } = req.body;
+    const { service_id, date_reservation, heure_debut, notes_client, specifications, a_domicile, adresse_rdv, adresse_rdv_lat, adresse_rdv_lng, publication_id, quantite, recurrence_semaines } = req.body;
 
     if (!service_id || !date_reservation) {
       return res.status(400).json({ error: 'service_id et date_reservation sont requis' });
@@ -176,8 +196,33 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     let heure_fin: string | undefined;
     if (bookingType === 'appointment' && heure_debut) {
       const startTime = new Date(`${date_reservation}T${heure_debut}`);
+      if (isNaN(startTime.getTime())) {
+        return res.status(400).json({ error: 'Date ou heure invalide' });
+      }
+      if (startTime.getTime() < Date.now()) {
+        return res.status(400).json({ error: 'Impossible de réserver un créneau dans le passé' });
+      }
       const endTime = new Date(startTime.getTime() + service.duree_minutes * 60000);
       heure_fin = endTime.toTimeString().slice(0, 5);
+
+      // Vérifier les horaires d'ouverture du prestataire (si définis)
+      const prestataireDoc = await Prestataire.findById(service.prestataire_id).select('horaires_ouverture');
+      const horairesJour = getHorairesForDate(prestataireDoc?.horaires_ouverture as any, startTime);
+      const horairesDefinis = prestataireDoc?.horaires_ouverture && Object.keys(prestataireDoc.horaires_ouverture).length > 0;
+      if (horairesDefinis) {
+        if (!horairesJour) {
+          return res.status(400).json({ error: 'Le prestataire est fermé à cette date' });
+        }
+        if (heure_debut < horairesJour.debut || heure_fin > horairesJour.fin) {
+          return res.status(400).json({ error: `Ce créneau est en dehors des horaires d'ouverture (${horairesJour.debut} - ${horairesJour.fin})` });
+        }
+      }
+
+      // Anti double-booking : refuser si le créneau chevauche une réservation existante
+      const conflict = await hasSlotConflict(service.prestataire_id, startTime, heure_debut, heure_fin);
+      if (conflict) {
+        return res.status(409).json({ error: 'Ce créneau vient d\'être réservé. Veuillez en choisir un autre.' });
+      }
     }
 
     const reservation = await Reservation.create({
@@ -196,6 +241,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       specifications: specifications || undefined,
       a_domicile: !!a_domicile,
       adresse_rdv: a_domicile ? adresse_rdv : undefined,
+      adresse_rdv_lat: a_domicile && Number.isFinite(Number(adresse_rdv_lat)) ? Number(adresse_rdv_lat) : null,
+      adresse_rdv_lng: a_domicile && Number.isFinite(Number(adresse_rdv_lng)) ? Number(adresse_rdv_lng) : null,
       publication_id: publication_id || null
     });
 
@@ -206,9 +253,74 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       changed_by_user_id: userId
     });
 
-    res.status(201).json({ id: reservation._id });
+    // Réservation récurrente : répéter le même créneau les semaines suivantes
+    const occurrences: number[] = [reservation._id as number];
+    const semaines_ignorees: string[] = [];
+    const nbSemaines = Math.min(8, Math.max(0, Number(recurrence_semaines) || 0));
+    if (bookingType === 'appointment' && heure_debut && heure_fin && nbSemaines >= 2) {
+      for (let semaine = 1; semaine < nbSemaines; semaine++) {
+        const dateOcc = new Date(date_reservation);
+        dateOcc.setDate(dateOcc.getDate() + semaine * 7);
+        const dateOccStr = dateOcc.toISOString().split('T')[0];
+        const startOcc = new Date(`${dateOccStr}T${heure_debut}`);
+
+        // Chaque occurrence est vérifiée individuellement (conflits) ; on saute celles qui coincent
+        const conflictOcc = await hasSlotConflict(service.prestataire_id, startOcc, heure_debut, heure_fin);
+        if (conflictOcc) {
+          semaines_ignorees.push(dateOccStr);
+          continue;
+        }
+
+        const occ = await Reservation.create({
+          client_id: userId,
+          prestataire_id: service.prestataire_id,
+          service_id,
+          booking_type: bookingType,
+          statut_id: enAttenteStatut._id as number,
+          date_reservation: dateOcc,
+          heure_debut,
+          heure_fin,
+          prix_final: service.prix,
+          prix_total: service.prix * qty,
+          quantite: qty,
+          notes_client: notes_client ? `${notes_client} (récurrence hebdo)` : 'Réservation récurrente hebdomadaire',
+          a_domicile: !!a_domicile,
+          adresse_rdv: a_domicile ? adresse_rdv : undefined,
+        });
+        await HistoriqueReservation.create({
+          reservation_id: occ._id as number,
+          nouveau_statut_id: enAttenteStatut._id as number,
+          commentaire: `Occurrence récurrente (semaine ${semaine + 1}/${nbSemaines})`,
+          changed_by_user_id: userId,
+        });
+        occurrences.push(occ._id as number);
+      }
+    }
+
+    // Notifier le prestataire (in-app + email, best-effort)
+    try {
+      const prestataireOwner = await Prestataire.findById(service.prestataire_id).select('user_id');
+      if (prestataireOwner?.user_id) {
+        const client = await User.findById(userId).select('nom prenom');
+        const clientNom = client ? `${client.prenom} ${client.nom}` : 'Un client';
+        const dateFr = new Date(date_reservation).toLocaleDateString('fr-FR');
+        await InAppNotificationService.createCustom(
+          prestataireOwner.user_id,
+          bookingType === 'order' ? '🛒 Nouvelle commande' : '📅 Nouvelle réservation',
+          `${clientNom} — ${service.nom} le ${dateFr}${heure_debut ? ` à ${heure_debut}` : ''}`,
+          'info'
+        );
+        await EmailNotifications.nouvelleReservation(prestataireOwner.user_id, clientNom, service.nom, dateFr, heure_debut);
+      }
+    } catch { /* ne pas bloquer la réservation pour une notif */ }
+
+    res.status(201).json({
+      id: reservation._id,
+      occurrences: occurrences.length > 1 ? occurrences : undefined,
+      semaines_ignorees: semaines_ignorees.length > 0 ? semaines_ignorees : undefined,
+    });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

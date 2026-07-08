@@ -45,22 +45,25 @@ export default function DashboardTab({ onNavigateToTab }: DashboardTabProps) {
     revenus_mois: 0,
   });
   const [recentReservations, setRecentReservations] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        
+
         // Récupérer les vraies statistiques depuis l'API
-        const [statsData, recentData] = await Promise.all([
+        const [statsData, recentData, analyticsData] = await Promise.all([
           api.dashboard.getStats(),
-          api.dashboard.getRecentReservations(3)
+          api.dashboard.getRecentReservations(3),
+          api.dashboard.getAnalytics().catch(() => null),
         ]);
-        
+
         if (mounted) {
           setStats(statsData);
           setRecentReservations(recentData);
+          setAnalytics(analyticsData);
           setLoading(false);
         }
       } catch (e: any) {
@@ -243,6 +246,84 @@ export default function DashboardTab({ onNavigateToTab }: DashboardTabProps) {
       </div>
 
       <div className="px-4 space-y-6 max-w-6xl mx-auto">
+
+      {/* Analyse d'activité */}
+      {analytics && (
+        <section className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/60 shadow-soft p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-500" />
+              Analyse d'activité
+            </h2>
+            {analytics.comparaison?.evolution_revenus_pct !== null && analytics.comparaison?.evolution_revenus_pct !== undefined && (
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                analytics.comparaison.evolution_revenus_pct >= 0
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+              }`}>
+                {analytics.comparaison.evolution_revenus_pct >= 0 ? '▲' : '▼'} {Math.abs(analytics.comparaison.evolution_revenus_pct)}% vs mois dernier
+              </span>
+            )}
+          </div>
+
+          {/* Indicateurs clés */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-900/40">
+              <p className="text-xl font-extrabold text-gray-900 dark:text-white">{analytics.vues_profil}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Vues du profil</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-900/40">
+              <p className="text-xl font-extrabold text-gray-900 dark:text-white">
+                {analytics.taux_acceptation !== null ? `${analytics.taux_acceptation}%` : '—'}
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Taux d'acceptation</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-gray-900/40">
+              <p className="text-xl font-extrabold text-gray-900 dark:text-white">{analytics.comparaison?.reservations_mois_courant ?? 0}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Résa ce mois</p>
+            </div>
+          </div>
+
+          {/* Revenus 6 derniers mois (mini bar chart) */}
+          {Array.isArray(analytics.revenus_par_mois) && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Revenus — 6 derniers mois</p>
+              <div className="flex items-end gap-2 h-24">
+                {(() => {
+                  const max = Math.max(1, ...analytics.revenus_par_mois.map((m: any) => m.revenus));
+                  return analytics.revenus_par_mois.map((m: any, i: number) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[9px] text-gray-400 font-medium">
+                        {m.revenus > 0 ? `${Math.round(m.revenus / 1000)}k` : ''}
+                      </span>
+                      <div
+                        className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-purple-500 min-h-[3px] transition-all"
+                        style={{ height: `${Math.max(4, (m.revenus / max) * 100)}%` }}
+                        title={`${m.revenus.toLocaleString()} XOF`}
+                      />
+                      <span className="text-[10px] text-gray-400">{m.mois}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Créneaux les plus demandés */}
+          {analytics.creneaux_populaires?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Créneaux les plus demandés</p>
+              <div className="flex flex-wrap gap-2">
+                {analytics.creneaux_populaires.map((c: any) => (
+                  <span key={c.heure} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                    {c.heure} · {c.count} demande{c.count > 1 ? 's' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

@@ -1,8 +1,10 @@
-import { Home, Calendar, Camera, Heart, User, Package, CreditCard, LayoutDashboard } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Home, Calendar, Camera, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
+import { api } from '../lib/api';
 
 interface BottomNavigationProps {
   currentTab: string;
@@ -11,8 +13,9 @@ interface BottomNavigationProps {
 
 const clientTabs = [
   { id: 'home', label: 'Accueil', icon: Home },
-  { id: 'reservations', label: 'Réservations', icon: Calendar },
-  { id: 'publications', label: 'Publications', icon: Camera },
+  { id: 'reservations', label: 'Résa', icon: Calendar },
+  { id: 'publications', label: 'Publis', icon: Camera },
+  { id: 'messages', label: 'Messages', icon: MessageCircle },
   { id: 'favorites', label: 'Favoris', icon: Heart },
   { id: 'profile', label: 'Profil', icon: User },
 ];
@@ -20,8 +23,9 @@ const clientTabs = [
 const prestataireTabs = [
   { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'services', label: 'Services', icon: Package },
-  { id: 'reservations', label: 'Réservations', icon: Calendar },
-  { id: 'plans', label: 'Abonnement', icon: CreditCard },
+  { id: 'reservations', label: 'Résa', icon: Calendar },
+  { id: 'messages', label: 'Messages', icon: MessageCircle },
+  { id: 'plans', label: 'Abo', icon: CreditCard },
   { id: 'profile', label: 'Profil', icon: User },
 ];
 
@@ -37,8 +41,25 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
   const { role, isAuthenticated } = useAuthStore();
   const { showToast } = useAppStore();
   const navigate = useNavigate();
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  // Badge messages non lus (poll 30s)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const load = () => api.conversations.getUnreadCount()
+      .then(res => setUnreadMessages(res.count))
+      .catch(() => {});
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const handleTabSelect = (tabId: string) => {
+    if (tabId === 'messages' && !isAuthenticated) {
+      showToast('Connectez-vous pour accéder à vos messages', 'info');
+      navigate('/login');
+      return;
+    }
     setCurrentTab(tabId);
   };
 
@@ -81,6 +102,13 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
 
                   {/* Active indicator dot */}
                   <AnimatedDot visible={isActive} />
+
+                  {/* Badge messages non lus */}
+                  {tab.id === 'messages' && unreadMessages > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
                 </div>
 
                 <span

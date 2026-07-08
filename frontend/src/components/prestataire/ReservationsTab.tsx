@@ -925,6 +925,16 @@ export default function ReservationsTab() {
                     <MapPin className="w-4 h-4 text-blue-500" />
                     <span>{selectedReservation.adresse_rdv}</span>
                   </p>
+                  {(selectedReservation as any).adresse_rdv_lat && (selectedReservation as any).adresse_rdv_lng && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${(selectedReservation as any).adresse_rdv_lat},${(selectedReservation as any).adresse_rdv_lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      🧭 Itinéraire GPS précis
+                    </a>
+                  )}
                 </div>
               )}
               <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-800">

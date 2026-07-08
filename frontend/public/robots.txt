@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /app/profile
+Disallow: /app/reservations
+Disallow: /app/messages
+Disallow: /app/favorites
+
+# Sitemap dynamique servi par le backend (adapter le domaine en production)
+# Sitemap: https://api.prestaci.com/api/sitemap.xml

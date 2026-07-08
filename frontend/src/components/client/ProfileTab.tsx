@@ -29,6 +29,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
 import PrivacyTab from './PrivacyTab';
+import ParrainageCard from '../common/ParrainageCard';
 import NotificationsSettingsTab from './NotificationsSettingsTab';
 import HelpSupportTab from './HelpSupportTab';
 import { Card } from '../ui/Card';
@@ -725,6 +726,9 @@ export default function ProfileTab() {
             ))}
           </div>
         </Card>
+
+        {/* Parrainage */}
+        <ParrainageCard />
 
         {/* Logout */}
         <motion.button

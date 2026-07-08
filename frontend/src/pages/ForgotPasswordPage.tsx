@@ -10,7 +10,7 @@ function ForgotStep() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resetToken, setResetToken] = useState('');
+  const [sent, setSent] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,10 +18,8 @@ function ForgotStep() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.auth.forgotPassword(email);
-      if (res.reset_token) {
-        setResetToken(res.reset_token);
-      }
+      await api.auth.forgotPassword(email);
+      setSent(true);
     } catch (e: any) {
       setError(e.message?.includes('HTTP') ? 'Erreur serveur. Réessayez.' : e.message);
     } finally {
@@ -29,7 +27,7 @@ function ForgotStep() {
     }
   };
 
-  if (resetToken) {
+  if (sent) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -40,18 +38,18 @@ function ForgotStep() {
           <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Lien généré !</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vérifiez vos emails</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe.
+            Si un compte existe avec l'adresse <span className="font-medium">{email}</span>, vous recevrez un lien de réinitialisation.
           </p>
         </div>
         <button
-          onClick={() => navigate(`/reset-password?token=${resetToken}`)}
+          onClick={() => navigate('/login')}
           className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
         >
-          Réinitialiser mon mot de passe →
+          Retour à la connexion
         </button>
-        <p className="text-xs text-gray-400">Ce lien expire dans 1 heure.</p>
+        <p className="text-xs text-gray-400">Le lien expire dans 1 heure. Pensez à vérifier vos spams.</p>
       </motion.div>
     );
   }
@@ -265,14 +263,14 @@ export default function ForgotPasswordPage() {
   const isReset = !!searchParams.get('token');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-app bg-aurora px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-soft-lg ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] p-8">
           {/* Logo + back */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">

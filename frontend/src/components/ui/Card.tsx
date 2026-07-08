@@ -21,8 +21,8 @@ export function Card({ children, className, onClick, hoverable = false, padding 
 
   const baseProps = {
     className: clsx(
-      'bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/60 shadow-sm',
-      hoverable && 'cursor-pointer hover:shadow-md transition-shadow duration-200',
+      'bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/60 shadow-soft',
+      hoverable && 'cursor-pointer card-lift',
       onClick && 'cursor-pointer',
       paddingStyles[padding],
       className,

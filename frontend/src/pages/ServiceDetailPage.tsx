@@ -23,6 +23,7 @@ import SignalementModal from '../components/common/SignalementModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { usePageMeta } from '../lib/seo';
 
 const StarRating = ({ rating, reviewCount }: { rating: number; reviewCount: number }) => (
   <div className="flex items-center space-x-1 text-sm">
@@ -56,6 +57,11 @@ export default function ServiceDetailPage() {
   const [loadingReviews, setLoadingReviews] = useState(false);
 
   const serviceId = Number(id);
+
+  usePageMeta(
+    service?.nom,
+    service ? (service.description || `${service.nom} — à partir de ${service.prix} ${service.devise || 'FCFA'}. Réservez sur PrestaCI.`) : null
+  );
 
   const loadServiceDetails = async (withRefresh = false) => {
     if (!serviceId) return;

@@ -1,8 +1,24 @@
-const CACHE_NAME = 'prestaci-v1.2.0';
+const CACHE_NAME = 'prestaci-v2.0.0';
+const DATA_CACHE_NAME = 'prestaci-data-v2.0.0';
+
 const urlsToCache = [
   '/',
   '/manifest.json'
 ];
+
+// Endpoints de données "consultables hors-ligne" (stale-while-revalidate)
+const CACHEABLE_API = [
+  '/api/categories',
+  '/api/sous_categories',
+  '/api/services',
+  '/api/prestataires',
+  '/api/plans_abonnement',
+];
+
+function isCacheableApi(url) {
+  const u = new URL(url);
+  return CACHEABLE_API.some((path) => u.pathname === path || u.pathname.startsWith(path + '/'));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -16,39 +32,65 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
       Promise.all(
-        names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
+        names
+          .filter((name) => name !== CACHE_NAME && name !== DATA_CACHE_NAME)
+          .map((name) => caches.delete(name))
       )
     ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET, API calls, and dev resources
-  if (event.request.method !== 'GET' ||
-      event.request.url.includes('/api/') ||
-      event.request.url.includes('hot-update') ||
-      event.request.url.includes('@vite')) {
+  const { request } = event;
+
+  // Skip non-GET et ressources de dev
+  if (request.method !== 'GET' ||
+      request.url.includes('hot-update') ||
+      request.url.includes('@vite')) {
     return;
   }
 
+  // Données publiques : stale-while-revalidate (réponse cache immédiate + refresh en fond)
+  if (isCacheableApi(request.url)) {
+    event.respondWith(
+      caches.open(DATA_CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(request);
+        const network = fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => null);
+        // Réseau d'abord si rien en cache, sinon cache immédiat
+        return cached || network.then((r) => r || new Response('[]', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'X-Offline': '1' },
+        }));
+      })
+    );
+    return;
+  }
+
+  // Autres appels API (authentifiés, mutations…) : réseau uniquement
+  if (request.url.includes('/api/')) return;
+
+  // App shell et assets statiques
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // Cache successful responses for static assets
-        if (response.ok && event.request.url.match(/\.(js|css|png|jpg|svg|woff2?)$/)) {
+        if (response.ok && request.url.match(/\.(js|css|png|jpg|jpeg|webp|svg|woff2?)$/)) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
       })
       .catch(() => {
-        // Offline fallback: try cache, then return cached index for navigation
-        return caches.match(event.request).then((cached) => {
+        return caches.match(request).then((cached) => {
           if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/').then((index) => index || new Response('Offline', { status: 503 }));
+          if (request.mode === 'navigate') {
+            return caches.match('/').then((index) => index || new Response('Hors ligne', { status: 503 }));
           }
-          return new Response('Offline', { status: 503 });
+          return new Response('Hors ligne', { status: 503 });
         });
       })
   );

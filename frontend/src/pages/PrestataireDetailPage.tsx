@@ -15,16 +15,19 @@ import {
   RefreshCw,
   Shield,
   Compass,
-  Flag
+  Flag,
+  Share2
 } from 'lucide-react';
 import ReservationModal from '../components/client/ReservationModal';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
 import AuthPromptModal from '../components/common/AuthPromptModal';
 import SignalementModal from '../components/common/SignalementModal';
+import ShareProfileModal from '../components/common/ShareProfileModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { usePageMeta } from '../lib/seo';
 
 const StarRating = ({ rating, reviewCount }: { rating: number; reviewCount: number }) => (
   <div className="flex items-center space-x-1">
@@ -73,8 +76,36 @@ export default function PrestataireDetailPage() {
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [authPromptMessage, setAuthPromptMessage] = useState('');
   const [signalementOpen, setSignalementOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
 
   const prestataireId = Number(id);
+
+  usePageMeta(
+    prestataire?.nom_commercial,
+    prestataire ? (prestataire.bio || `${prestataire.nom_commercial} — services à ${prestataire.ville || 'Côte d\'Ivoire'}. Réservez sur PrestaCI.`) : null
+  );
+
+  const handleContact = async () => {
+    if (!isAuthenticated) {
+      setAuthPromptMessage('Connectez-vous pour contacter ce prestataire.');
+      setAuthPromptOpen(true);
+      return;
+    }
+    setContactLoading(true);
+    try {
+      const { id: conversationId } = await api.conversations.start(prestataireId);
+      sessionStorage.setItem('prestaci-open-conversation', String(conversationId));
+      useAppStore.getState().setCurrentTab('messages');
+      navigate('/app');
+    } catch (e: any) {
+      showToast(e.message?.includes('vous-même')
+        ? 'Vous ne pouvez pas vous contacter vous-même'
+        : 'Impossible de démarrer la conversation', 'error');
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   const loadDetails = async (withRefresh = false) => {
     if (!prestataireId) return;
@@ -251,6 +282,13 @@ export default function PrestataireDetailPage() {
 
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <button
+              onClick={() => setShareOpen(true)}
+              className="bg-white/90 dark:bg-gray-900/70 p-2 rounded-full text-gray-800 dark:text-white shadow"
+              title="Partager"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => {
                 if (!isAuthenticated) {
                   setAuthPromptMessage('Connectez-vous pour signaler un problème.');
@@ -305,6 +343,20 @@ export default function PrestataireDetailPage() {
               )}
             </div>
 
+            {/* Badges d'activité calculés automatiquement */}
+            {Array.isArray(prestataire.badges) && prestataire.badges.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {prestataire.badges.map((b: any) => (
+                  <span
+                    key={b.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800/40"
+                  >
+                    <span>{b.emoji}</span> {b.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {prestataire.bio && (
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                 {prestataire.bio}
@@ -315,6 +367,15 @@ export default function PrestataireDetailPage() {
               <InfoBadge icon={Compass} label="Adresse" value={prestataire.adresse || 'Non renseignée'} />
               <InfoBadge icon={MapPin} label="Localisation" value={prestataire.ville || 'Côte d\'Ivoire'} />
             </div>
+
+            <Button
+              fullWidth
+              icon={MessageCircle}
+              loading={contactLoading}
+              onClick={handleContact}
+            >
+              Contacter le prestataire
+            </Button>
           </div>
         </div>
 
@@ -476,6 +537,13 @@ export default function PrestataireDetailPage() {
         typeCible="prestataire"
         cibleId={prestataireId}
         cibleNom={prestataire?.nom_commercial}
+      />
+
+      <ShareProfileModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        nom={prestataire?.nom_commercial || 'Prestataire'}
+        url={`${window.location.origin}/prestataires/${prestataireId}`}
       />
     </Layout>
   );

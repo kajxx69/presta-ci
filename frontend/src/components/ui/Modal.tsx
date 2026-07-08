@@ -48,7 +48,7 @@ export function Modal({ open, onClose, title, children, size = 'md', showClose =
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-gray-950/60 backdrop-blur-[6px]"
             onClick={onClose}
           />
           <motion.div
@@ -57,8 +57,8 @@ export function Modal({ open, onClose, title, children, size = 'md', showClose =
             exit={{ opacity: 0, y: 40, scale: 0.97 }}
             transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             className={clsx(
-              'relative w-full bg-white dark:bg-gray-900 shadow-2xl z-10',
-              'rounded-t-2xl sm:rounded-2xl',
+              'relative w-full bg-white dark:bg-gray-900 shadow-soft-lg ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] z-10',
+              'rounded-t-3xl sm:rounded-3xl',
               'max-h-[90vh] overflow-y-auto',
               sizeStyles[size],
               className,

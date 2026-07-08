@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { Plan, Prestataire } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/plans', async (_req: Request, res: Response) => {
     const plans = await Plan.find({ is_active: true }).sort({ _id: 1 });
     res.json(plans);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -35,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({ subscription: sub });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -60,7 +61,7 @@ router.post('/start', async (req: Request, res: Response) => {
 
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

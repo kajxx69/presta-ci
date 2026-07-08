@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Configuration, User, Service, Reservation, Notification } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
 
 const router = Router();
 const BACKUP_DIR = path.resolve(process.cwd(), 'backups');
@@ -22,7 +23,7 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
     }
     next();
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 }
 
@@ -46,7 +47,7 @@ router.get('/settings', requireAdmin, async (_req: Request, res: Response) => {
     });
     res.json(settings);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -60,7 +61,7 @@ router.put('/settings/:key', requireAdmin, async (req: Request, res: Response) =
     await upsertSetting(key, valueString, description || null);
     res.json({ ok: true, message: 'Paramètre mis à jour' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -71,7 +72,7 @@ router.delete('/settings/:key', requireAdmin, async (req: Request, res: Response
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Paramètre introuvable' });
     res.json({ ok: true, message: 'Paramètre supprimé' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -94,7 +95,7 @@ router.post('/settings/reset', requireAdmin, async (_req: Request, res: Response
     }
     res.json({ ok: true, message: 'Paramètres réinitialisés', count: defaultSettings.length });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -124,7 +125,7 @@ router.get('/maintenance/status', requireAdmin, async (_req: Request, res: Respo
     }
     res.json({ maintenanceMode, lastBackupAt, lastBackupFile, lastCacheClearAt });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -139,7 +140,7 @@ router.post('/maintenance/clear-cache', requireAdmin, async (_req: Request, res:
     await upsertSetting('maintenance_last_cache_clear', JSON.stringify({ cleared_at: clearedAt }), 'Dernier vidage du cache');
     res.json({ ok: true, clearedAt });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -169,7 +170,7 @@ router.post('/maintenance/backup', requireAdmin, async (_req: Request, res: Resp
     await upsertSetting('maintenance_last_backup', JSON.stringify({ file: fileName, created_at: timestamp }), 'Dernière sauvegarde');
     res.json({ ok: true, file: fileName, createdAt: timestamp });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -184,7 +185,7 @@ router.get('/maintenance/logs', requireAdmin, async (_req: Request, res: Respons
     } catch {}
     res.json({ ok: true, logs });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -196,7 +197,7 @@ router.post('/maintenance/maintenance-mode', requireAdmin, async (req: Request, 
     await upsertSetting('maintenance_mode', enabled ? 'true' : 'false', 'Mode maintenance global');
     res.json({ ok: true, maintenanceMode: enabled });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -232,7 +233,7 @@ router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
       generated_at: new Date().toISOString()
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

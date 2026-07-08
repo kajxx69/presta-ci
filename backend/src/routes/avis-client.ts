@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { AvisClient, Reservation, StatutReservation, User, Prestataire } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -53,7 +54,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.json({ ok: true, id: avis._id, message: 'Note client enregistrée' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -67,7 +68,7 @@ router.get('/reservation/:id', async (req: Request, res: Response) => {
     const avis = await AvisClient.findOne({ reservation_id, prestataire_id: prestataireId });
     res.json({ a_note: !!avis, note: avis?.note || null });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -87,7 +88,7 @@ router.get('/client/:id', async (req: Request, res: Response) => {
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

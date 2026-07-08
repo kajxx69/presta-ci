@@ -15,3 +15,4 @@ export { Configuration, SystemLog } from './Settings.js';
 export { Signalement } from './Signalement.js';
 export { AvisClient } from './AvisClient.js';
 export { TicketSupport, MessageTicket } from './TicketSupport.js';
+export { Conversation, Message } from './Conversation.js';

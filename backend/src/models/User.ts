@@ -18,6 +18,8 @@ const userSchema = new mongoose.Schema({
   email_verification_token: String,
   reset_password_token: String,
   reset_password_expires: Date,
+  code_parrainage: { type: String, unique: true, sparse: true },
+  parrain_id: { type: Number, default: null, ref: 'User' },
   last_login: Date,
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

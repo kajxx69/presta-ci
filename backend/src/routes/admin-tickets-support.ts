@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { TicketSupport, MessageTicket, User, Notification } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -37,7 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({ tickets: results, pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -53,7 +54,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
     ]);
     res.json({ total, ouvert, en_cours, resolu, ferme });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -81,7 +82,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       messages: enrichedMessages
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -121,7 +122,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -161,7 +162,7 @@ router.post('/:id/messages', async (req: Request, res: Response) => {
 
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

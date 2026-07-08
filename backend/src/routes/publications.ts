@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import { Publication, Like, CommentairePublication, User, Prestataire, Service, Notification, FavorisPublication } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
+import { serverError } from '../utils/http.js';
+import { materializePhotos } from '../utils/uploads.js';
 
 const router = express.Router();
 
@@ -52,7 +54,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -69,8 +71,8 @@ router.post('/', async (req: Request, res: Response) => {
       prestataire_id,
       service_id: service_id || null,
       description,
-      photos: photos || [],
-      videos: videos || []
+      photos: photos ? await materializePhotos(photos) : [],
+      videos: videos ? await materializePhotos(videos) : []
     });
 
     // Notifier le prestataire tagué
@@ -90,7 +92,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.json({ id: pub._id });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -115,7 +117,7 @@ router.post('/:id/like', async (req: Request, res: Response) => {
     }
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -135,7 +137,7 @@ router.delete('/:id/like', async (req: Request, res: Response) => {
     }
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -157,7 +159,7 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -184,7 +186,7 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
       photo_profil: user?.photo_profil || null
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

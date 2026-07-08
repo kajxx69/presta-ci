@@ -13,6 +13,24 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Titres légèrement resserrés — rendu plus éditorial */
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Sélection de texte aux couleurs de la marque */
+  ::selection {
+    background: rgba(99, 102, 241, 0.22);
+  }
+
+  /* Focus clavier visible et cohérent partout */
+  :focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   /* Hide scrollbar but allow scroll */
@@ -24,23 +42,42 @@
     display: none;
   }
 
-  /* Thin scrollbar for dark mode */
-  .dark ::-webkit-scrollbar {
-    width: 6px;
+  /* Scrollbars fines et discrètes (clair ET sombre) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-  .dark ::-webkit-scrollbar-track {
-    background: rgb(31, 41, 55);
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.25);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.45);
+    background-clip: content-box;
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: rgb(75, 85, 99);
-    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.25);
+    background-clip: content-box;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.45);
+    background-clip: content-box;
   }
 }
 
 @layer components {
   /* Glass card effect */
   .glass {
-    @apply bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
+    @apply bg-white/75 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-white/[0.06];
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .dark .glass {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   }
 
   /* Gradient text */
@@ -48,8 +85,68 @@
     @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
   }
 
+  /* Fond d'application : dégradé très subtil, plus chaleureux qu'un gris plat */
+  .bg-app {
+    background:
+      radial-gradient(80rem 40rem at 110% -10%, rgba(139, 92, 246, 0.06), transparent 50%),
+      radial-gradient(70rem 35rem at -20% 0%, rgba(99, 102, 241, 0.07), transparent 50%),
+      #f8f9fc;
+  }
+  .dark .bg-app {
+    background:
+      radial-gradient(80rem 40rem at 110% -10%, rgba(139, 92, 246, 0.08), transparent 50%),
+      radial-gradient(70rem 35rem at -20% 0%, rgba(99, 102, 241, 0.09), transparent 50%),
+      #0d1117;
+  }
+
+  /* Carte interactive : léger soulèvement au survol */
+  .card-lift {
+    @apply transition-all duration-200 ease-out;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    @apply shadow-soft-md border-blue-200/70 dark:border-blue-500/25;
+  }
+
+  /* Fond décoratif "aurora" pour les pages d'authentification */
+  .bg-aurora {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .bg-aurora::before,
+  .bg-aurora::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    border-radius: 9999px;
+    filter: blur(72px);
+    opacity: 0.55;
+  }
+  .bg-aurora::before {
+    width: 34rem;
+    height: 34rem;
+    top: -12rem;
+    right: -10rem;
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.35), transparent 65%);
+    animation: float 9s ease-in-out infinite;
+  }
+  .bg-aurora::after {
+    width: 30rem;
+    height: 30rem;
+    bottom: -10rem;
+    left: -8rem;
+    background: radial-gradient(circle at center, rgba(99, 102, 241, 0.35), transparent 65%);
+    animation: float 11s ease-in-out infinite reverse;
+  }
+
   /* Safe area padding for mobile */
   .safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-16px) scale(1.04); }
 }

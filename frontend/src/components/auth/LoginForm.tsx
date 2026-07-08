@@ -43,7 +43,7 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex rounded-3xl overflow-hidden shadow-2xl min-h-[560px]">
+    <div className="w-full max-w-5xl mx-auto flex rounded-3xl overflow-hidden shadow-soft-lg ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] min-h-[560px]">
       {/* Left panel — desktop only */}
       <div className="hidden lg:flex lg:w-5/12 relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-10 flex-col justify-between overflow-hidden">
         {/* Decorative circles */}

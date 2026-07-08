@@ -4,12 +4,12 @@ export interface ApiPrestataire { id: number; nom_commercial: string; ville?: st
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; duree_minutes: number; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
-const remoteDefault = 'https://quantitative-shortly-happens-transparency.trycloudflare.com';
 const isLocalHost =
   typeof window !== 'undefined' &&
   (/^localhost$/i.test(window.location.hostname) || window.location.hostname.startsWith('127.'));
 
-export const API_BASE = envApiBase || (isLocalHost ? 'http://localhost:4000' : remoteDefault);
+// En production, définir VITE_API_BASE ; sinon on suppose que l'API est servie sur la même origine (reverse proxy)
+export const API_BASE = envApiBase || (isLocalHost ? 'http://localhost:4000' : '');
 
 async function http<T>(url: string, init?: RequestInit): Promise<T> {
   // Récupérer le token JWT depuis localStorage
@@ -54,18 +54,51 @@ export const api = {
     const q = categorieId ? `?categorie_id=${categorieId}` : '';
     return http(`/api/sous_categories${q}`);
   },
-  getPrestataires: (params?: { ville?: string }): Promise<ApiPrestataire[]> => {
-    const q = params?.ville ? `?ville=${encodeURIComponent(params.ville)}` : '';
-    return http(`/api/prestataires${q}`);
+  getPrestataires: (params?: { ville?: string; q?: string; lat?: number; lng?: number; radius_km?: number; page?: number; limit?: number }): Promise<ApiPrestataire[]> => {
+    const query = new URLSearchParams();
+    if (params?.ville) query.set('ville', params.ville);
+    if (params?.q) query.set('q', params.q);
+    if (params?.lat !== undefined) query.set('lat', String(params.lat));
+    if (params?.lng !== undefined) query.set('lng', String(params.lng));
+    if (params?.radius_km) query.set('radius_km', String(params.radius_km));
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return http(`/api/prestataires${qs ? `?${qs}` : ''}`);
   },
-  getServices: (params?: { sous_categorie_id?: number; prestataire_id?: number }): Promise<ApiService[]> => {
+  getServices: (params?: { sous_categorie_id?: number; prestataire_id?: number; q?: string; prix_max?: number; page?: number; limit?: number }): Promise<ApiService[]> => {
     const q = new URLSearchParams();
     if (params?.sous_categorie_id) q.set('sous_categorie_id', String(params.sous_categorie_id));
     if (params?.prestataire_id) q.set('prestataire_id', String(params.prestataire_id));
+    if (params?.q) q.set('q', params.q);
+    if (params?.prix_max) q.set('prix_max', String(params.prix_max));
+    if (params?.page) q.set('page', String(params.page));
+    if (params?.limit) q.set('limit', String(params.limit));
     const qs = q.toString();
     return http(`/api/services${qs ? `?${qs}` : ''}`);
   },
+  search: (q: string, geo?: { lat: number; lng: number }): Promise<{ services: ApiService[]; prestataires: ApiPrestataire[] }> => {
+    const params = new URLSearchParams({ q });
+    if (geo) {
+      params.set('lat', String(geo.lat));
+      params.set('lng', String(geo.lng));
+    }
+    return http(`/api/search?${params.toString()}`);
+  },
+  geo: {
+    search: (q: string): Promise<Array<{ label: string; label_court: string; lat: number; lng: number; type?: string }>> =>
+      http(`/api/geo/search?q=${encodeURIComponent(q)}`),
+    reverse: (lat: number, lng: number): Promise<{ label: string; label_court: string; quartier: string | null; ville: string | null; lat: number; lng: number }> =>
+      http(`/api/geo/reverse?lat=${lat}&lng=${lng}`),
+  },
   getServiceById: (id: number): Promise<ApiService> => http(`/api/services/${id}`),
+  getServiceSlots: (id: number, date: string): Promise<{
+    date: string;
+    duree_minutes: number;
+    horaires_definis: boolean;
+    ouvert: boolean;
+    slots: Array<{ heure_debut: string; heure_fin: string; disponible: boolean }>;
+  }> => http(`/api/services/${id}/slots?date=${date}`),
   auth: {
     register: (payload: { email: string; password: string; nom: string; prenom: string; telephone?: string; role_id: number; nom_commercial?: string; ville?: string; adresse?: string; latitude?: number; longitude?: number }): Promise<{ user: any }> =>
       http('/api/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
@@ -73,7 +106,7 @@ export const api = {
       http('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
     me: (): Promise<{ user: any }> => http('/api/auth/me'),
     logout: (): Promise<{ ok: boolean }> => http('/api/auth/logout', { method: 'POST' }),
-    forgotPassword: (email: string): Promise<{ ok: boolean; message: string; reset_token?: string }> =>
+    forgotPassword: (email: string): Promise<{ ok: boolean; message: string }> =>
       http('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
     resetPassword: (token: string, new_password: string): Promise<{ ok: boolean; message: string }> =>
       http('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password }) }),
@@ -138,11 +171,13 @@ export const api = {
   },
   users: {
     getMe: (): Promise<{ user: any }> => http('/api/users/me'),
+    getParrainage: (): Promise<{ code: string; filleuls: number }> => http('/api/users/me/parrainage'),
     updateMe: (payload: { nom?: string; prenom?: string; telephone?: string; ville?: string; photo_profil?: string }): Promise<{ user: any }> =>
       http('/api/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   },
   dashboard: {
     getStats: (): Promise<any> => http('/api/dashboard/stats'),
+    getAnalytics: (): Promise<any> => http('/api/dashboard/analytics'),
     getRecentReservations: (limit?: number): Promise<any[]> => {
       const q = limit ? `?limit=${limit}` : '';
       return http(`/api/dashboard/recent-reservations${q}`);
@@ -527,6 +562,27 @@ export const api = {
       http(`/api/avis-client/reservation/${reservationId}`),
     getByClient: (clientId: number): Promise<any[]> =>
       http(`/api/avis-client/client/${clientId}`),
+  },
+  conversations: {
+    start: (prestataire_id: number): Promise<{ id: number }> =>
+      http('/api/conversations', { method: 'POST', body: JSON.stringify({ prestataire_id }) }),
+    list: (): Promise<any[]> => http('/api/conversations'),
+    getUnreadCount: (): Promise<{ count: number }> => http('/api/conversations/unread-count'),
+    getMessages: (id: number, afterId?: number): Promise<{
+      messages: any[];
+      mes_messages_lus_jusqua: number;
+      interlocuteur_ecrit: boolean;
+    }> => http(`/api/conversations/${id}/messages${afterId ? `?after_id=${afterId}` : ''}`),
+    sendMessage: (id: number, contenu: string, image?: string): Promise<any> =>
+      http(`/api/conversations/${id}/messages`, { method: 'POST', body: JSON.stringify({ contenu, image }) }),
+    deleteMessage: (id: number, messageId: number): Promise<{ ok: boolean }> =>
+      http(`/api/conversations/${id}/messages/${messageId}`, { method: 'DELETE' }),
+    typing: (id: number): Promise<{ ok: boolean }> =>
+      http(`/api/conversations/${id}/typing`, { method: 'POST' }),
+    sendDevis: (id: number, payload: { service_id: number; montant: number; date: string; heure?: string; description?: string }): Promise<any> =>
+      http(`/api/conversations/${id}/devis`, { method: 'POST', body: JSON.stringify(payload) }),
+    respondDevis: (id: number, messageId: number, action: 'accepte' | 'refuse'): Promise<{ ok: boolean; statut: string; reservation_id?: number }> =>
+      http(`/api/conversations/${id}/devis/${messageId}`, { method: 'PUT', body: JSON.stringify({ action }) }),
   },
   tickets: {
     create: (payload: { sujet: string; categorie: string; message: string; reservation_id?: number; priorite?: string }): Promise<{ ok: boolean; id: number; message: string }> =>

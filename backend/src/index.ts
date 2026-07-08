@@ -1,5 +1,6 @@
-import dotenv from 'dotenv';
-dotenv.config(); // ⚠️ doit être le tout premier import
+// ⚠️ doit être le tout premier import : charge le .env AVANT l'évaluation des autres modules
+// (les imports ES sont hoistés, un `dotenv.config()` classique s'exécuterait trop tard)
+import 'dotenv/config';
 
 import './mongoose-setup.js'; // Must be before any model/route imports
 import express from 'express';
@@ -38,9 +39,13 @@ import signalementsRoutes from './routes/signalements.js';
 import adminSignalementsRoutes from './routes/admin-signalements.js';
 import avisClientRoutes from './routes/avis-client.js';
 import ticketsSupportRoutes from './routes/tickets-support.js';
+import conversationsRoutes from './routes/conversations.js';
+import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
+import { UPLOADS_DIR } from './utils/uploads.js';
+import { startReminderLoop } from './services/reminders.js';
 
 const app = express();
 const normalizeOrigin = (value: string): string | null => {
@@ -72,6 +77,11 @@ const corsOptions: cors.CorsOptions = {
     }
     const normalized = normalizeOrigin(origin);
     if (normalized && RAW_FRONTEND_ORIGINS.includes(normalized)) {
+      return callback(null, true);
+    }
+    // Tunnels de démo (Cloudflare Quick Tunnel) : domaine aléatoire à chaque lancement,
+    // impossible à figer dans FRONTEND_ORIGIN. Autorisé uniquement hors production.
+    if (process.env.NODE_ENV !== 'production' && /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin)) {
       return callback(null, true);
     }
     logger.warn(`CORS blocked request from ${origin}`);
@@ -127,6 +137,13 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
+// Fichiers uploadés (photos de services, profils, publications…)
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  maxAge: '30d',
+  immutable: true,
+  fallthrough: true,
+}));
+
 // 🔹 Routes
 app.use('/api', coreRoutes);
 app.use('/api/auth', authRoutes);
@@ -159,7 +176,12 @@ app.use('/api/signalements', signalementsRoutes);
 app.use('/api/admin/signalements', adminSignalementsRoutes);
 app.use('/api/avis-client', avisClientRoutes);
 app.use('/api/tickets', ticketsSupportRoutes);
+app.use('/api/conversations', conversationsRoutes);
+app.use('/api/geo', geoRoutes);
 app.use('/api/admin/tickets', adminTicketsSupportRoutes);
+
+// Sitemap accessible à la racine (les crawlers cherchent /sitemap.xml)
+app.get('/sitemap.xml', (_req, res) => res.redirect(301, '/api/sitemap.xml'));
 
 // Root endpoint with API info
 app.get('/', (_req, res) => res.json({ 
@@ -203,6 +225,7 @@ const port = Number(process.env.PORT || 4000);
   try {
     await connectDB();
     logger.info('Connected to MongoDB Atlas');
+    startReminderLoop();
     app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
   } catch (err: any) {
     logger.error(`Database connection failed: ${err.message}`);

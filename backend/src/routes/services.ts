@@ -2,6 +2,9 @@ import express, { Request, Response } from 'express';
 import { Service, Prestataire, Plan, Reservation } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateCreateService } from '../utils/validation.js';
+import { serverError } from '../utils/http.js';
+import { computeDaySlots } from '../utils/availability.js';
+import { materializePhotos } from '../utils/uploads.js';
 
 const router = express.Router();
 
@@ -14,7 +17,7 @@ router.get('/my-services', requireAuth, async (req: Request, res: Response) => {
     const services = await Service.find({ prestataire_id: prestataire._id }).sort({ created_at: -1 });
     res.json(services);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -51,13 +54,13 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       quantite_min: quantite_min || 1,
       quantite_max: quantite_max || null,
       duree_minutes,
-      photos: photos || null,
+      photos: photos ? await materializePhotos(photos) : null,
       is_domicile: is_domicile || false
     });
 
     res.json({ id: service._id });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -85,7 +88,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     if (prix !== undefined) update.prix = prix;
     if (devise !== undefined) update.devise = devise;
     if (duree_minutes !== undefined) update.duree_minutes = duree_minutes;
-    if (photos !== undefined) update.photos = photos;
+    if (photos !== undefined) update.photos = photos ? await materializePhotos(photos) : photos;
     if (is_domicile !== undefined) update.is_domicile = is_domicile;
     if (is_active !== undefined) update.is_active = is_active;
     if (unite !== undefined) update.unite = unite;
@@ -95,7 +98,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     await Service.updateOne({ _id: id, prestataire_id: prestataireId }, update);
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -130,7 +133,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     await Service.deleteOne({ _id: id, prestataire_id: prestataireId });
     res.json({ ok: true, message: 'Service supprimé avec succès', deleted: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -147,7 +150,46 @@ router.put('/:id/toggle', requireAuth, async (req: Request, res: Response) => {
     await Service.updateOne({ _id: id }, { is_active: !service.is_active, updated_at: new Date() });
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
+  }
+});
+
+// GET /api/services/:id/slots?date=YYYY-MM-DD — créneaux disponibles pour un service
+router.get('/:id/slots', async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const dateStr = String(req.query.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return res.status(400).json({ error: 'Paramètre date requis (format YYYY-MM-DD)' });
+    }
+    const date = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(date.getTime())) return res.status(400).json({ error: 'Date invalide' });
+
+    const service = await Service.findOne({ _id: id, is_active: true });
+    if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
+
+    const prestataire = await Prestataire.findById(service.prestataire_id);
+    if (!prestataire) return res.status(404).json({ error: 'Prestataire introuvable' });
+
+    const horaires = prestataire.horaires_ouverture as any;
+    const horairesDefinis = !!(horaires && typeof horaires === 'object' && Object.keys(horaires).length > 0);
+
+    const slots = await computeDaySlots(
+      service.prestataire_id,
+      horaires,
+      service.duree_minutes,
+      date
+    );
+
+    res.json({
+      date: dateStr,
+      duree_minutes: service.duree_minutes,
+      horaires_definis: horairesDefinis,
+      ouvert: !horairesDefinis || slots.length > 0,
+      slots,
+    });
+  } catch (e: any) {
+    serverError(res, e);
   }
 });
 
@@ -158,7 +200,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!service) return res.status(404).json({ error: 'Service non trouvé' });
     res.json(service);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

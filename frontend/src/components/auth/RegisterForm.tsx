@@ -69,7 +69,8 @@ export default function RegisterForm() {
     ville: '',
     adresse: '',
     latitude: undefined as number | undefined,
-    longitude: undefined as number | undefined
+    longitude: undefined as number | undefined,
+    code_parrain: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -511,6 +512,22 @@ export default function RegisterForm() {
                 </motion.div>
               )}
             </div>
+
+            {/* Code de parrainage (optionnel) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Code de parrainage <span className="text-gray-400 font-normal">(optionnel)</span>
+              </label>
+              <input
+                type="text"
+                name="code_parrain"
+                value={formData.code_parrain}
+                onChange={handleChange}
+                placeholder="Ex: AWA-3F2A1B"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-400 uppercase"
+              />
+              <p className="text-xs text-gray-400 mt-1">Un ami vous a invité ? Entrez son code ici.</p>
+            </div>
           </motion.div>
         );
 
@@ -520,7 +537,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex rounded-3xl overflow-hidden shadow-2xl min-h-[600px]">
+    <div className="w-full max-w-5xl mx-auto flex rounded-3xl overflow-hidden shadow-soft-lg ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] min-h-[600px]">
       {/* Left panel — desktop only */}
       <div className="hidden lg:flex lg:w-5/12 relative bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 p-10 flex-col justify-between overflow-hidden">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-2xl" />

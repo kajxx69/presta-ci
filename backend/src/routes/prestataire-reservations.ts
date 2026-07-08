@@ -3,6 +3,8 @@ import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestat
 import { requireAuth } from '../middleware/auth.js';
 import { ClientNotifications } from '../services/notifications.js';
 import { ClientInAppNotifications } from '../services/in-app-notifications.js';
+import { EmailNotifications } from '../services/email-notifications.js';
+import { serverError } from '../utils/http.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -40,10 +42,20 @@ router.get('/', async (req: Request, res: Response) => {
 
     const reservations = await Reservation.find(query).sort({ date_reservation: -1, heure_debut: -1 });
 
-    const results = await Promise.all(reservations.map(async (r) => {
-      const client = await User.findById(r.client_id).select('nom prenom telephone email');
-      const service = await Service.findById(r.service_id);
-      const statut = await StatutReservation.findById(r.statut_id);
+    // Enrichissement par requêtes groupées (évite N+1)
+    const [clients, services, statuts] = await Promise.all([
+      User.find({ _id: { $in: [...new Set(reservations.map(r => r.client_id))] } }).select('nom prenom telephone email'),
+      Service.find({ _id: { $in: [...new Set(reservations.map(r => r.service_id))] } }),
+      StatutReservation.find({ _id: { $in: [...new Set(reservations.map(r => r.statut_id))] } }),
+    ]);
+    const clientById = new Map(clients.map(c => [c._id as number, c]));
+    const serviceById = new Map(services.map(s => [s._id as number, s]));
+    const statutById = new Map(statuts.map(s => [s._id as number, s]));
+
+    const results = reservations.map((r) => {
+      const client = clientById.get(r.client_id) || null;
+      const service = serviceById.get(r.service_id) || null;
+      const statut = statutById.get(r.statut_id) || null;
       return {
         id: r._id,
         date_reservation: r.date_reservation instanceof Date ? r.date_reservation.toISOString().split('T')[0] : r.date_reservation,
@@ -57,6 +69,8 @@ router.get('/', async (req: Request, res: Response) => {
         prix_total: (r as any).prix_total ?? r.prix_final,
         a_domicile: r.a_domicile,
         adresse_rdv: r.adresse_rdv,
+        adresse_rdv_lat: (r as any).adresse_rdv_lat ?? null,
+        adresse_rdv_lng: (r as any).adresse_rdv_lng ?? null,
         client_id: r.client_id,
         client_nom: client?.nom || null,
         client_prenom: client?.prenom || null,
@@ -68,11 +82,11 @@ router.get('/', async (req: Request, res: Response) => {
         statut_couleur: statut?.couleur || null,
         created_at: r.created_at
       };
-    }));
+    });
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -108,11 +122,12 @@ router.put('/:id/accept', async (req: Request, res: Response) => {
 
       await ClientNotifications.reservationConfirmee(reservation.client_id, prestNom, serviceNom, date);
       await ClientInAppNotifications.reservationConfirmee(reservation.client_id, prestNom, serviceNom, date, reservation.heure_debut || '');
+      await EmailNotifications.reservationConfirmee(reservation.client_id, prestNom, serviceNom, date, reservation.heure_debut);
     } catch { /* ne pas bloquer pour une notif */ }
 
     res.json({ ok: true, message: 'Réservation acceptée avec succès' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -150,11 +165,12 @@ router.put('/:id/reject', async (req: Request, res: Response) => {
       const serviceNom = service?.nom || 'votre service';
       await ClientNotifications.reservationRefusee(reservation.client_id, prestNom, serviceNom, motif);
       await ClientInAppNotifications.reservationRefusee(reservation.client_id, prestNom, serviceNom, motif);
+      await EmailNotifications.reservationRefusee(reservation.client_id, prestNom, serviceNom, motif);
     } catch { /* ne pas bloquer */ }
 
     res.json({ ok: true, message: 'Réservation refusée avec succès' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -200,11 +216,12 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
       const serviceNom = service?.nom || 'votre service';
       await ClientNotifications.serviceTermine(reservation.client_id, prestNom, serviceNom);
       await ClientInAppNotifications.serviceTermine(reservation.client_id, prestNom, serviceNom);
+      await EmailNotifications.serviceTermine(reservation.client_id, prestNom, serviceNom);
     } catch { /* ne pas bloquer */ }
 
     res.json({ ok: true, message: 'Prestation marquée comme terminée. En attente de confirmation du client.' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

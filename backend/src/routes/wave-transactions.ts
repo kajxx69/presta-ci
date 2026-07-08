@@ -51,9 +51,17 @@ router.get('/my-transactions', requireAuth, async (req, res) => {
 
     const transactions = await TransactionWave.find({ prestataire_id: prestataire._id }).sort({ created_at: -1 });
 
-    const results = await Promise.all(transactions.map(async (tx) => {
-      const plan = await Plan.findById(tx.plan_id);
-      const admin = tx.validee_par_admin_id ? await User.findById(tx.validee_par_admin_id).select('nom prenom') : null;
+    // Enrichissement par requêtes groupées (évite N+1)
+    const [plans, admins] = await Promise.all([
+      Plan.find({ _id: { $in: [...new Set(transactions.map(tx => tx.plan_id))] } }),
+      User.find({ _id: { $in: [...new Set(transactions.map(tx => tx.validee_par_admin_id).filter((x): x is number => typeof x === 'number'))] } }).select('nom prenom'),
+    ]);
+    const planById = new Map(plans.map(p => [p._id as number, p]));
+    const adminById = new Map(admins.map(a => [a._id as number, a]));
+
+    const results = transactions.map((tx) => {
+      const plan = planById.get(tx.plan_id) || null;
+      const admin = tx.validee_par_admin_id ? adminById.get(tx.validee_par_admin_id) || null : null;
       return {
         ...tx.toJSON(),
         plan_nom: plan?.nom || null,
@@ -61,7 +69,7 @@ router.get('/my-transactions', requireAuth, async (req, res) => {
         admin_nom: admin?.nom || null,
         admin_prenom: admin?.prenom || null
       };
-    }));
+    });
 
     res.json(results);
   } catch (error) {

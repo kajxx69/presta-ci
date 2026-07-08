@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { User, UserSession, Prestataire, Role } from '../models/index.js';
 import { verifyToken, extractTokenFromHeader, JwtPayload } from '../utils/jwt.js';
+import { serverError } from '../utils/http.js';
 
 export interface AuthenticatedRequest extends Request {
   userId?: number;
@@ -54,7 +55,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     req.user = user ? user.toJSON() : null;
     next();
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 }
 
@@ -71,7 +72,7 @@ export async function requirePrestataire(req: AuthenticatedRequest, res: Respons
     req.prestataireId = prestataire._id as number;
     next();
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 }
 
@@ -91,7 +92,7 @@ export function requireRole(roleName: string) {
 
       next();
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      serverError(res, e);
     }
   };
 }

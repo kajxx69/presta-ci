@@ -13,10 +13,11 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
     },
-    allowedHosts: [
-      'but-buyer-damages-televisions.trycloudflare.com',
-      'lawrence-clause-airport-throat.trycloudflare.com'
-    ],
+    allowedHosts: true,
   },
 });

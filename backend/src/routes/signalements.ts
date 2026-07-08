@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { Signalement, User, Prestataire, Service, Publication, Notification } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 
@@ -90,7 +91,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json({ ok: true, id: signalement._id, message: 'Signalement envoyé avec succès' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -103,7 +104,7 @@ router.get('/mine', async (req: Request, res: Response) => {
     const signalements = await Signalement.find({ signaleur_id: userId }).sort({ created_at: -1 });
     res.json(signalements);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { TicketSupport, MessageTicket, User, Notification } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -48,7 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json({ ok: true, id: ticket._id, message: 'Ticket créé avec succès' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -69,7 +70,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(results);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -93,7 +94,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json({ ticket: ticket.toJSON(), messages: enrichedMessages });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -133,7 +134,7 @@ router.post('/:id/messages', async (req: Request, res: Response) => {
 
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

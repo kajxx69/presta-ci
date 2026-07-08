@@ -4,8 +4,23 @@ import crypto from 'crypto';
 import { User, UserSession, Role, Prestataire, Configuration } from '../models/index.js';
 import { validateRegister, validateLogin } from '../utils/validation.js';
 import { generateToken } from '../utils/jwt.js';
+import { serverError } from '../utils/http.js';
+import { sendPasswordResetEmail } from '../utils/mailer.js';
+import { logger } from '../logger.js';
 
 const router = express.Router();
+
+// Cookie sécurisé si le frontend est servi en HTTPS (déploiement), lax/non-secure en dev local
+const FRONTEND_IS_HTTPS = (process.env.FRONTEND_ORIGIN || '').startsWith('https://');
+export function sessionCookieOptions(hours: number) {
+  return {
+    httpOnly: true,
+    sameSite: (FRONTEND_IS_HTTPS ? 'none' : 'lax') as 'none' | 'lax',
+    secure: FRONTEND_IS_HTTPS,
+    maxAge: hours * 60 * 60 * 1000,
+    path: '/',
+  };
+}
 
 async function getSessionDurationHours(): Promise<number> {
   try {
@@ -17,9 +32,14 @@ async function getSessionDurationHours(): Promise<number> {
   }
 }
 
+function generateReferralCode(prenom: string): string {
+  const base = (prenom || 'USER').normalize('NFD').replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5) || 'USER';
+  return `${base}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
 router.post('/register', validateRegister, async (req: Request, res: Response) => {
   try {
-    const { email, password, nom, prenom, telephone, role_id = 1, nom_commercial, ville, adresse, latitude, longitude } = req.body || {};
+    const { email, password, nom, prenom, telephone, role_id = 1, nom_commercial, ville, adresse, latitude, longitude, code_parrain } = req.body || {};
     if (!email || !password || !nom || !prenom) {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
@@ -35,10 +55,31 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
       return res.status(409).json({ error: 'Email déjà utilisé' });
     }
 
+    // Parrainage : retrouver le parrain si un code est fourni (non bloquant si invalide)
+    let parrain: any = null;
+    if (code_parrain && typeof code_parrain === 'string') {
+      parrain = await User.findOne({ code_parrainage: code_parrain.trim().toUpperCase() });
+    }
+
     const password_hash = await bcrypt.hash(password, 10);
     const newUser = await User.create({
-      email, password_hash, role_id, nom, prenom, telephone: telephone || undefined
+      email, password_hash, role_id, nom, prenom, telephone: telephone || undefined,
+      code_parrainage: generateReferralCode(prenom),
+      parrain_id: parrain ? (parrain._id as number) : null
     });
+
+    // Notifier le parrain (best-effort)
+    if (parrain) {
+      try {
+        const { InAppNotificationService } = await import('../services/in-app-notifications.js');
+        await InAppNotificationService.createCustom(
+          parrain._id as number,
+          '🎉 Nouveau filleul !',
+          `${prenom} vient de s'inscrire avec votre code de parrainage.`,
+          'success'
+        );
+      } catch { /* non bloquant */ }
+    }
 
     if (role_id === 2) {
       await Prestataire.create({
@@ -71,13 +112,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
       expires_at: new Date(Date.now() + hours * 3600000)
     });
 
-    res.cookie('session_token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      maxAge: hours * 60 * 60 * 1000,
-      path: '/',
-    });
+    res.cookie('session_token', token, sessionCookieOptions(hours));
 
     const jwtToken = generateToken({
       userId: newUser._id as number,
@@ -87,7 +122,7 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
 
     res.json({ user, token: jwtToken });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -116,13 +151,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 
     await User.updateOne({ _id: user._id }, { last_login: new Date() });
 
-    res.cookie('session_token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      maxAge: hours * 60 * 60 * 1000,
-      path: '/',
-    });
+    res.cookie('session_token', token, sessionCookieOptions(hours));
 
     const safeUser = {
       id: user._id,
@@ -142,7 +171,7 @@ router.post('/login', validateLogin, async (req: Request, res: Response) => {
 
     res.json({ user: safeUser, token: jwtToken });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -169,7 +198,7 @@ router.get('/me', async (req: Request, res: Response) => {
 
     res.json({ user: result });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -179,10 +208,12 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis' });
 
+    const genericResponse = { ok: true, message: 'Si cet email existe, vous recevrez un lien de réinitialisation.' };
+
     const user = await User.findOne({ email });
     // Ne pas révéler si l'email existe ou non (sécurité)
     if (!user) {
-      return res.json({ ok: true, message: 'Si cet email existe, vous recevrez un lien de réinitialisation.' });
+      return res.json(genericResponse);
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -193,15 +224,17 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
       reset_password_expires: expires
     });
 
-    // Pas de service email configuré — on retourne le token directement (mode démo)
-    // En production, envoyer un email avec le lien
-    res.json({
-      ok: true,
-      message: 'Lien de réinitialisation généré.',
-      reset_token: token // À retirer en production et envoyer par email
-    });
+    const frontendOrigin = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173').split(',')[0].trim();
+    const resetUrl = `${frontendOrigin}/reset-password?token=${token}`;
+    const sent = await sendPasswordResetEmail(user.email, resetUrl);
+    if (!sent) {
+      // SMTP non configuré : le lien n'est visible que dans les logs serveur, jamais dans la réponse
+      logger.warn(`[auth] Lien de réinitialisation pour ${user.email}: ${resetUrl}`);
+    }
+
+    res.json(genericResponse);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -237,7 +270,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
     res.json({ ok: true, message: 'Mot de passe réinitialisé avec succès.' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -250,7 +283,7 @@ router.post('/logout', async (req: Request, res: Response) => {
     res.clearCookie('session_token', { path: '/' });
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

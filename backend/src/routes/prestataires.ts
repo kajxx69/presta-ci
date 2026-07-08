@@ -1,26 +1,21 @@
 import { Router, Request, Response } from 'express';
-import { Prestataire, UserSession } from '../models/index.js';
+import { Prestataire, UserSession, Reservation, StatutReservation } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
+import { materializePhotos } from '../utils/uploads.js';
+import { computeBadges } from '../utils/badges.js';
 
 const router = Router();
-const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2MB
 
-function parsePhotoArray(input: any) {
+/** Normalise l'entrée en tableau puis convertit les base64 en fichiers /uploads */
+async function parsePhotoArray(input: any): Promise<any[] | null> {
   if (!input) return null;
   let photos = input;
   if (typeof input === 'string') {
     try { photos = JSON.parse(input); } catch { photos = [input]; }
   }
   if (!Array.isArray(photos)) return null;
-  for (const photo of photos) {
-    if (typeof photo !== 'string') continue;
-    const base64Match = photo.split('base64,')[1] || photo;
-    const sizeInBytes = Buffer.from(base64Match, 'base64').length;
-    if (sizeInBytes > MAX_PHOTO_SIZE) {
-      throw new Error('Chaque photo doit faire moins de 2MB. Compressez ou réduisez vos images.');
-    }
-  }
-  return photos;
+  return materializePhotos(photos);
 }
 
 // Récupérer le profil du prestataire connecté
@@ -47,7 +42,11 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
 
     let parsedPhotos: any = existing.photos_etablissement;
     if (photos_etablissement) {
-      parsedPhotos = parsePhotoArray(photos_etablissement);
+      try {
+        parsedPhotos = await parsePhotoArray(photos_etablissement);
+      } catch (err: any) {
+        return res.status(400).json({ error: err.message || 'Photos invalides' });
+      }
     }
 
     await Prestataire.updateOne({ user_id: userId }, {
@@ -90,7 +89,7 @@ router.post('/setup', async (req: Request, res: Response) => {
     let photosData: any = null;
     if (photos_etablissement) {
       try {
-        photosData = parsePhotoArray(photos_etablissement);
+        photosData = await parsePhotoArray(photos_etablissement);
       } catch (err: any) {
         return res.status(400).json({ error: err.message || 'photos_etablissement invalide (JSON array attendu)' });
       }
@@ -132,18 +131,37 @@ router.post('/setup', async (req: Request, res: Response) => {
 
     res.json({ ok: true, created: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
 // GET /api/prestataires/:id
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const prestataire = await Prestataire.findById(Number(req.params.id));
+    const id = Number(req.params.id);
+    const prestataire = await Prestataire.findById(id);
     if (!prestataire) return res.status(404).json({ error: 'Prestataire non trouvé' });
-    res.json(prestataire);
+
+    // Compteur de vues (fire-and-forget) + badges calculés
+    Prestataire.updateOne({ _id: id }, { $inc: { vues: 1 } }).catch(() => {});
+    const statutTerminee = await StatutReservation.findOne({ nom: 'terminee' });
+    const prestationsTerminees = statutTerminee
+      ? await Reservation.countDocuments({ prestataire_id: id, statut_id: statutTerminee._id })
+      : 0;
+
+    res.json({
+      ...prestataire.toJSON(),
+      badges: computeBadges({
+        is_verified: prestataire.is_verified,
+        note_moyenne: prestataire.note_moyenne,
+        nombre_avis: prestataire.nombre_avis,
+        created_at: prestataire.created_at,
+        prestations_terminees: prestationsTerminees,
+      }),
+      prestations_terminees: prestationsTerminees,
+    });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

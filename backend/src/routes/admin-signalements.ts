@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { Signalement, User, Prestataire, Service, Publication, Notification } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { getNextId } from '../models/Counter.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 
@@ -72,7 +73,7 @@ router.get('/', async (req: Request, res: Response) => {
       pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) }
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -89,7 +90,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
 
     res.json({ total, en_attente, en_cours, resolu, rejete });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -153,7 +154,7 @@ router.put('/:id/traiter', async (req: Request, res: Response) => {
 
     res.json({ ok: true, message: 'Signalement mis à jour' });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -212,7 +213,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       nombre_signalements_cible: historique + 1
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 

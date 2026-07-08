@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { FavorisPrestataire, FavorisService, FavorisPublication, Prestataire, Service, Publication, User, Like } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { serverError } from '../utils/http.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/providers', requireAuth, async (req: Request, res: Response) => {
 
     res.json(results.filter(Boolean));
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -43,7 +44,7 @@ router.post('/providers/:id', requireAuth, async (req: Request, res: Response) =
     );
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -53,7 +54,7 @@ router.delete('/providers/:id', requireAuth, async (req: Request, res: Response)
     await FavorisPrestataire.deleteOne({ client_id: userId, prestataire_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -84,7 +85,7 @@ router.get('/services', requireAuth, async (req: Request, res: Response) => {
 
     res.json(results.filter(Boolean));
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -99,7 +100,7 @@ router.post('/services/:id', requireAuth, async (req: Request, res: Response) =>
     );
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -109,7 +110,7 @@ router.delete('/services/:id', requireAuth, async (req: Request, res: Response) 
     await FavorisService.deleteOne({ client_id: userId, service_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -149,7 +150,7 @@ router.get('/publications', requireAuth, async (req: Request, res: Response) => 
 
     res.json(results.filter(Boolean));
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -164,7 +165,7 @@ router.post('/publications/:id', requireAuth, async (req: Request, res: Response
     );
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
@@ -174,7 +175,7 @@ router.delete('/publications/:id', requireAuth, async (req: Request, res: Respon
     await FavorisPublication.deleteOne({ client_id: userId, publication_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    serverError(res, e);
   }
 });
 
