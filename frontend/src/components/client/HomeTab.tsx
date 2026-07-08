@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw, ChevronDown } from 'lucide-react';
+import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw, ChevronDown, Map as MapIcon, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import ReservationModal from './ReservationModal';
@@ -483,13 +483,26 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
           </div>
         )}
 
-        <div className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-sm">
+        <div className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-soft-lg bg-white dark:bg-gray-800">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600">
+            <div className="flex items-center gap-2 text-white">
+              <div className="p-1.5 rounded-lg bg-white/20">
+                <MapIcon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-semibold">Carte des prestataires</span>
+            </div>
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-white/90 bg-white/15 px-2.5 py-1 rounded-full">
+              <Navigation className="w-3 h-3" />
+              {markers.length} sur la carte
+            </span>
+          </div>
           <MapView
             center={userLocation || defaultCenter}
             markers={markers}
             userLocation={userLocation || undefined}
             onMarkerClick={handleMarkerClick}
             route={route}
+            className="[&_.leaflet-container]:rounded-none"
           />
         </div>
 
