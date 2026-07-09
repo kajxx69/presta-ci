@@ -1,14 +1,37 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye, EyeOff, Mail, Lock, User, Phone, Briefcase, Loader2,
   AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft,
-  MapPin, Star, Shield, Zap, Sparkles
+  MapPin, Star, Shield, Zap, Sparkles, Camera, X
 } from 'lucide-react';
 import AddressMapPicker from '../common/AddressMapPicker';
 import Logo from '../Logo';
+
+async function compressAvatar(file: File): Promise<string> {
+  const dataUri: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = dataUri;
+  });
+  const MAX = 640;
+  const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+  if (scale === 1 && file.size < 300 * 1024) return dataUri;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   let score = 0;
@@ -70,13 +93,16 @@ export default function RegisterForm() {
     adresse: '',
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
-    code_parrain: ''
+    code_parrain: '',
+    photo_profil: '' as string
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [focused, setFocused] = useState('');
+  const [photoError, setPhotoError] = useState('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { register } = useAuthStore();
   const navigate = useNavigate();
@@ -92,7 +118,7 @@ export default function RegisterForm() {
     const currentStepId = currentSteps[step]?.id;
     switch (currentStepId) {
       case 'role': return formData.role_id > 0;
-      case 'business': return formData.nom_commercial.trim() && formData.ville.trim() && formData.adresse.trim();
+      case 'business': return !!(formData.nom_commercial.trim() && formData.ville.trim() && formData.adresse.trim() && formData.photo_profil);
       case 'identity': return formData.prenom.trim() && formData.nom.trim() && formData.email.includes('@') && formData.telephone.trim();
       case 'security': return formData.password.length >= 6 && passwordsMatch;
       default: return false;
@@ -246,6 +272,58 @@ export default function RegisterForm() {
               <p className="text-sm text-purple-700 dark:text-purple-300">
                 <strong>Votre établissement</strong> — ces informations seront visibles par les clients
               </p>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 py-2">
+              <label className={labelClass}>Photo de profil *</label>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center group hover:border-purple-500 transition-colors"
+              >
+                {formData.photo_profil ? (
+                  <img src={formData.photo_profil} alt="Aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera className="w-8 h-8 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+              </button>
+              {formData.photo_profil && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, photo_profil: '' }))}
+                  className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Retirer
+                </button>
+              )}
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setPhotoError('');
+                  if (file.size > 5 * 1024 * 1024) {
+                    setPhotoError('Image trop volumineuse (max 5MB)');
+                    return;
+                  }
+                  try {
+                    const compressed = await compressAvatar(file);
+                    setFormData(prev => ({ ...prev, photo_profil: compressed }));
+                  } catch {
+                    setPhotoError('Impossible de charger cette image');
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
+                Une photo claire de vous ou de votre établissement inspire confiance aux clients
+              </p>
+              {photoError && <p className="text-xs text-red-500">{photoError}</p>}
             </div>
 
             <div>

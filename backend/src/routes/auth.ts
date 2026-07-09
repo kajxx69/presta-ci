@@ -7,6 +7,7 @@ import { generateToken } from '../utils/jwt.js';
 import { serverError } from '../utils/http.js';
 import { sendPasswordResetEmail } from '../utils/mailer.js';
 import { logger } from '../logger.js';
+import { materializePhotos } from '../utils/uploads.js';
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ function generateReferralCode(prenom: string): string {
 
 router.post('/register', validateRegister, async (req: Request, res: Response) => {
   try {
-    const { email, password, nom, prenom, telephone, role_id = 1, nom_commercial, ville, adresse, latitude, longitude, code_parrain } = req.body || {};
+    const { email, password, nom, prenom, telephone, role_id = 1, nom_commercial, ville, adresse, latitude, longitude, code_parrain, photo_profil } = req.body || {};
     if (!email || !password || !nom || !prenom) {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
@@ -47,6 +48,9 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     if (role_id === 2) {
       if (!nom_commercial || !ville || !adresse) {
         return res.status(400).json({ error: 'Les champs nom_commercial, ville et adresse sont requis pour un compte prestataire' });
+      }
+      if (!photo_profil) {
+        return res.status(400).json({ error: 'Une photo de profil est requise pour un compte prestataire' });
       }
     }
 
@@ -62,8 +66,10 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     }
 
     const password_hash = await bcrypt.hash(password, 10);
+    const photoUrl = photo_profil ? await materializePhotos(photo_profil) : undefined;
     const newUser = await User.create({
       email, password_hash, role_id, nom, prenom, telephone: telephone || undefined,
+      photo_profil: photoUrl,
       code_parrainage: generateReferralCode(prenom),
       parrain_id: parrain ? (parrain._id as number) : null
     });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw, ChevronDown, Map as MapIcon, Navigation } from 'lucide-react';
+import { MapPin, Star, Heart, Clock, Loader2, ChevronLeft, BadgeCheck, RefreshCw, ChevronDown, ChevronUp, Map as MapIcon, Navigation, Sparkles, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import ReservationModal from './ReservationModal';
@@ -185,6 +185,9 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
       .then(res => setLocationLabel(res.label_court))
       .catch(() => {});
   }, [userLocation]);
+
+  // Carte repliée par défaut : évite qu'un nouvel utilisateur tombe direct sur une map
+  const [showMap, setShowMap] = useState(false);
 
   // Filtre "Près de moi" : requête $geoNear côté serveur (distances exactes, triées)
   const [nearMe, setNearMe] = useState(false);
@@ -377,13 +380,37 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
 
       <div className="p-4 lg:p-6 space-y-5 max-w-lg lg:max-w-5xl mx-auto">
         {/* Hero */}
-        <div className="pt-1 pb-1">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            {user?.prenom ? `Bonjour ${user.prenom} 👋` : 'Bienvenue sur PrestaCI 👋'}
-          </p>
-          <h1 className="mt-1 text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
-            Trouvez le bon <span className="text-gradient">prestataire</span>,<br className="lg:hidden" /> près de chez vous.
-          </h1>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-blue-600 to-purple-600 px-5 py-6 lg:px-8 lg:py-8 shadow-brand-lg">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-12 -left-8 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative">
+            <p className="text-sm font-medium text-white/80 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" />
+              {user?.prenom ? `Bonjour ${user.prenom} 👋` : 'Bienvenue sur PrestaCI 👋'}
+            </p>
+            <h1 className="mt-2 text-2xl lg:text-3xl font-extrabold text-white leading-tight">
+              Trouvez le bon prestataire,<br className="lg:hidden" /> près de chez vous.
+            </h1>
+            <p className="mt-1.5 text-sm text-white/80 max-w-md">
+              Coiffure, ménage, beauté, imprimerie… réservez en toute confiance, où que vous soyez en Côte d'Ivoire.
+            </p>
+            {(categories.length > 0 || prestataires.length > 0) && (
+              <div className="mt-4 flex items-center gap-4 text-white/90">
+                {prestataires.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                    <Users className="w-3.5 h-3.5" />
+                    {prestataires.length}+ prestataires
+                  </div>
+                )}
+                {categories.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold bg-white/15 px-3 py-1.5 rounded-full">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {categories.length} catégories
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Search */}
@@ -462,68 +489,42 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
           </p>
         )}
 
-        {/* Map section */}
-        <AnimatePresence>
-          {(routeMsg || loadingRoute) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-medium flex items-center gap-2"
-            >
-              {loadingRoute && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>{loadingRoute ? "Calcul de l'itinéraire..." : routeMsg}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {routeError && (
-          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-sm font-medium">
-            {routeError}
-          </div>
-        )}
-
-        <div className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-soft-lg bg-white dark:bg-gray-800">
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600">
-            <div className="flex items-center gap-2 text-white">
-              <div className="p-1.5 rounded-lg bg-white/20">
-                <MapIcon className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-semibold">Carte des prestataires</span>
-            </div>
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-white/90 bg-white/15 px-2.5 py-1 rounded-full">
-              <Navigation className="w-3 h-3" />
-              {markers.length} sur la carte
-            </span>
-          </div>
-          <MapView
-            center={userLocation || defaultCenter}
-            markers={markers}
-            userLocation={userLocation || undefined}
-            onMarkerClick={handleMarkerClick}
-            route={route}
-            className="[&_.leaflet-container]:rounded-none"
-          />
-        </div>
-
-        {route.length > 0 && (
-          <div className="flex justify-end">
-            <Button variant="ghost" size="sm" onClick={clearRoute}>
-              Effacer l'itinéraire
-            </Button>
-          </div>
-        )}
-
-        {/* Scroll hint below map */}
-        {!searchQuery.trim() && !selectedCategory && (
-          <button
-            onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="w-full flex flex-col items-center gap-1 py-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-            aria-label="Voir les résultats"
-          >
-            <span className="text-xs font-medium">Voir les prestataires</span>
-            <ChevronDown className="w-4 h-4 animate-bounce" />
-          </button>
+        {/* Categories — premier contenu de découverte, avant tout le reste */}
+        {!searchQuery.trim() && !selectedCategory && !dataError && (
+          <section>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+              Catégories
+            </h2>
+            <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+              {categories.map(category => (
+                <StaggerItem key={category.id}>
+                  <Card
+                    hoverable
+                    onClick={() => setSelectedCategory(category)}
+                    padding="sm"
+                    className="text-center"
+                  >
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2"
+                      style={{ backgroundColor: (category.couleur || '#3B82F6') + '15' }}
+                    >
+                      <span className="text-2xl">
+                        {getCategoryEmoji(category.icone)}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
+                      {category.nom}
+                    </h3>
+                    {category.description && (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        {category.description}
+                      </p>
+                    )}
+                  </Card>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </section>
         )}
 
         {/* Error state */}
@@ -601,44 +602,6 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
                 description={`Aucun service ou prestataire ne correspond à "${searchQuery}".`}
               />
             )}
-          </section>
-        )}
-
-        {/* Categories */}
-        {!searchQuery.trim() && !selectedCategory && !dataError && (
-          <section>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-              Catégories
-            </h2>
-            <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-              {categories.map(category => (
-                <StaggerItem key={category.id}>
-                  <Card
-                    hoverable
-                    onClick={() => setSelectedCategory(category)}
-                    padding="sm"
-                    className="text-center"
-                  >
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2"
-                      style={{ backgroundColor: (category.couleur || '#3B82F6') + '15' }}
-                    >
-                      <span className="text-2xl">
-                        {getCategoryEmoji(category.icone)}
-                      </span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
-                      {category.nom}
-                    </h3>
-                    {category.description && (
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                        {category.description}
-                      </p>
-                    )}
-                  </Card>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
           </section>
         )}
 
@@ -779,6 +742,79 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
                 ))}
               </StaggerContainer>
             )}
+          </section>
+        )}
+
+        {/* Carte — reléguée en fin de page et repliée par défaut : un nouvel
+            utilisateur découvre d'abord les catégories/prestataires, la carte
+            reste disponible pour qui la cherche plutôt que de s'imposer d'entrée. */}
+        {!searchQuery.trim() && !selectedCategory && !dataError && (
+          <section className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-soft bg-white dark:bg-gray-800">
+            <button
+              onClick={() => setShowMap(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-white/20">
+                  <MapIcon className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-semibold">Voir sur la carte</span>
+                <span className="flex items-center gap-1 text-xs font-semibold text-white/90 bg-white/15 px-2 py-0.5 rounded-full">
+                  <Navigation className="w-3 h-3" />
+                  {markers.length}
+                </span>
+              </div>
+              {showMap ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
+
+            <AnimatePresence initial={false}>
+              {showMap && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden"
+                >
+                  <AnimatePresence>
+                    {(routeMsg || loadingRoute) && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="m-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-medium flex items-center gap-2"
+                      >
+                        {loadingRoute && <Loader2 className="w-4 h-4 animate-spin" />}
+                        <span>{loadingRoute ? "Calcul de l'itinéraire..." : routeMsg}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {routeError && (
+                    <div className="m-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-sm font-medium">
+                      {routeError}
+                    </div>
+                  )}
+
+                  <MapView
+                    center={userLocation || defaultCenter}
+                    markers={markers}
+                    userLocation={userLocation || undefined}
+                    onMarkerClick={handleMarkerClick}
+                    route={route}
+                    className="[&_.leaflet-container]:rounded-none"
+                  />
+
+                  {route.length > 0 && (
+                    <div className="flex justify-end p-2">
+                      <Button variant="ghost" size="sm" onClick={clearRoute}>
+                        Effacer l'itinéraire
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         )}
       </div>

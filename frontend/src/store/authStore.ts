@@ -55,6 +55,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       prenom: userData.prenom!,
       telephone: userData.telephone,
       role_id: userData.role_id || 1,
+      code_parrain: (userData as any).code_parrain || undefined,
+      photo_profil: (userData as any).photo_profil || undefined,
       // Champs prestataire si role_id === 2
       ...(userData.role_id === 2 && {
         nom_commercial: (userData as any).nom_commercial,
