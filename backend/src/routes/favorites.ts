@@ -8,7 +8,7 @@ const router = express.Router();
 // --- Providers favorites ---
 router.get('/providers', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const favs = await FavorisPrestataire.find({ client_id: userId }).sort({ created_at: -1 });
 
     const results = await Promise.all(favs.map(async (f) => {
@@ -35,7 +35,7 @@ router.get('/providers', requireAuth, async (req: Request, res: Response) => {
 
 router.post('/providers/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const id = Number(req.params.id);
     await FavorisPrestataire.findOneAndUpdate(
       { client_id: userId, prestataire_id: id },
@@ -50,7 +50,7 @@ router.post('/providers/:id', requireAuth, async (req: Request, res: Response) =
 
 router.delete('/providers/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     await FavorisPrestataire.deleteOne({ client_id: userId, prestataire_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {
@@ -61,7 +61,7 @@ router.delete('/providers/:id', requireAuth, async (req: Request, res: Response)
 // --- Services favorites ---
 router.get('/services', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const favs = await FavorisService.find({ client_id: userId }).sort({ created_at: -1 });
 
     const results = await Promise.all(favs.map(async (f) => {
@@ -91,7 +91,7 @@ router.get('/services', requireAuth, async (req: Request, res: Response) => {
 
 router.post('/services/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const id = Number(req.params.id);
     await FavorisService.findOneAndUpdate(
       { client_id: userId, service_id: id },
@@ -106,7 +106,7 @@ router.post('/services/:id', requireAuth, async (req: Request, res: Response) =>
 
 router.delete('/services/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     await FavorisService.deleteOne({ client_id: userId, service_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {
@@ -117,7 +117,7 @@ router.delete('/services/:id', requireAuth, async (req: Request, res: Response) 
 // --- Publications favorites ---
 router.get('/publications', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const favs = await FavorisPublication.find({ client_id: userId }).sort({ created_at: -1 });
 
     const results = await Promise.all(favs.map(async (f) => {
@@ -156,7 +156,7 @@ router.get('/publications', requireAuth, async (req: Request, res: Response) => 
 
 router.post('/publications/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const id = Number(req.params.id);
     await FavorisPublication.findOneAndUpdate(
       { client_id: userId, publication_id: id },
@@ -171,7 +171,7 @@ router.post('/publications/:id', requireAuth, async (req: Request, res: Response
 
 router.delete('/publications/:id', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     await FavorisPublication.deleteOne({ client_id: userId, publication_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e: any) {

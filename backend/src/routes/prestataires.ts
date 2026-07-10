@@ -2,8 +2,9 @@ import { Router, Request, Response } from 'express';
 import { Prestataire, UserSession, Reservation, StatutReservation } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
-import { materializePhotos } from '../utils/uploads.js';
+import { materializePhotos, saveDataUri } from '../utils/uploads.js';
 import { computeBadges } from '../utils/badges.js';
+import { InAppNotificationService } from '../services/in-app-notifications.js';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ async function parsePhotoArray(input: any): Promise<any[] | null> {
 // Récupérer le profil du prestataire connecté
 router.get('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
-    const prestataire = await Prestataire.findOne({ user_id: (req as any).user.id });
+    const prestataire = await Prestataire.findOne({ user_id: req.userId! });
     if (!prestataire) return res.status(404).json({ error: 'Profil prestataire non trouvé.' });
     res.json(prestataire);
   } catch (error: any) {
@@ -32,7 +33,7 @@ router.get('/profile', requireAuth, async (req: Request, res: Response) => {
 // Mettre à jour le profil du prestataire connecté
 router.put('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const { nom_commercial, bio, adresse, ville, pays, latitude, longitude, telephone_pro, horaires_ouverture, photos_etablissement } = req.body;
 
     if (!nom_commercial) return res.status(400).json({ error: 'Le nom commercial est requis.' });
@@ -61,6 +62,46 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
     res.json({ message: 'Profil mis à jour avec succès.', prestataire: updated });
   } catch (error: any) {
     res.status(500).json({ error: 'Erreur interne du serveur.' });
+  }
+});
+
+// POST /api/prestataires/me/verification — soumettre un document d'identité pour vérification
+router.post('/me/verification', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { document } = req.body || {};
+    if (!document || typeof document !== 'string') {
+      return res.status(400).json({ error: 'Un document (photo de pièce d\'identité) est requis.' });
+    }
+
+    const prestataire = await Prestataire.findOne({ user_id: userId });
+    if (!prestataire) return res.status(404).json({ error: 'Profil prestataire non trouvé.' });
+
+    if (prestataire.verification_statut === 'verifie') {
+      return res.status(400).json({ error: 'Votre profil est déjà vérifié.' });
+    }
+    if (prestataire.verification_statut === 'en_attente') {
+      return res.status(400).json({ error: 'Une demande de vérification est déjà en cours d\'examen.' });
+    }
+
+    let documentUrl: string;
+    try {
+      documentUrl = await saveDataUri(document);
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message || 'Document invalide' });
+    }
+
+    await Prestataire.updateOne({ user_id: userId }, {
+      verification_document: documentUrl,
+      verification_statut: 'en_attente',
+      verification_demandee_at: new Date(),
+      verification_rejet_motif: null,
+      updated_at: new Date()
+    });
+
+    res.json({ ok: true, message: 'Votre demande de vérification a été envoyée. Elle sera examinée sous peu.' });
+  } catch (error: any) {
+    serverError(res, error);
   }
 });
 

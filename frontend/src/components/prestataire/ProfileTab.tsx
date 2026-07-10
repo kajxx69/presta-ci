@@ -19,7 +19,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   Camera,
-  Loader2
+  Loader2,
+  ShieldCheck,
+  Upload,
+  XCircle
 } from 'lucide-react';
 import PrivacyTab from '../client/PrivacyTab';
 import NotificationsSettingsTab from '../client/NotificationsSettingsTab';
@@ -41,6 +44,8 @@ interface PrestataireProfile {
   horaires_ouverture: Record<string, { debut: string; fin: string } | null> | null;
   photos_etablissement: string[] | null;
   is_verified?: number;
+  verification_statut?: 'non_demandee' | 'en_attente' | 'verifie' | 'rejete';
+  verification_rejet_motif?: string | null;
   plan_actuel_id?: number | null;
   abonnement_expires_at?: string | null;
   updated_at?: string;
@@ -95,6 +100,8 @@ export default function ProfileTab() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [submittingVerification, setSubmittingVerification] = useState(false);
+  const verificationInputRef = useRef<HTMLInputElement>(null);
 
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -138,6 +145,29 @@ export default function ProfileTab() {
       showToast(e?.message || 'Erreur lors de la sauvegarde', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSubmitVerification = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image trop volumineuse (max 5MB)', 'error');
+      return;
+    }
+    try {
+      setSubmittingVerification(true);
+      const document = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await api.prestataires.submitVerification(document);
+      setProfile(prev => prev ? { ...prev, verification_statut: 'en_attente' } : prev);
+      showToast('Demande de vérification envoyée avec succès', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Erreur lors de l\'envoi', 'error');
+    } finally {
+      setSubmittingVerification(false);
     }
   };
 
@@ -506,6 +536,76 @@ export default function ProfileTab() {
         </div>
 
         <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              Vérification d'identité
+            </h3>
+            {isVerified ? (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Identité vérifiée</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
+                    Le badge "Vérifié" est visible sur votre profil par tous les clients.
+                  </p>
+                </div>
+              </div>
+            ) : profile?.verification_statut === 'en_attente' ? (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20">
+                <Loader2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 animate-spin" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Demande en cours d'examen</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">
+                    Notre équipe examine votre document. Vous serez notifié du résultat.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {profile?.verification_statut === 'rejete' && (
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-red-50 dark:bg-red-900/20">
+                    <XCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-700 dark:text-red-400">Demande précédente refusée</p>
+                      {profile.verification_rejet_motif && (
+                        <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{profile.verification_rejet_motif}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Obtenez le badge "Identité vérifiée" en soumettant une photo de votre pièce d'identité
+                  (CNI, passeport, attestation d'identité). Cela rassure vos clients et améliore votre
+                  visibilité dans les résultats de recherche.
+                </p>
+                <input
+                  ref={verificationInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleSubmitVerification(file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  onClick={() => verificationInputRef.current?.click()}
+                  disabled={submittingVerification}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm hover:shadow-lg transition-all disabled:opacity-60"
+                >
+                  {submittingVerification ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {submittingVerification ? 'Envoi en cours...' : 'Soumettre ma pièce d\'identité'}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
             <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Checklist qualité</h3>
             <div className="space-y-3">

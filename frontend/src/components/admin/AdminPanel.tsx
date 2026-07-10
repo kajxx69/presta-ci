@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, TrendingUp, Crown, Settings, Wrench,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle, ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -25,10 +25,11 @@ import AdminMaintenance from './AdminMaintenance';
 import AdminProfile from './AdminProfile';
 import AdminSignalements from './AdminSignalements';
 import AdminTickets from './AdminTickets';
+import AdminVerifications from './AdminVerifications';
 
 type AdminTab =
   | 'dashboard' | 'users' | 'services' | 'categories'
-  | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'payments' | 'notifications'
+  | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'verifications' | 'payments' | 'notifications'
   | 'statistics' | 'plans' | 'settings' | 'maintenance' | 'profile';
 
 interface NavItem {
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'avis', label: 'Avis', icon: Star },
       { id: 'signalements', label: 'Signalements', icon: ShieldAlert },
+      { id: 'verifications', label: 'Vérifications', icon: ShieldCheck },
       { id: 'tickets', label: 'Support', icon: MessageCircle },
       { id: 'payments', label: 'Paiements', icon: CreditCard },
       { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -87,6 +89,7 @@ const tabComponents: Record<AdminTab, React.ComponentType> = {
   reservations: AdminReservations,
   avis: AdminAvis,
   signalements: AdminSignalements,
+  verifications: AdminVerifications,
   tickets: AdminTickets,
   payments: AdminPayments,
   notifications: AdminNotifications,

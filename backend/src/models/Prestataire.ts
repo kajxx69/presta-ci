@@ -24,6 +24,11 @@ const prestataireSchema = new mongoose.Schema({
   note_moyenne: { type: Number, default: 0 },
   nombre_avis: { type: Number, default: 0 },
   is_verified: { type: Boolean, default: false },
+  verification_statut: { type: String, enum: ['non_demandee', 'en_attente', 'verifie', 'rejete'], default: 'non_demandee' },
+  verification_document: { type: String, default: null }, // URL /uploads du document d'identité (CNI, attestation...)
+  verification_demandee_at: { type: Date, default: null },
+  verification_traitee_at: { type: Date, default: null },
+  verification_rejet_motif: { type: String, default: null },
   vues: { type: Number, default: 0 },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

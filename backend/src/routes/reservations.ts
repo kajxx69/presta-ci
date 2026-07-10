@@ -12,7 +12,7 @@ const router = express.Router();
 // GET /api/reservations?filter=all|upcoming|completed|cancelled
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const filter = String(req.query.filter || 'all');
 
     // Build statut name filter
@@ -88,7 +88,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 // PUT /api/reservations/:id/cancel
 router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const id = Number(req.params.id);
 
     const reservation = await Reservation.findOne({ _id: id, client_id: userId });
@@ -126,7 +126,7 @@ router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
 // PUT /api/reservations/:id/confirm-completion — le client confirme que la prestation est terminée
 router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const id = Number(req.params.id);
 
     const reservation = await Reservation.findOne({ _id: id, client_id: userId });
@@ -158,7 +158,7 @@ router.put('/:id/confirm-completion', requireAuth, async (req: Request, res: Res
 // POST /api/reservations
 router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = req.userId!;
     const { service_id, date_reservation, heure_debut, notes_client, specifications, a_domicile, adresse_rdv, adresse_rdv_lat, adresse_rdv_lng, publication_id, quantite, recurrence_semaines } = req.body;
 
     if (!service_id || !date_reservation) {

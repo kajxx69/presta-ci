@@ -128,6 +128,8 @@ export const api = {
     updateProfile: (payload: any): Promise<{ message: string, prestataire: any }> =>
       http('/api/prestataires/profile', { method: 'PUT', body: JSON.stringify(payload) }),
     getById: (id: number): Promise<any> => http(`/api/prestataires/${id}`),
+    submitVerification: (document: string): Promise<{ ok: boolean; message: string }> =>
+      http('/api/prestataires/me/verification', { method: 'POST', body: JSON.stringify({ document }) }),
   },
   subscription: {
     getPlans: (): Promise<any[]> => http('/api/subscription/plans'),
@@ -474,6 +476,20 @@ export const api = {
       getStats: (): Promise<any> => http('/api/admin/signalements/stats'),
       traiter: (id: number, data: { statut: string; resolution_note?: string; action_prise?: string }): Promise<any> =>
         http(`/api/admin/signalements/${id}/traiter`, { method: 'PUT', body: JSON.stringify(data) }),
+    },
+    verifications: {
+      getAll: (params?: { statut?: string; page?: number; limit?: number }): Promise<{ verifications: any[]; pagination: any }> => {
+        const query = new URLSearchParams();
+        if (params?.statut) query.append('statut', params.statut);
+        if (params?.page) query.append('page', params.page.toString());
+        if (params?.limit) query.append('limit', params.limit.toString());
+        const queryString = query.toString();
+        return http(`/api/admin/verifications${queryString ? '?' + queryString : ''}`);
+      },
+      approve: (id: number): Promise<{ ok: boolean; message: string }> =>
+        http(`/api/admin/verifications/${id}/approve`, { method: 'PUT' }),
+      reject: (id: number, motif: string): Promise<{ ok: boolean; message: string }> =>
+        http(`/api/admin/verifications/${id}/reject`, { method: 'PUT', body: JSON.stringify({ motif }) }),
     },
     tickets: {
       getAll: (params?: { statut?: string; page?: number; limit?: number }): Promise<{ tickets: any[]; pagination: any }> => {
