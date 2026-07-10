@@ -40,8 +40,9 @@ export default function Header() {
       try {
         const { count } = await api.notifications.getUnreadCount();
         setUnreadCount(count);
-      } catch (error) {
-        console.error('Erreur récupération compteur notifications:', error);
+      } catch {
+        // Silencieux : échec réseau transitoire (ex: cold start backend) — le
+        // prochain polling (30s) rattrapera le compteur, pas la peine d'alerter.
       }
     };
 

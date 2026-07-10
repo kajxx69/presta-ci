@@ -53,8 +53,8 @@ export default function NotificationCenter({ onClose, onUnreadCountChange }: Not
       const { count } = await api.notifications.getUnreadCount();
       setUnreadCount(count);
       onUnreadCountChange?.(count);
-    } catch (error) {
-      console.error('Erreur comptage notifications:', error);
+    } catch {
+      // Silencieux : échec réseau transitoire, non bloquant pour l'utilisateur.
     }
   };
 
