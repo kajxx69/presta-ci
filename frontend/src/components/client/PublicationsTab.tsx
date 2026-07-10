@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Heart,
   MessageCircle,
   Share2,
   Camera,
@@ -21,6 +20,7 @@ import {
 import CommentsModal from './CommentsModal';
 import AuthPromptModal from '../common/AuthPromptModal';
 import ReservationModal from './ReservationModal';
+import { LikeButton } from '../ui/LikeButton';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
@@ -589,13 +589,11 @@ export default function PublicationsTab() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-6">
-                    <button 
-                      onClick={() => handleToggleLike(publication.id, publication.liked)}
-                      className={`flex items-center space-x-2 ${publication.liked ? 'text-red-500' : 'text-gray-600 dark:text-gray-400 hover:text-red-500'} transition-colors`}
-                    >
-                      <Heart className={`w-5 h-5 ${publication.liked ? 'fill-red-500' : ''}`} />
-                      <span className="text-sm">{publication.nombre_likes}</span>
-                    </button>
+                    <LikeButton
+                      liked={publication.liked}
+                      count={publication.nombre_likes}
+                      onToggle={() => handleToggleLike(publication.id, publication.liked)}
+                    />
                     
                     <button
                       onClick={() => {

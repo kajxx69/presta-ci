@@ -82,6 +82,13 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
                 onClick={() => handleTabSelect(tab.id)}
                 className="relative flex flex-col items-center justify-center w-full py-1 gap-0.5"
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="bottom-nav-pill"
+                    className="absolute inset-x-1 inset-y-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30"
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                  />
+                )}
                 <div className="relative">
                   <motion.div
                     animate={{

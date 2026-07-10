@@ -9,7 +9,12 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className, variant = 'text', width, height, count = 1 }: SkeletonProps) {
-  const baseClass = 'animate-pulse bg-gray-200 dark:bg-gray-700';
+  const baseClass = clsx(
+    'animate-shimmer bg-gray-200 dark:bg-gray-700',
+    'bg-[linear-gradient(110deg,transparent_0%,transparent_35%,rgba(255,255,255,0.6)_50%,transparent_65%,transparent_100%)]',
+    'dark:bg-[linear-gradient(110deg,transparent_0%,transparent_35%,rgba(255,255,255,0.08)_50%,transparent_65%,transparent_100%)]',
+    'bg-[length:200%_100%]'
+  );
 
   const variantClass = {
     text: 'rounded-md h-4',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, Clock, Home, MessageSquare, ArrowRight, ChevronLeft, CheckCircle, Minus, Plus, Package, FileText, Truck } from 'lucide-react';
+import { Calendar, Clock, Home, MessageSquare, ArrowRight, ChevronLeft, Minus, Plus, Package, FileText, Truck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -7,6 +7,7 @@ import { fr } from 'date-fns/locale';
 import { api } from '../../lib/api';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { SuccessCheck } from '../ui/SuccessCheck';
 
 // Grille par défaut, utilisée seulement si le prestataire n'a pas défini d'horaires
 const fallbackTimes = Array.from({ length: 18 }, (_, i) => {
@@ -171,21 +172,29 @@ export default function ReservationModal({ service, onClose, onReservationSucces
       <AnimatePresence>
         {success && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="py-8 flex flex-col items-center gap-3 text-center"
           >
-            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <CheckCircle className="w-9 h-9 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            <SuccessCheck size={72} />
+            <motion.h3
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-xl font-bold text-gray-900 dark:text-white"
+            >
               {bookingType === 'order' ? 'Commande envoyée !' : 'Réservation confirmée !'}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            </motion.h3>
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="text-sm text-gray-500 dark:text-gray-400"
+            >
               {bookingType === 'order'
                 ? 'Le prestataire va analyser votre commande et vous recontacter.'
                 : 'Votre demande est en attente de confirmation par le prestataire.'}
-            </p>
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
