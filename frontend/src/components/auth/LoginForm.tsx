@@ -12,6 +12,8 @@ const features = [
   { icon: Zap, title: 'Rapide & simple', desc: 'Réservez en quelques clics' },
 ];
 
+const exampleServices = ['💇 Coiffure', '🧹 Ménage', '💅 Beauté', '🖨️ Imprimerie', '💐 Fleuriste', '🍽️ Traiteur'];
+
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,6 +65,13 @@ export default function LoginForm() {
             <span className="text-2xl font-bold text-white tracking-tight">PrestaCI</span>
           </div>
           <p className="text-blue-100 text-sm mt-1">La marketplace de services en Côte d'Ivoire</p>
+          <div className="flex flex-wrap gap-1.5 mt-4">
+            {exampleServices.map(s => (
+              <span key={s} className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white">
+                {s}
+              </span>
+            ))}
+          </div>
         </motion.div>
 
         <div className="relative z-10 space-y-5">
@@ -104,12 +113,25 @@ export default function LoginForm() {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="flex-1 bg-white dark:bg-gray-800 p-8 sm:p-10 flex flex-col justify-center"
       >
-        {/* Mobile logo */}
+        {/* Mobile intro — explique ce qu'est l'app avant même le formulaire */}
         <div className="lg:hidden text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-3">
             <Logo className="h-10 w-auto" />
           </div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">PrestaCI</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            La marketplace de services près de chez vous, en Côte d'Ivoire
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+            {exampleServices.map(s => (
+              <span
+                key={s}
+                className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="mb-8">
@@ -119,7 +141,7 @@ export default function LoginForm() {
             transition={{ delay: 0.2 }}
             className="text-2xl font-bold text-gray-900 dark:text-white"
           >
-            Bon retour !
+            Trouvez le bon prestataire
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
@@ -127,7 +149,7 @@ export default function LoginForm() {
             transition={{ delay: 0.3 }}
             className="text-gray-500 dark:text-gray-400 mt-1"
           >
-            Connectez-vous pour continuer
+            Connectez-vous pour réserver, ou créez un compte en 30 secondes
           </motion.p>
         </div>
 
