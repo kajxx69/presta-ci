@@ -52,35 +52,6 @@ export default function FavoritesTab() {
   const { showToast } = useAppStore();
   const navigate = useNavigate();
 
-  if (!isAuthenticated) {
-    return (
-      <div className="p-4 max-w-lg lg:max-w-5xl mx-auto">
-        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-            <Heart className="w-8 h-8 text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vos favoris</h2>
-          <p className="text-gray-500 dark:text-gray-400 max-w-xs">
-            Connectez-vous pour sauvegarder vos prestataires et services préférés.
-          </p>
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => navigate('/login')}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg"
-            >
-              Se connecter
-            </button>
-            <button
-              onClick={() => navigate('/register')}
-              className="px-6 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold"
-            >
-              S'inscrire
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
   const [activeTab, setActiveTab] = useState<TabKey>('providers');
   const [favoriteProvidersData, setFavoriteProvidersData] = useState<any[]>([]);
   const [favoriteServicesData, setFavoriteServicesData] = useState<any[]>([]);
@@ -115,7 +86,13 @@ export default function FavoritesTab() {
     }
   };
 
-  useEffect(() => { void loadFavorites(); }, []);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+    void loadFavorites();
+  }, [isAuthenticated]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -202,6 +179,36 @@ export default function FavoritesTab() {
       (p.description || '').toLowerCase().includes(q) || (p.client_nom || '').toLowerCase().includes(q),
     );
   }, [favoritePublicationsData, searchTerm, activeTab]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 max-w-lg lg:max-w-5xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+            <Heart className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vos favoris</h2>
+          <p className="text-gray-500 dark:text-gray-400 max-w-xs">
+            Connectez-vous pour sauvegarder vos prestataires et services préférés.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg"
+            >
+              Se connecter
+            </button>
+            <button
+              onClick={() => navigate('/register')}
+              className="px-6 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold"
+            >
+              S'inscrire
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Provider detail view
   if (selectedProvider) {

@@ -40,29 +40,12 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/subscription/start
-router.post('/start', async (req: Request, res: Response) => {
-  try {
-    const userId = await getUserIdFromSession(req);
-    if (!userId) return res.status(401).json({ error: 'Non authentifié' });
-
-    const { plan_id, duree_jours = 30 } = req.body || {};
-    if (!plan_id) return res.status(400).json({ error: 'plan_id requis' });
-
-    const prestataire = await Prestataire.findOne({ user_id: userId });
-    if (!prestataire) return res.status(403).json({ error: 'Prestataire introuvable' });
-
-    const expires = new Date(Date.now() + duree_jours * 86400000);
-    await Prestataire.updateOne({ user_id: userId }, {
-      plan_actuel_id: plan_id,
-      abonnement_expires_at: expires,
-      updated_at: new Date()
-    });
-
-    res.json({ ok: true });
-  } catch (e: any) {
-    serverError(res, e);
-  }
-});
+// Note : l'activation d'un abonnement se fait exclusivement via le flux Wave
+// (POST /api/wave-transactions puis validation admin sur
+// PUT /api/admin/wave-transactions/:id/validate). Il n'existe volontairement
+// aucune route ici permettant à un prestataire de s'auto-attribuer un plan —
+// une ancienne route /start le permettait sans aucune vérification de
+// paiement ni validation admin (faille de contournement de facturation) et a
+// été supprimée. Ne pas la réintroduire sans passer par le flux Wave.
 
 export default router;

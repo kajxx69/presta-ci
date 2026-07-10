@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 import { serverError } from '../utils/http.js';
 
@@ -122,8 +122,9 @@ router.post('/test', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/notifications/cleanup - Nettoyer les anciennes notifications
-router.post('/cleanup', async (req: Request, res: Response) => {
+// POST /api/notifications/cleanup - Nettoyer les anciennes notifications (admin uniquement :
+// supprime les notifications de TOUTE la plateforme, pas seulement celles de l'appelant)
+router.post('/cleanup', requireRole('admin'), async (req: Request, res: Response) => {
   try {
     const daysOld = parseInt(req.body.days) || 30;
     

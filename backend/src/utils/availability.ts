@@ -1,3 +1,4 @@
+import type { ClientSession } from 'mongoose';
 import { Reservation, StatutReservation } from '../models/index.js';
 
 /** Statuts qui occupent un créneau (tout sauf annulée/refusée/terminée) */
@@ -61,7 +62,7 @@ export async function getBlockingStatutIds(): Promise<number[]> {
 }
 
 /** Réservations "rendez-vous" qui occupent des créneaux pour un prestataire à une date donnée */
-export async function getBlockingReservations(prestataireId: number, date: Date) {
+export async function getBlockingReservations(prestataireId: number, date: Date, session?: ClientSession) {
   const statutIds = await getBlockingStatutIds();
   const dayStart = new Date(date); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(date); dayEnd.setHours(23, 59, 59, 999);
@@ -71,18 +72,21 @@ export async function getBlockingReservations(prestataireId: number, date: Date)
     statut_id: { $in: statutIds },
     date_reservation: { $gte: dayStart, $lte: dayEnd },
     heure_debut: { $ne: null },
-  }).select('heure_debut heure_fin _id');
+  }).select('heure_debut heure_fin _id').session(session ?? null);
 }
 
-/** Vérifie si [debut, fin) chevauche une réservation existante du prestataire ce jour-là */
+/** Vérifie si [debut, fin) chevauche une réservation existante du prestataire ce jour-là.
+ *  Passer la session de la transaction en cours évite une lecture non isolée pendant
+ *  la fenêtre vérification→création (protection anti double-booking). */
 export async function hasSlotConflict(
   prestataireId: number,
   date: Date,
   heureDebut: string,
   heureFin: string,
-  excludeReservationId?: number
+  excludeReservationId?: number,
+  session?: ClientSession
 ): Promise<boolean> {
-  const reservations = await getBlockingReservations(prestataireId, date);
+  const reservations = await getBlockingReservations(prestataireId, date, session);
   const start = toMinutes(heureDebut);
   const end = toMinutes(heureFin);
   return reservations.some(r => {

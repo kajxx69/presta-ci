@@ -134,8 +134,6 @@ export const api = {
   subscription: {
     getPlans: (): Promise<any[]> => http('/api/subscription/plans'),
     getCurrent: (): Promise<{ subscription: any }> => http('/api/subscription'),
-    start: (payload: { plan_id: number; duree_jours?: number }): Promise<{ ok: boolean }> =>
-      http('/api/subscription/start', { method: 'POST', body: JSON.stringify(payload) }),
   },
   reservations: {
     list: (filter?: 'all' | 'upcoming' | 'completed' | 'cancelled'): Promise<any[]> =>

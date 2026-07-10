@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis, User } from '../models/index.js';
+import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, Avis, User, SlotLock } from '../models/index.js';
 import { SubCategory } from '../models/Category.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
@@ -116,6 +116,9 @@ router.put('/:id/cancel', requireAuth, async (req: Request, res: Response) => {
     if (service && service.type_service === 'produit' && service.stock !== null && service.stock !== undefined) {
       await Service.updateOne({ _id: reservation.service_id }, { $inc: { stock: reservation.quantite || 1 } });
     }
+
+    // Libérer le créneau (sinon il reste verrouillé jusqu'au TTL d'1h de SlotLock)
+    await SlotLock.deleteOne({ reservation_id: id });
 
     res.json({ ok: true });
   } catch (e: any) {
@@ -235,15 +238,46 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
           return res.status(400).json({ error: `Ce créneau est en dehors des horaires d'ouverture (${horairesJour.debut} - ${horairesJour.fin})` });
         }
       }
+    }
 
-      // Anti double-booking : refuser si le créneau chevauche une réservation existante
+    // Anti double-booking : un index unique Mongo (prestataire_id, date, heure_debut)
+    // sur SlotLock garantit qu'une seule requête concurrente peut poser le verrou sur un
+    // même créneau exact — contrairement à une simple lecture-puis-écriture (hasSlotConflict
+    // seul), qui laisse une fenêtre où deux requêtes passent toutes les deux la vérification
+    // avant qu'aucune n'ait encore créé sa réservation. hasSlotConflict reste utilisé en
+    // complément pour détecter les chevauchements partiels (durées de service différentes).
+    let reservation: any;
+    if (bookingType === 'appointment' && heure_debut && heure_fin) {
+      const startTime = new Date(`${date_reservation}T${heure_debut}`);
       const conflict = await hasSlotConflict(service.prestataire_id, startTime, heure_debut, heure_fin);
       if (conflict) {
         return res.status(409).json({ error: 'Ce créneau vient d\'être réservé. Veuillez en choisir un autre.' });
       }
+
+      try {
+        await SlotLock.create({
+          prestataire_id: service.prestataire_id,
+          date_reservation,
+          heure_debut,
+          reservation_id: 0, // mis à jour juste après la création de la réservation
+        });
+      } catch (lockErr: any) {
+        if (lockErr?.code === 11000) {
+          return res.status(409).json({ error: 'Ce créneau vient d\'être réservé. Veuillez en choisir un autre.' });
+        }
+        throw lockErr;
+      }
+
+      // Revérification post-verrou : couvre le cas d'un chevauchement partiel avec un
+      // créneau de durée différente qui aurait été créé entre le check et la pose du lock.
+      const conflictAfterLock = await hasSlotConflict(service.prestataire_id, startTime, heure_debut, heure_fin);
+      if (conflictAfterLock) {
+        await SlotLock.deleteOne({ prestataire_id: service.prestataire_id, date_reservation, heure_debut });
+        return res.status(409).json({ error: 'Ce créneau vient d\'être réservé. Veuillez en choisir un autre.' });
+      }
     }
 
-    const reservation = await Reservation.create({
+    reservation = await Reservation.create({
       client_id: userId,
       prestataire_id: service.prestataire_id,
       service_id,
@@ -264,6 +298,13 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       publication_id: publication_id || null
     });
 
+    if (bookingType === 'appointment' && heure_debut && heure_fin) {
+      await SlotLock.updateOne(
+        { prestataire_id: service.prestataire_id, date_reservation, heure_debut },
+        { reservation_id: reservation._id as number }
+      );
+    }
+
     await HistoriqueReservation.create({
       reservation_id: reservation._id as number,
       nouveau_statut_id: enAttenteStatut._id as number,
@@ -282,9 +323,24 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         const dateOccStr = dateOcc.toISOString().split('T')[0];
         const startOcc = new Date(`${dateOccStr}T${heure_debut}`);
 
-        // Chaque occurrence est vérifiée individuellement (conflits) ; on saute celles qui coincent
+        // Chaque occurrence pose son propre verrou ; on saute celles qui coincent
         const conflictOcc = await hasSlotConflict(service.prestataire_id, startOcc, heure_debut, heure_fin);
         if (conflictOcc) {
+          semaines_ignorees.push(dateOccStr);
+          continue;
+        }
+        let occLockAcquired = true;
+        try {
+          await SlotLock.create({
+            prestataire_id: service.prestataire_id,
+            date_reservation: dateOccStr,
+            heure_debut,
+            reservation_id: 0,
+          });
+        } catch (lockErr: any) {
+          if (lockErr?.code === 11000) { occLockAcquired = false; } else { throw lockErr; }
+        }
+        if (!occLockAcquired) {
           semaines_ignorees.push(dateOccStr);
           continue;
         }
@@ -305,6 +361,10 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
           a_domicile: !!a_domicile,
           adresse_rdv: a_domicile ? adresse_rdv : undefined,
         });
+        await SlotLock.updateOne(
+          { prestataire_id: service.prestataire_id, date_reservation: dateOccStr, heure_debut },
+          { reservation_id: occ._id as number }
+        );
         await HistoriqueReservation.create({
           reservation_id: occ._id as number,
           nouveau_statut_id: enAttenteStatut._id as number,

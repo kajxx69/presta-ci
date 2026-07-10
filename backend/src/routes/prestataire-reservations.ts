@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, User } from '../models/index.js';
+import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestataire, User, SlotLock } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { ClientNotifications } from '../services/notifications.js';
 import { ClientInAppNotifications } from '../services/in-app-notifications.js';
@@ -162,6 +162,9 @@ router.put('/:id/reject', async (req: Request, res: Response) => {
     if (refusedService && refusedService.type_service === 'produit' && refusedService.stock !== null && refusedService.stock !== undefined) {
       await Service.updateOne({ _id: reservation.service_id }, { $inc: { stock: reservation.quantite || 1 } });
     }
+
+    // Libérer le créneau (sinon il reste verrouillé jusqu'au TTL d'1h de SlotLock)
+    await SlotLock.deleteOne({ reservation_id: reservationId });
 
     try {
       const prestataire = await Prestataire.findById(prestataireId);
