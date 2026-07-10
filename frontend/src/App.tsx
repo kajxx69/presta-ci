@@ -11,6 +11,7 @@ import ToastContainer from './components/ToastContainer';
 const LoginForm = lazy(() => import('./components/auth/LoginForm'));
 const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const WelcomeGate = lazy(() => import('./components/common/WelcomeGate'));
 
 // ─── Lazy: Layout shell (chargé dès qu'on est client/prestataire) ───
 const Layout = lazy(() => import('./components/Layout'));
@@ -123,6 +124,28 @@ function AppShell() {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
+  // Sélecteur d'intention à l'entrée : une fois par session de navigateur pour
+  // un visiteur non connecté (pas localStorage — on ne veut pas priver de ce
+  // moment d'accueil un visiteur qui revient un autre jour sans compte).
+  const [showWelcomeGate, setShowWelcomeGate] = useState(() => {
+    if (isAuthenticated) return false;
+    try { return sessionStorage.getItem('prestaci-welcome-seen') !== '1'; } catch { return false; }
+  });
+
+  const dismissWelcomeGate = useCallback(() => {
+    setShowWelcomeGate(false);
+    try { sessionStorage.setItem('prestaci-welcome-seen', '1'); } catch { /* ignore */ }
+  }, []);
+
+  const handleWelcomeSelect = useCallback((intent: 'search' | 'discover' | 'pro') => {
+    dismissWelcomeGate();
+    if (intent === 'pro') {
+      navigate('/register?role=prestataire');
+      return;
+    }
+    setCurrentTab(intent === 'discover' ? 'publications' : 'home');
+  }, [dismissWelcomeGate, navigate, setCurrentTab]);
+
   // URL → store (navigation navigateur : retour/avant, lien partagé)
   useEffect(() => {
     if (tab && VALID_TABS.has(tab) && tab !== currentTab) {
@@ -171,20 +194,23 @@ function AppShell() {
   };
 
   return (
-    <Layout>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentTab}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -12 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-        >
-          {renderCurrentTab()}
-        </motion.div>
-      </AnimatePresence>
-      <BottomNavigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
-    </Layout>
+    <>
+      <WelcomeGate open={showWelcomeGate} onClose={dismissWelcomeGate} onSelect={handleWelcomeSelect} />
+      <Layout>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTab}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {renderCurrentTab()}
+          </motion.div>
+        </AnimatePresence>
+        <BottomNavigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      </Layout>
+    </>
   );
 }
 

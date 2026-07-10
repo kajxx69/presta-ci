@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -79,7 +79,10 @@ const stepsPrestataire = [
 ];
 
 export default function RegisterForm() {
-  const [step, setStep] = useState(0);
+  const [searchParams] = useSearchParams();
+  const prefillProRole = searchParams.get('role') === 'prestataire';
+
+  const [step, setStep] = useState(prefillProRole ? 1 : 0);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -87,7 +90,7 @@ export default function RegisterForm() {
     nom: '',
     prenom: '',
     telephone: '',
-    role_id: 0,
+    role_id: prefillProRole ? 2 : 0,
     nom_commercial: '',
     ville: '',
     adresse: '',
