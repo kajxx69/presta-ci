@@ -598,6 +598,16 @@ export const api = {
     respondDevis: (id: number, messageId: number, action: 'accepte' | 'refuse'): Promise<{ ok: boolean; statut: string; reservation_id?: number }> =>
       http(`/api/conversations/${id}/devis/${messageId}`, { method: 'PUT', body: JSON.stringify({ action }) }),
   },
+  demandes: {
+    create: (payload: { titre: string; description: string; categorie_id: number; sous_categorie_id?: number; ville?: string; budget_max?: number; date_souhaitee?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
+      http('/api/demandes', { method: 'POST', body: JSON.stringify(payload) }),
+    mine: (): Promise<any[]> => http('/api/demandes/mes'),
+    opportunites: (): Promise<any[]> => http('/api/demandes/opportunites'),
+    repondre: (id: number, message?: string): Promise<{ ok: boolean; conversation_id: number }> =>
+      http(`/api/demandes/${id}/repondre`, { method: 'POST', body: JSON.stringify({ message }) }),
+    cloturer: (id: number, statut: 'pourvue' | 'annulee'): Promise<{ ok: boolean; statut: string }> =>
+      http(`/api/demandes/${id}/cloturer`, { method: 'PUT', body: JSON.stringify({ statut }) }),
+  },
   tickets: {
     create: (payload: { sujet: string; categorie: string; message: string; reservation_id?: number; priorite?: string }): Promise<{ ok: boolean; id: number; message: string }> =>
       http('/api/tickets', { method: 'POST', body: JSON.stringify(payload) }),

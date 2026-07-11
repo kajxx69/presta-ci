@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import ReservationModal from './ReservationModal';
 import MapView from '../map/MapView';
 import AuthPromptModal from '../common/AuthPromptModal';
+import { DemandeExpressCard, DemandeExpressModal, MesDemandesModal } from './DemandeExpress';
 import { api, ApiCategory, ApiSubCategory, ApiPrestataire, ApiService } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
@@ -108,6 +109,8 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
   const [loadingData, setLoadingData] = useState(true);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [demandeModalOpen, setDemandeModalOpen] = useState(false);
+  const [mesDemandesOpen, setMesDemandesOpen] = useState(false);
 
   const loadInitialData = useCallback(async () => {
     setLoadingData(true);
@@ -370,6 +373,17 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
     <>
       <AuthPromptModal open={authPromptOpen} onClose={() => setAuthPromptOpen(false)} message={authPromptMessage} />
 
+      <DemandeExpressModal
+        open={demandeModalOpen}
+        onClose={() => setDemandeModalOpen(false)}
+        categories={categories}
+      />
+      <MesDemandesModal
+        open={mesDemandesOpen}
+        onClose={() => setMesDemandesOpen(false)}
+        onNouvelleDemande={() => setDemandeModalOpen(true)}
+      />
+
       {isReservationModalOpen && selectedServiceForReservation && (
         <ReservationModal
           service={selectedServiceForReservation}
@@ -487,6 +501,15 @@ export default function HomeTab({ onSelectService, onSelectProvider }: HomeTabPr
               ? `${nearbyPrestataires.length} prestataire${nearbyPrestataires.length > 1 ? 's' : ''} dans un rayon de ${nearRadius} km, du plus proche au plus lointain.`
               : `Aucun prestataire dans un rayon de ${nearRadius} km — élargissez le rayon.`}
           </p>
+        )}
+
+        {/* Demande Express — le marché inversé : le besoin du client va aux prestataires */}
+        {!searchQuery.trim() && !selectedCategory && !dataError && (
+          <DemandeExpressCard
+            isAuthenticated={isAuthenticated}
+            onPublier={() => requireAuth('Connectez-vous pour publier votre besoin et recevoir des réponses de prestataires.', () => setDemandeModalOpen(true))}
+            onVoirMesDemandes={() => setMesDemandesOpen(true)}
+          />
         )}
 
         {/* Categories — premier contenu de découverte, avant tout le reste */}

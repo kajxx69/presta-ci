@@ -41,6 +41,7 @@ import adminVerificationsRoutes from './routes/admin-verifications.js';
 import avisClientRoutes from './routes/avis-client.js';
 import ticketsSupportRoutes from './routes/tickets-support.js';
 import conversationsRoutes from './routes/conversations.js';
+import demandesRoutes from './routes/demandes.js';
 import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
 import { connectDB } from './db.js';
@@ -179,6 +180,7 @@ app.use('/api/admin/verifications', adminVerificationsRoutes);
 app.use('/api/avis-client', avisClientRoutes);
 app.use('/api/tickets', ticketsSupportRoutes);
 app.use('/api/conversations', conversationsRoutes);
+app.use('/api/demandes', demandesRoutes);
 app.use('/api/geo', geoRoutes);
 app.use('/api/admin/tickets', adminTicketsSupportRoutes);
 
