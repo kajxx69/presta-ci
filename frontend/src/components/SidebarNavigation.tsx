@@ -48,6 +48,9 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
       return;
     }
     setCurrentTab(tabId);
+    // L'URL est la source de vérité de l'onglet (AppShell) : sans navigation,
+    // écrire le store ne change pas la page quand l'URL porte déjà un onglet
+    navigate(`/app/${tabId}`);
   };
 
   let tabs = clientTabs;

@@ -143,22 +143,32 @@ function AppShell() {
       navigate('/register?role=prestataire');
       return;
     }
-    setCurrentTab(intent === 'discover' ? 'publications' : 'home');
-  }, [dismissWelcomeGate, navigate, setCurrentTab]);
+    navigate(`/app/${intent === 'discover' ? 'publications' : 'home'}`);
+  }, [dismissWelcomeGate, navigate]);
 
-  // URL → store (navigation navigateur : retour/avant, lien partagé)
-  useEffect(() => {
-    if (tab && VALID_TABS.has(tab) && tab !== currentTab) {
-      setCurrentTab(tab);
-    }
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  // L'URL est la seule source de vérité pour l'onglet courant : une synchronisation
+  // bidirectionnelle URL↔store crée une course au montage d'un deep-link
+  // (/app/messages) où le store écrase l'URL demandée et fait churner la clé
+  // d'AnimatePresence en plein montage → contenu figé à opacity 0 (page "vide").
+  const urlTab = tab && VALID_TABS.has(tab) ? tab : null;
+  const activeTab = urlTab ?? currentTab;
 
-  // store → URL (les composants appellent setCurrentTab)
+  // Le store suit l'URL (pour les composants hors AppShell qui lisent currentTab)
   useEffect(() => {
-    if (currentTab && tab !== currentTab) {
-      navigate(`/app/${currentTab}`, { replace: !tab });
-    }
-  }, [currentTab]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (urlTab && urlTab !== currentTab) setCurrentTab(urlTab);
+  }, [urlTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // URL sans onglet valide (/app, ou setCurrentTab+navigate('/app') depuis une
+  // page détail) : matérialiser l'onglet du store dans l'URL
+  useEffect(() => {
+    if (!urlTab && currentTab) navigate(`/app/${currentTab}`, { replace: true });
+  }, [urlTab, currentTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Changer d'onglet = naviguer (l'effet ci-dessus aligne ensuite le store)
+  const handleTabChange = useCallback((t: string) => {
+    setCurrentTab(t);
+    if (VALID_TABS.has(t)) navigate(`/app/${t}`);
+  }, [navigate, setCurrentTab]);
 
   const handleSelectService = useCallback((serviceId: number) => {
     navigate(`/services/${serviceId}`);
@@ -185,10 +195,10 @@ function AppShell() {
   const renderCurrentTab = () => {
     if (!isAuthenticated || !role || role.nom === 'client') {
       // Les visiteurs non connectés naviguent comme des clients
-      return <ClientTabRenderer currentTab={currentTab} homeTabProps={homeTabProps} />;
+      return <ClientTabRenderer currentTab={activeTab} homeTabProps={homeTabProps} />;
     }
     if (role.nom === 'prestataire') {
-      return <PrestataireTabRenderer currentTab={currentTab} setCurrentTab={setCurrentTab} />;
+      return <PrestataireTabRenderer currentTab={activeTab} setCurrentTab={handleTabChange} />;
     }
     return null;
   };
@@ -199,7 +209,7 @@ function AppShell() {
       <Layout>
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentTab}
+            key={activeTab}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
@@ -208,7 +218,7 @@ function AppShell() {
             {renderCurrentTab()}
           </motion.div>
         </AnimatePresence>
-        <BottomNavigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
+        <BottomNavigation currentTab={activeTab} setCurrentTab={handleTabChange} />
       </Layout>
     </>
   );
