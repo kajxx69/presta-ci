@@ -45,3 +45,6 @@ temp/
 # Backups
 backups/
 *.sql
+
+# Graphify (carte du code générée localement)
+graphify-out/
