@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/uploads/:path*", "destination": "https://presta-ci.onrender.com/uploads/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
