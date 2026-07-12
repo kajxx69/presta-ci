@@ -3,6 +3,7 @@ import { Demande, Category, SubCategory, Service, Prestataire, User, Conversatio
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
+import { isValidDayString, isPastDay } from '../utils/validation.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -68,6 +69,15 @@ router.post('/', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Budget invalide' });
       }
       budget_max = Math.round(budget_max);
+    }
+
+    if (date_souhaitee !== null) {
+      if (!isValidDayString(date_souhaitee)) {
+        return res.status(400).json({ error: 'Date souhaitée invalide (format attendu : AAAA-MM-JJ)' });
+      }
+      if (isPastDay(date_souhaitee)) {
+        return res.status(400).json({ error: 'La date souhaitée ne peut pas être dans le passé' });
+      }
     }
 
     const categorie = await Category.findOne({ _id: categorie_id, is_active: true });

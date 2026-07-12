@@ -1,5 +1,35 @@
 import { describe, it, expect } from 'vitest';
-import { isValidEmail, isValidPassword, isValidPhone } from './validation.js';
+import { isValidEmail, isValidPassword, isValidPhone, isValidDayString, isPastDay } from './validation.js';
+
+function dayString(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const j = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${j}`;
+}
+
+describe('isValidDayString', () => {
+  it('accepte une date YYYY-MM-DD valide', () => {
+    expect(isValidDayString('2026-07-12')).toBe(true);
+  });
+
+  it('rejette les formats et valeurs invalides', () => {
+    expect(isValidDayString('12/07/2026')).toBe(false);
+    expect(isValidDayString('2026-13-40')).toBe(false);
+    expect(isValidDayString('')).toBe(false);
+    expect(isValidDayString(null)).toBe(false);
+    expect(isValidDayString(20260712)).toBe(false);
+  });
+});
+
+describe('isPastDay', () => {
+  it("hier est passé, aujourd'hui et demain ne le sont pas", () => {
+    expect(isPastDay(dayString(-1))).toBe(true);
+    expect(isPastDay(dayString(0))).toBe(false);
+    expect(isPastDay(dayString(1))).toBe(false);
+  });
+});
 
 describe('isValidEmail', () => {
   it('accepte les emails valides', () => {

@@ -6,6 +6,7 @@ import { serverError } from '../utils/http.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 import { hasSlotConflict } from '../utils/availability.js';
 import { saveDataUri } from '../utils/uploads.js';
+import { isValidDayString, isPastDay } from '../utils/validation.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -313,8 +314,11 @@ router.post('/:id/devis', async (req: Request, res: Response) => {
     if (!service_id || !montant || !date) {
       return res.status(400).json({ error: 'service_id, montant et date sont requis' });
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+    if (!isValidDayString(date)) {
       return res.status(400).json({ error: 'Date invalide (format YYYY-MM-DD)' });
+    }
+    if (isPastDay(date)) {
+      return res.status(400).json({ error: 'La date du devis ne peut pas être dans le passé' });
     }
     const montantNum = Number(montant);
     if (!Number.isFinite(montantNum) || montantNum <= 0) {
@@ -398,6 +402,11 @@ router.put('/:id/devis/:messageId', async (req: Request, res: Response) => {
       // Acceptation → création de la réservation déjà confirmée
       const service = await Service.findById(devis.service_id);
       if (!service) return res.status(404).json({ error: 'Service introuvable' });
+
+      // Un devis peut être accepté des jours après sa proposition : re-vérifier la date
+      if (!isValidDayString(devis.date) || isPastDay(devis.date)) {
+        return res.status(400).json({ error: 'La date de ce devis est déjà passée. Demandez un nouveau devis au prestataire.' });
+      }
 
       // Anti double-booking si un créneau est précisé
       let heure_fin: string | undefined;

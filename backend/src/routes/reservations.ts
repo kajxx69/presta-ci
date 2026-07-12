@@ -3,6 +3,7 @@ import { Reservation, StatutReservation, HistoriqueReservation, Service, Prestat
 import { SubCategory } from '../models/Category.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
+import { isValidDayString, isPastDay } from '../utils/validation.js';
 import { hasSlotConflict, getHorairesForDate } from '../utils/availability.js';
 import { EmailNotifications } from '../services/email-notifications.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
@@ -166,6 +167,15 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     if (!service_id || !date_reservation) {
       return res.status(400).json({ error: 'service_id et date_reservation sont requis' });
+    }
+
+    // Vaut pour les deux types (rendez-vous ET commande) : jamais de date passée.
+    // Le contrôle heure précise des rendez-vous (startTime < now) reste plus bas.
+    if (!isValidDayString(date_reservation)) {
+      return res.status(400).json({ error: 'Date invalide (format attendu : AAAA-MM-JJ)' });
+    }
+    if (isPastDay(date_reservation)) {
+      return res.status(400).json({ error: 'Impossible de réserver à une date passée' });
     }
 
     const service = await Service.findOne({ _id: service_id, is_active: true });

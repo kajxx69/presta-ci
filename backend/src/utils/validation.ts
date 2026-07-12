@@ -17,6 +17,19 @@ export const isValidPassword = (password: string): boolean => {
   return password.length >= 6;
 };
 
+/** true si la chaîne est une date YYYY-MM-DD valide */
+export const isValidDayString = (date: unknown): date is string => {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  return !isNaN(new Date(`${date}T00:00`).getTime());
+};
+
+/** true si la date (YYYY-MM-DD) est strictement avant aujourd'hui (jour local serveur) */
+export const isPastDay = (date: string): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(`${date}T00:00`) < today;
+};
+
 export const isValidPhone = (phone: string): boolean => {
   const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
   return phoneRegex.test(phone);
