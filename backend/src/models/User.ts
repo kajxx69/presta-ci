@@ -12,6 +12,10 @@ const userSchema = new mongoose.Schema({
   ville: String,
   photo_profil: String,
   is_active: { type: Boolean, default: true },
+  // Suppression douce par l'admin : le compte disparaît des listes et son email
+  // est libéré (anonymisé), mais le document reste pour l'intégrité référentielle
+  // (réservations, avis, conversations pointent vers ce user_id)
+  deleted_at: { type: Date, default: null },
   note_moyenne_client: { type: Number, default: null },
   nombre_avis_client: { type: Number, default: 0 },
   email_verified: { type: Boolean, default: false },

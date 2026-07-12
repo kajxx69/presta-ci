@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { User, UserSession, Role, Prestataire, Plan } from '../models/index.js';
+import { User, UserSession, Role, Prestataire, Plan, Service } from '../models/index.js';
 
 const router = express.Router();
 
@@ -27,6 +27,9 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
       ];
     }
 
+    // Les comptes supprimés (soft-delete) ne figurent plus dans la liste
+    filter.deleted_at = null;
+
     const [users, total] = await Promise.all([
       User.find(filter).sort({ created_at: -1 }).skip(offset).limit(limitNum),
       User.countDocuments(filter)
@@ -42,7 +45,6 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
         nom_commercial: prestataire?.nom_commercial || null,
         abonnement_expires_at: prestataire?.abonnement_expires_at || null,
         plan_nom: plan?.nom || null,
-        is_active: true
       };
     }));
 
@@ -70,12 +72,13 @@ router.get('/stats', requireAuth, requireRole('admin'), async (req, res) => {
     ]);
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+    const notDeleted = { deleted_at: null };
     const [total, clients, prestataires, admins, nouveaux_30j] = await Promise.all([
-      User.countDocuments(),
-      clientRole ? User.countDocuments({ role_id: clientRole._id }) : 0,
-      prestataireRole ? User.countDocuments({ role_id: prestataireRole._id }) : 0,
-      adminRole ? User.countDocuments({ role_id: adminRole._id }) : 0,
-      User.countDocuments({ created_at: { $gte: thirtyDaysAgo } })
+      User.countDocuments(notDeleted),
+      clientRole ? User.countDocuments({ role_id: clientRole._id, ...notDeleted }) : 0,
+      prestataireRole ? User.countDocuments({ role_id: prestataireRole._id, ...notDeleted }) : 0,
+      adminRole ? User.countDocuments({ role_id: adminRole._id, ...notDeleted }) : 0,
+      User.countDocuments({ created_at: { $gte: thirtyDaysAgo }, ...notDeleted })
     ]);
 
     res.json({ total_users: total, clients, prestataires, admins, nouveaux_30j });
@@ -120,8 +123,21 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     if (roleDoc?.nom === 'admin') return res.status(403).json({ error: "Impossible de supprimer un administrateur" });
     if (userId === adminId) return res.status(403).json({ error: 'Vous ne pouvez pas supprimer votre propre compte' });
 
-    await User.updateOne({ _id: userId }, { is_active: false });
+    // Anonymiser l'email pour le libérer (une réinscription avec le même email
+    // doit rester possible), tout en gardant une trace de l'original
+    await User.updateOne({ _id: userId }, {
+      is_active: false,
+      deleted_at: new Date(),
+      email: `deleted-${userId}.${user.email}`,
+      updated_at: new Date(),
+    });
     await UserSession.deleteMany({ user_id: userId });
+
+    // Prestataire : ses services ne doivent plus apparaître dans les recherches
+    const prestataire = await Prestataire.findOne({ user_id: userId });
+    if (prestataire) {
+      await Service.updateMany({ prestataire_id: prestataire._id }, { is_active: false, updated_at: new Date() });
+    }
 
     res.json({ ok: true, message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
