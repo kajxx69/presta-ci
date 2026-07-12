@@ -249,7 +249,7 @@ export default function DashboardTab({ onNavigateToTab }: DashboardTabProps) {
       <div className="px-4 space-y-6 max-w-6xl mx-auto">
 
       {/* Opportunités Demande Express — en premier : c'est du business qui attend */}
-      <OpportunitesSection onNavigateToTab={onNavigateToTab} />
+      <OpportunitesSection onNavigateToTab={onNavigateToTab} hasActiveServices={stats.services_actifs > 0} />
 
       {/* Analyse d'activité */}
       {analytics && (

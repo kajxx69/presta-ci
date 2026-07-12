@@ -8,7 +8,7 @@ import { useAppStore } from '../../store/appStore';
  * Opportunités Demande Express : les besoins publiés par des clients dans les
  * catégories du prestataire. Répondre ouvre une conversation avec le client.
  */
-export default function OpportunitesSection({ onNavigateToTab }: { onNavigateToTab: (tab: string) => void }) {
+export default function OpportunitesSection({ onNavigateToTab, hasActiveServices }: { onNavigateToTab: (tab: string) => void; hasActiveServices: boolean }) {
   const { showToast } = useAppStore();
   const [opportunites, setOpportunites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,36 @@ export default function OpportunitesSection({ onNavigateToTab }: { onNavigateToT
     }
   };
 
-  if (loading || opportunites.length === 0) return null;
+  if (loading) return null;
+
+  // Sans service actif, le matching ne peut pas connaître les catégories du
+  // prestataire : il ne recevra ni notifications ni opportunités. L'expliquer
+  // vaut mieux que de cacher silencieusement la section.
+  if (opportunites.length === 0) {
+    if (hasActiveServices) return null;
+    return (
+      <section className="rounded-2xl border border-orange-200/70 dark:border-orange-800/40 bg-gradient-to-br from-orange-50 to-rose-50 dark:from-orange-950/30 dark:to-rose-950/20 p-5">
+        <div className="flex items-start gap-3">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-white" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="font-bold text-gray-900 dark:text-white text-sm">Demande Express : recevez du business sans rien faire</h2>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+              Les clients publient leurs besoins et les prestataires de la catégorie sont notifiés.
+              Ajoutez <strong>au moins un service actif</strong> pour que PrestaCI connaisse votre métier et vous envoie leurs demandes.
+            </p>
+            <button
+              onClick={() => onNavigateToTab('services')}
+              className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 text-white text-xs font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+            >
+              Ajouter un service
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const disponibles = opportunites.filter(o => !o.deja_repondu && !o.complete);
 
