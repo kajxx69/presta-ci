@@ -2,6 +2,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
+import { GridFSBucket } from 'mongodb';
 import { logger } from '../logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +36,22 @@ function isDataUri(value: unknown): value is string {
 }
 
 /**
+ * Les fichiers sont stockés dans MongoDB (GridFS) et non sur le disque :
+ * le filesystem de Render (plan gratuit) est éphémère — chaque redéploiement
+ * ou mise en veille efface tout. Le disque ne sert plus que de fallback en
+ * lecture pour les anciens fichiers locaux.
+ */
+let bucket: GridFSBucket | null = null;
+export function getUploadsBucket(): GridFSBucket {
+  if (!bucket) {
+    const db = mongoose.connection.db;
+    if (!db) throw new Error('MongoDB non connecté');
+    bucket = new GridFSBucket(db as any, { bucketName: 'uploads' });
+  }
+  return bucket;
+}
+
+/**
  * Écrit un data-URI base64 sur disque et retourne son URL publique (/uploads/xxx.ext).
  * Rejette les types non autorisés et les fichiers > 2MB.
  */
@@ -51,9 +69,13 @@ export async function saveDataUri(dataUri: string): Promise<string> {
     throw new Error(`Fichier trop volumineux (max ${Math.round(maxSize / 1024 / 1024)}MB). Compressez votre ${mime.startsWith('video/') ? 'vidéo' : 'image'}.`);
   }
 
-  await ensureDir();
   const name = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${ext}`;
-  await fs.writeFile(path.join(UPLOADS_DIR, name), buffer);
+  await new Promise<void>((resolve, reject) => {
+    const up = getUploadsBucket().openUploadStream(name, { metadata: { contentType: mime } });
+    up.on('finish', () => resolve());
+    up.on('error', reject);
+    up.end(buffer);
+  });
   return `${PUBLIC_BASE_URL}/uploads/${name}`;
 }
 
@@ -89,6 +111,12 @@ export async function materializePhotos<T>(input: T): Promise<T> {
 export async function deleteUpload(publicUrl: string): Promise<void> {
   if (!publicUrl.includes('/uploads/')) return;
   const name = path.basename(publicUrl);
+  try {
+    const files = await getUploadsBucket().find({ filename: name }).toArray();
+    for (const f of files) await getUploadsBucket().delete(f._id);
+  } catch (e: any) {
+    logger.warn(`[uploads] Suppression GridFS impossible: ${name} (${e.message})`);
+  }
   try {
     await fs.unlink(path.join(UPLOADS_DIR, name));
   } catch (e: any) {

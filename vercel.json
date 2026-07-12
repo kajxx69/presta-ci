@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "rootDirectory": "frontend",
   "rewrites": [
+    { "source": "/uploads/:path*", "destination": "https://presta-ci.onrender.com/uploads/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

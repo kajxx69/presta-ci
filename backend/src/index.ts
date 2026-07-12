@@ -46,7 +46,7 @@ import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
-import { UPLOADS_DIR } from './utils/uploads.js';
+import { UPLOADS_DIR, getUploadsBucket } from './utils/uploads.js';
 import { startReminderLoop } from './services/reminders.js';
 
 const app = express();
@@ -140,6 +140,26 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Fichiers uploadés (photos de services, profils, publications…)
+// Source primaire : GridFS (MongoDB) — survit aux redéploiements, contrairement
+// au disque éphémère de Render. Le statique disque reste en fallback pour les
+// anciens fichiers locaux de dev.
+app.get('/uploads/:name', async (req, res, next) => {
+  try {
+    const name = req.params.name;
+    if (!/^[\w][\w.-]*$/.test(name)) return res.status(400).json({ error: 'Nom de fichier invalide' });
+    const bucket = getUploadsBucket();
+    const files = await bucket.find({ filename: name }).limit(1).toArray();
+    if (files.length === 0) return next();
+    res.setHeader('Content-Type', (files[0].metadata as any)?.contentType || 'application/octet-stream');
+    res.setHeader('Content-Length', String(files[0].length));
+    res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    bucket.openDownloadStreamByName(name)
+      .on('error', () => { if (!res.headersSent) next(); else res.end(); })
+      .pipe(res);
+  } catch {
+    next();
+  }
+});
 app.use('/uploads', express.static(UPLOADS_DIR, {
   maxAge: '30d',
   immutable: true,
