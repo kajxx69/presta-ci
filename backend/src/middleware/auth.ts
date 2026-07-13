@@ -9,7 +9,8 @@ export interface AuthenticatedRequest extends Request {
   jwtPayload?: JwtPayload;
 }
 
-export async function getUserIdFromSession(req: Request): Promise<number | null> {
+/** Identité brute (JWT ou cookie), sans contrôle de l'état du compte */
+async function getRawUserId(req: Request): Promise<number | null> {
   // Essayer d'abord JWT
   const jwtUserId = await getUserIdFromJWT(req);
   if (jwtUserId) return jwtUserId;
@@ -29,6 +30,16 @@ export async function getUserIdFromSession(req: Request): Promise<number | null>
   }
 }
 
+export async function getUserIdFromSession(req: Request): Promise<number | null> {
+  const userId = await getRawUserId(req);
+  if (!userId) return null;
+  // Compte suspendu ou supprimé : plus aucune requête authentifiée ne passe,
+  // même sur les routes qui n'utilisent pas requireAuth (ex. /auth/me).
+  // Le JWT du client reste techniquement valide ; c'est ce contrôle qui l'invalide.
+  const active = await User.exists({ _id: userId, is_active: { $ne: false } });
+  return active ? userId : null;
+}
+
 export async function getUserIdFromJWT(req: Request): Promise<number | null> {
   try {
     const authHeader = req.headers.authorization;
@@ -45,14 +56,15 @@ export async function getUserIdFromJWT(req: Request): Promise<number | null> {
 
 export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    const userId = await getUserIdFromSession(req);
+    const userId = await getRawUserId(req);
     if (!userId) {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
     const user = await User.findById(userId).select('email nom prenom telephone ville photo_profil role_id is_active');
     if (!user || user.is_active === false) {
-      return res.status(403).json({ error: 'Ce compte a été suspendu.' });
+      // `code` exploité par le frontend pour déconnecter immédiatement l'appareil
+      return res.status(403).json({ error: 'Ce compte a été suspendu ou supprimé.', code: 'compte_suspendu' });
     }
     req.userId = userId;
     req.user = user.toJSON();

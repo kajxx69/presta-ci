@@ -43,6 +43,19 @@ async function http<T>(url: string, init?: RequestInit): Promise<T> {
     }
     
     const text = await res.text();
+
+    // Compte suspendu/supprimé par un admin : déconnecter cet appareil immédiatement.
+    // Le JWT local resterait valide sinon — c'est le serveur qui fait foi.
+    if (res.status === 403 && token) {
+      let payload: any = null;
+      try { payload = JSON.parse(text); } catch { /* réponse non-JSON */ }
+      if (payload?.code === 'compte_suspendu') {
+        localStorage.removeItem('prestaci-auth');
+        window.location.replace('/login');
+        throw new Error(payload.error || 'Ce compte a été suspendu ou supprimé.');
+      }
+    }
+
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   return res.json();
