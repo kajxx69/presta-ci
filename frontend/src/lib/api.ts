@@ -62,6 +62,7 @@ async function http<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getWavePaymentInfo: (): Promise<{ numero: string | null; nom: string }> => http('/api/wave-payment-info'),
   getCategories: (): Promise<ApiCategory[]> => http('/api/categories'),
   getSubCategories: (categorieId?: number): Promise<ApiSubCategory[]> => {
     const q = categorieId ? `?categorie_id=${categorieId}` : '';

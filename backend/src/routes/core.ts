@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Category, SubCategory, Plan, Prestataire, Service } from '../models/index.js';
+import { Category, SubCategory, Plan, Prestataire, Service, Configuration } from '../models/index.js';
 import { serverError } from '../utils/http.js';
 import { searchAll } from '../utils/search-engine.js';
 
@@ -10,6 +10,25 @@ router.get('/health', async (_req: Request, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) throw new Error('DB not connected');
     res.json({ status: 'ok', db: [{ ok: 1 }] });
+  } catch (e: any) {
+    serverError(res, e);
+  }
+});
+
+// GET /api/wave-payment-info — coordonnées Wave affichées au prestataire au
+// moment de payer son abonnement. Route publique en lecture (pas de secret ici,
+// juste un numéro de réception), modifiable depuis l'admin via /api/admin/settings
+// (clés wave_payment_number / wave_payment_name) sans redéploiement.
+router.get('/wave-payment-info', async (_req: Request, res: Response) => {
+  try {
+    const [numberDoc, nameDoc] = await Promise.all([
+      Configuration.findOne({ cle: 'wave_payment_number' }),
+      Configuration.findOne({ cle: 'wave_payment_name' }),
+    ]);
+    res.json({
+      numero: numberDoc?.valeur || null,
+      nom: nameDoc?.valeur || 'PrestaCI',
+    });
   } catch (e: any) {
     serverError(res, e);
   }

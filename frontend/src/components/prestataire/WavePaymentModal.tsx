@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, CreditCard, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, CreditCard, AlertCircle, CheckCircle, Copy, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 
@@ -17,6 +17,21 @@ export default function WavePaymentModal({ isOpen, onClose, plan, onSuccess }: W
     transaction_id_wave: '',
     duree_abonnement_jours: 30
   });
+  const [waveInfo, setWaveInfo] = useState<{ numero: string | null; nom: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    api.getWavePaymentInfo().then(setWaveInfo).catch(() => setWaveInfo(null));
+  }, [isOpen]);
+
+  const handleCopyNumber = () => {
+    if (!waveInfo?.numero) return;
+    navigator.clipboard.writeText(waveInfo.numero).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   // Calculer le prix en fonction de la durée (prix de base = 1 mois)
   const calculatePrice = (durationDays: number) => {
@@ -125,16 +140,35 @@ export default function WavePaymentModal({ isOpen, onClose, plan, onSuccess }: W
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-6">
             <div className="flex items-start space-x-3">
               <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
-              <div>
+              <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">
                   Instructions de paiement
                 </h4>
                 <ol className="text-sm text-orange-700 dark:text-orange-300 space-y-1 list-decimal list-inside">
-                  <li>Effectuez le paiement via Wave Money</li>
-                  <li>Montant : <strong>{currentPrice.toLocaleString()} FCFA</strong></li>
-                  <li>Copiez l'ID de transaction Wave ci-dessous</li>
+                  <li>
+                    Envoyez <strong>{currentPrice.toLocaleString()} FCFA</strong> via Wave au numéro ci-dessous
+                  </li>
+                  <li>Copiez l'ID de transaction Wave reçu après le paiement</li>
+                  <li>Collez-le dans le champ ci-dessous et soumettez</li>
                   <li>Votre abonnement sera activé après validation par l'admin</li>
                 </ol>
+
+                {waveInfo?.numero && (
+                  <div className="mt-3 flex items-center justify-between gap-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-orange-200 dark:border-orange-700">
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase text-gray-400 dark:text-gray-500 tracking-wide">Numéro Wave — {waveInfo.nom}</p>
+                      <p className="font-bold text-gray-900 dark:text-white text-base">{waveInfo.numero}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyNumber}
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-semibold hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? 'Copié' : 'Copier'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
