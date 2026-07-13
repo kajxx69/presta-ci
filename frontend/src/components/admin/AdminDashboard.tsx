@@ -178,7 +178,7 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Reservations aujourd'hui"
-          value={stats?.reservations?.today ?? stats?.reservations?.en_attente ?? 0}
+          value={stats?.reservations?.today ?? 0}
           icon={Calendar}
           trend={overview?.reservations?.growth_percent}
           subtitle={`${stats?.reservations?.confirmees ?? 0} confirmees`}

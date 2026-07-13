@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { User, Service, Reservation, Avis, StatutReservation, Category, SubCategory, Prestataire } from '../models/index.js';
+import { User, Service, Reservation, Avis, StatutReservation, Category, SubCategory, Prestataire, HistoriqueReservation } from '../models/index.js';
 
 const router = express.Router();
 router.use(requireAuth);
@@ -70,6 +70,34 @@ router.get('/overview', async (req, res) => {
     const growthPercent = (current: number, previous: number) =>
       previous > 0 ? parseFloat((((current - previous) / previous) * 100).toFixed(1)) : (current > 0 ? 100 : 0);
 
+    // Temps de réponse moyen du prestataire : délai entre la création de la
+    // réservation et son premier passage hors de "en_attente" (accepté ou
+    // refusé). Indépendant de la période sélectionnée — mesuré sur les 200
+    // dernières réservations traitées pour rester représentatif sans scanner
+    // tout l'historique à chaque chargement du dashboard.
+    let avg_response_time_hours = 0;
+    if (enAttenteId) {
+      const recentHistorique = await HistoriqueReservation.find({ ancien_statut_id: enAttenteId })
+        .sort({ changed_at: -1 })
+        .limit(200)
+        .select('reservation_id changed_at');
+      if (recentHistorique.length > 0) {
+        const resaIds = [...new Set(recentHistorique.map(h => h.reservation_id))];
+        const resaById = new Map(
+          (await Reservation.find({ _id: { $in: resaIds } }).select('created_at')).map(r => [r._id as number, r.created_at])
+        );
+        const delaysHours = recentHistorique
+          .map(h => {
+            const createdAt = resaById.get(h.reservation_id);
+            return createdAt ? (h.changed_at.getTime() - createdAt.getTime()) / 3600000 : null;
+          })
+          .filter((d): d is number => d !== null && d >= 0);
+        if (delaysHours.length > 0) {
+          avg_response_time_hours = parseFloat((delaysHours.reduce((s, d) => s + d, 0) / delaysHours.length).toFixed(1));
+        }
+      }
+    }
+
     // Revenue by month (last 6 months) — sert de base au graphe "data"/"revenue_trend"
     const sixMonthsAgo = new Date(Date.now() - 180 * 86400000);
     const recentTerminees = terminees.filter(r => r.created_at >= sixMonthsAgo);
@@ -102,7 +130,7 @@ router.get('/overview', async (req, res) => {
         data: revenue_by_month.map(r => ({ label: r.month, value: r.revenue }))
       },
       performance: {
-        conversion_rate: taux_completion, avg_rating: parseFloat(note_moyenne.toFixed(1)), avg_response_time: 0,
+        conversion_rate: taux_completion, avg_rating: parseFloat(note_moyenne.toFixed(1)), avg_response_time: avg_response_time_hours,
         completion_rate: taux_completion, conversion_prestataires: total_prestataires > 0 ? parseFloat(((prestataires_actifs / total_prestataires) * 100).toFixed(1)) : 0,
         avis_rate: all_reservations.length > 0 ? parseFloat(((avis_all.length / terminees.length || 0) * 100).toFixed(1)) : 0,
         note_moyenne: parseFloat(note_moyenne.toFixed(1))

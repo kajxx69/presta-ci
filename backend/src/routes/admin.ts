@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { Configuration, User, Service, Reservation, Notification } from '../models/index.js';
+import { Configuration, User, Service, Reservation, Notification, StatutReservation, TransactionWave } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 
@@ -99,16 +99,38 @@ router.post('/settings/reset', requireAdmin, async (_req: Request, res: Response
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
   try {
-    const [users, services, reservations, notifications] = await Promise.all([
-      User.find().select('role_id'),
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+
+    const [
+      users, services, reservations, notifications,
+      confirmeeStatut, enAttenteStatut, termineeStatut,
+      wavesToday, wavesMonth,
+    ] = await Promise.all([
+      // deleted_at exclut les comptes supprimés par un admin (anonymisés, mais
+      // toujours en base pour l'intégrité référentielle) — sans ce filtre le
+      // total d'utilisateurs restait gonflé de comptes qui n'existent plus.
+      User.find({ deleted_at: null }).select('role_id'),
       Service.find({ deleted_at: null }).select('is_active'),
-      Reservation.find().select('statut_id'),
-      Notification.find().select('is_read')
+      Reservation.find().select('statut_id date_reservation'),
+      Notification.find().select('is_read'),
+      StatutReservation.findOne({ nom: 'confirmee' }),
+      StatutReservation.findOne({ nom: 'en_attente' }),
+      StatutReservation.findOne({ nom: 'terminee' }),
+      TransactionWave.find({ statut: 'valide', created_at: { $gte: todayStart } }).select('montant'),
+      TransactionWave.find({ statut: 'valide', created_at: { $gte: monthStart } }).select('montant'),
     ]);
 
     const clients = users.filter(u => u.role_id === 1).length;
     const prestataires = users.filter(u => u.role_id === 2).length;
     const admins = users.filter(u => u.role_id === 3).length;
+
+    const confirmeeId = confirmeeStatut?._id;
+    const enAttenteId = enAttenteStatut?._id;
+    const termineeId = termineeStatut?._id;
+    const todayEnd = new Date(todayStart); todayEnd.setHours(23, 59, 59, 999);
+
+    const montantOf = (t: any) => parseFloat(String(t.montant)) || 0;
 
     res.json({
       users: { total_users: users.length, clients, prestataires, admins },
@@ -118,8 +140,16 @@ router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
       },
       reservations: {
         total_reservations: reservations.length,
-        confirmees: reservations.filter(r => r.statut_id === 2).length,
-        en_attente: reservations.filter(r => r.statut_id === 1).length
+        confirmees: confirmeeId ? reservations.filter(r => String(r.statut_id) === String(confirmeeId)).length : 0,
+        en_attente: enAttenteId ? reservations.filter(r => String(r.statut_id) === String(enAttenteId)).length : 0,
+        terminees: termineeId ? reservations.filter(r => String(r.statut_id) === String(termineeId)).length : 0,
+        today: reservations.filter(r => new Date(r.date_reservation) >= todayStart && new Date(r.date_reservation) <= todayEnd).length,
+      },
+      // Revenu = abonnements Wave réellement validés par un admin (le seul
+      // argent qui transite réellement sur la plateforme, cf. wave-transactions.ts)
+      financial: {
+        revenue_today: wavesToday.reduce((s, t) => s + montantOf(t), 0),
+        revenue_month: wavesMonth.reduce((s, t) => s + montantOf(t), 0),
       },
       notifications: {
         total_notifications: notifications.length,
