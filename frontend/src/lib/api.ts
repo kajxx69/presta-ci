@@ -301,6 +301,10 @@ export const api = {
       http(`/api/admin/wave-transactions/${transactionId}/validate`, { method: 'PUT' }),
     rejectWaveTransaction: (transactionId: number, motif: string): Promise<{ ok: boolean; message: string }> =>
       http(`/api/admin/wave-transactions/${transactionId}/reject`, { method: 'PUT', body: JSON.stringify({ motif_rejet: motif }) }),
+    getWaveTransactionsStats: (): Promise<{
+      total_transactions: number; en_attente: number; validees: number; rejetees: number;
+      revenus_total: number; montant_en_attente: number; montant_moyen: number; today_count: number;
+    }> => http('/api/admin/wave-transactions/stats'),
     
     // Nouvelles routes admin complètes
     services: {

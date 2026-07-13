@@ -55,10 +55,12 @@ interface HealthCheck {
 }
 
 interface BackupInfo {
+  id: string;
   file_name: string;
   file_size_mb: string;
   created_at: string;
-  modified_at?: string;
+  backup_type?: string;
+  collections_count?: number;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -249,11 +251,11 @@ export default function AdminMaintenance() {
     }
   };
 
-  const handleDeleteBackup = async (fileName: string) => {
+  const handleDeleteBackup = async (id: string, fileName: string) => {
     if (!confirm(`Supprimer la sauvegarde ${fileName} ?`)) return;
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/maintenance/backups/${encodeURIComponent(fileName)}`,
+        `${API_BASE}/api/admin/maintenance/backups/${encodeURIComponent(id)}`,
         { method: 'DELETE', headers: authHeaders(), credentials: 'include' }
       );
       if (res.ok) {
@@ -614,7 +616,7 @@ export default function AdminMaintenance() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDeleteBackup(backup.file_name)}
+                  onClick={() => handleDeleteBackup(backup.id, backup.file_name)}
                   className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
                   title="Supprimer"
                 >

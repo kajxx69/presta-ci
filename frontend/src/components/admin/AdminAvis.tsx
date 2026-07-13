@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import {
   StatusBadge, LoadingSpinner, EmptyState,
-  SectionHeader, RefreshButton, FilterSelect,
+  SectionHeader, RefreshButton, FilterSelect, SearchInput, Pagination,
   formatDate
 } from './AdminShared';
 
@@ -49,43 +49,52 @@ export default function AdminAvis() {
   const [loading, setLoading] = useState(true);
   const [avis, setAvis] = useState<Avis[]>([]);
   const [filter, setFilter] = useState<AvisFilter>('all');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [counts, setCounts] = useState({ all: 0, approved: 0, rejected: 0 });
   const [moderatingId, setModeratingId] = useState<number | null>(null);
 
-  // ── Data loader ──────────────────────────────────────────────────────────
+  const PER_PAGE = 20;
+
+  // ── Data loaders — pagination et recherche envoyées au serveur : au-delà de
+  // la page par défaut, tout charger côté client faussait silencieusement les
+  // compteurs "au total / visibles / masqués" affichés dans l'en-tête. ───────
 
   const loadAvis = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.admin.avis.getAll();
-      setAvis(Array.isArray(data) ? data : data?.data || data?.avis || []);
+      const data = await api.admin.avis.getAll({ page, limit: PER_PAGE, status: filter, search: search || undefined });
+      setAvis(data?.avis || []);
+      setTotal(data?.pagination?.total || 0);
+      setTotalPages(data?.pagination?.totalPages || 1);
     } catch (err: any) {
       showToast(err.message || 'Erreur lors du chargement des avis', 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, filter, search, showToast]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await api.admin.avis.getStats();
+      const o = data?.overview;
+      if (o) setCounts({ all: o.total_avis || 0, approved: o.approuves || 0, rejected: o.rejetes || 0 });
+    } catch { /* les compteurs restent à zéro, pas bloquant pour la liste */ }
+  }, []);
 
   useEffect(() => {
     loadAvis();
   }, [loadAvis]);
 
-  // ── Filtering ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
-  const filtered = useMemo(() => {
-    return avis.filter((a) => {
-      if (filter === 'approved') return a.is_visible === true;
-      if (filter === 'rejected') return a.is_visible === false;
-      return true;
-    });
-  }, [avis, filter]);
-
-  const counts = useMemo(() => {
-    return {
-      all: avis.length,
-      approved: avis.filter((a) => a.is_visible === true).length,
-      rejected: avis.filter((a) => a.is_visible === false).length,
-    };
-  }, [avis]);
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -95,14 +104,14 @@ export default function AdminAvis() {
       try {
         await api.admin.avis.moderate(id, approved);
         showToast(approved ? 'Avis approuve' : 'Avis rejete', 'success');
-        await loadAvis();
+        await Promise.all([loadAvis(), loadStats()]);
       } catch (err: any) {
         showToast(err.message || 'Erreur lors de la moderation', 'error');
       } finally {
         setModeratingId(null);
       }
     },
-    [showToast, loadAvis]
+    [showToast, loadAvis, loadStats]
   );
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -116,6 +125,7 @@ export default function AdminAvis() {
         title="Moderation des Avis"
         subtitle={`${counts.all} avis au total — ${counts.approved} visibles, ${counts.rejected} masques`}
       >
+        <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un avis, client, service..." />
         <FilterSelect
           value={filter}
           onChange={(v) => setFilter(v as AvisFilter)}
@@ -129,11 +139,11 @@ export default function AdminAvis() {
       </SectionHeader>
 
       {/* Avis list */}
-      {filtered.length === 0 ? (
+      {avis.length === 0 ? (
         <EmptyState icon={Star} message="Aucun avis trouve pour ce filtre" />
       ) : (
         <div className="space-y-4">
-          {filtered.map((a) => (
+          {avis.map((a) => (
             <div
               key={a.id}
               className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200"
@@ -188,6 +198,13 @@ export default function AdminAvis() {
               </div>
             </div>
           ))}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="avis"
+            onPageChange={(dir) => setPage((p) => (dir === 'prev' ? Math.max(1, p - 1) : Math.min(totalPages, p + 1)))}
+          />
         </div>
       )}
     </div>

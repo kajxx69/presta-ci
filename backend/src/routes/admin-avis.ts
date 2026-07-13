@@ -7,27 +7,47 @@ router.use(requireAuth);
 router.use(requireRole('admin'));
 
 // GET /api/admin/avis
+// La recherche texte porte sur des champs répartis sur 3 collections (User,
+// Prestataire via Reservation, Service) : on résout d'abord les ids qui
+// matchent, puis on filtre les avis sur ces ids — la pagination reste 100%
+// serveur (un filtre appliqué après un `.limit()` perdrait des résultats).
 router.get('/', async (req, res) => {
   try {
     const { status = 'all', search = '', page = 1, limit = 20, note_min, note_max, prestataire_id, service_id } = req.query;
     const pageNum = Number(page);
-    const limitNum = Number(limit);
+    const limitNum = Math.min(Number(limit) || 20, 100);
     const offset = (pageNum - 1) * limitNum;
 
     const filter: any = {};
-    if (status === 'pending') filter.is_visible = false;
+    if (status === 'rejected' || status === 'pending') filter.is_visible = false;
     else if (status === 'approved') filter.is_visible = true;
     if (note_min) filter.note = { ...filter.note, $gte: Number(note_min) };
     if (note_max) filter.note = { ...filter.note, $lte: Number(note_max) };
     if (prestataire_id) filter.prestataire_id = parseInt(prestataire_id as string);
     if (service_id) filter.service_id = parseInt(service_id as string);
 
+    if (search) {
+      const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const [matchingClients, matchingServices, matchingPrestataires] = await Promise.all([
+        User.find({ $or: [{ nom: rx }, { prenom: rx }, { email: rx }] }).select('_id'),
+        Service.find({ nom: rx }).select('_id'),
+        Prestataire.find({ nom_commercial: rx }).select('_id'),
+      ]);
+      const matchingReservations = await Reservation.find({ prestataire_id: { $in: matchingPrestataires.map(p => p._id) } }).select('_id');
+      filter.$or = [
+        { client_id: { $in: matchingClients.map(c => c._id) } },
+        { service_id: { $in: matchingServices.map(s => s._id) } },
+        { reservation_id: { $in: matchingReservations.map(r => r._id) } },
+        { commentaire: rx },
+      ];
+    }
+
     const [avisList, total] = await Promise.all([
       Avis.find(filter).sort({ created_at: -1 }).skip(offset).limit(limitNum),
       Avis.countDocuments(filter)
     ]);
 
-    let results = await Promise.all(avisList.map(async (a) => {
+    const results = await Promise.all(avisList.map(async (a) => {
       const [client, service, reservation] = await Promise.all([
         User.findById(a.client_id).select('nom prenom email'),
         a.service_id ? Service.findById(a.service_id).select('nom') : null,
@@ -45,17 +65,6 @@ router.get('/', async (req, res) => {
         service_nom: service?.nom || null
       };
     }));
-
-    if (search) {
-      const s = (search as string).toLowerCase();
-      results = results.filter(r =>
-        r.client_nom?.toLowerCase().includes(s) ||
-        r.client_email?.toLowerCase().includes(s) ||
-        r.prestataire_nom?.toLowerCase().includes(s) ||
-        r.service_nom?.toLowerCase().includes(s) ||
-        r.commentaire?.toLowerCase().includes(s)
-      );
-    }
 
     const totalPages = Math.ceil(total / limitNum);
     res.json({ avis: results, pagination: { page: pageNum, limit: limitNum, total, totalPages, hasNext: pageNum < totalPages, hasPrev: pageNum > 1 } });

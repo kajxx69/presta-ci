@@ -97,16 +97,30 @@ router.put('/:id/reject', requireAuth, requireRole('admin'), async (req, res) =>
 // GET /api/admin/wave-transactions/stats
 router.get('/stats', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const all = await TransactionWave.find().select('statut montant');
+    const all = await TransactionWave.find().select('statut montant created_at');
     const total = all.length;
-    const en_attente = all.filter(t => t.statut === 'en_attente').length;
-    const validees = all.filter(t => t.statut === 'valide').length;
-    const rejetees = all.filter(t => t.statut === 'rejete').length;
-    const validatedAmounts = all.filter(t => t.statut === 'valide').map(t => parseFloat(String(t.montant)) || 0);
-    const revenus_total = validatedAmounts.reduce((s, v) => s + v, 0);
-    const montant_moyen = validatedAmounts.length > 0 ? revenus_total / validatedAmounts.length : 0;
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
-    res.json({ total_transactions: total, en_attente, validees, rejetees, revenus_total, montant_moyen: parseFloat(montant_moyen.toFixed(0)) });
+    const en_attenteTx = all.filter(t => t.statut === 'en_attente');
+    const valideeTx = all.filter(t => t.statut === 'valide');
+    const rejetees = all.filter(t => t.statut === 'rejete').length;
+
+    const montantOf = (t: any) => parseFloat(String(t.montant)) || 0;
+    const revenus_total = valideeTx.reduce((s, t) => s + montantOf(t), 0);
+    const montant_en_attente = en_attenteTx.reduce((s, t) => s + montantOf(t), 0);
+    const montant_moyen = valideeTx.length > 0 ? revenus_total / valideeTx.length : 0;
+    const today_count = all.filter(t => new Date(t.created_at) >= todayStart).length;
+
+    res.json({
+      total_transactions: total,
+      en_attente: en_attenteTx.length,
+      validees: valideeTx.length,
+      rejetees,
+      revenus_total,
+      montant_en_attente,
+      montant_moyen: parseFloat(montant_moyen.toFixed(0)),
+      today_count,
+    });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }

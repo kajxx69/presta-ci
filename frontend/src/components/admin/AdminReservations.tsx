@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Calendar, Clock, CheckCircle, XCircle, Eye, AlertTriangle,
-  CalendarDays, CalendarCheck, CalendarX, User, Phone, Mail,
+  Calendar, Clock, CheckCircle, XCircle, Eye,
+  CalendarDays, CalendarCheck, User, Phone, Mail,
   TrendingUp, Timer
 } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -9,7 +9,6 @@ import { useAppStore } from '../../store/appStore';
 import {
   StatCard, StatusBadge, SearchInput, FilterSelect, LoadingSpinner, EmptyState,
   Pagination, Modal, SectionHeader, RefreshButton, ResetButton,
-  formatDate, formatCurrency
 } from './AdminShared';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -49,101 +48,66 @@ export default function AdminReservations() {
     action: 'confirmee' | 'terminee' | 'annulee';
   } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ total: 0, enAttente: 0, confirmees: 0, terminees: 0, todayCount: 0, next30: 0, completionRate: 0 });
 
   const perPage = 10;
 
-  // ── Data loader ──────────────────────────────────────────────────────────
+  // ── Data loaders — pagination, recherche et filtres sont envoyés au serveur :
+  // au-delà de quelques centaines de réservations, tout charger côté client
+  // aurait faussé silencieusement les compteurs et la recherche. ─────────────
 
   const loadReservations = useCallback(async () => {
     setLoading(true);
     try {
-      // Le filtrage, tri et pagination se font côté client dans ce composant :
-      // il faut donc charger toutes les réservations, pas la page de 20 par défaut du backend.
-      const data = await api.admin.reservations.getAll({ limit: 500 });
-      setReservations(Array.isArray(data) ? data : data?.data || data?.reservations || []);
+      const data = await api.admin.reservations.getAll({
+        page,
+        limit: perPage,
+        search: search || undefined,
+        statut: statusFilter,
+        date_filter: dateFilter,
+      });
+      setReservations(data?.reservations || []);
+      setTotal(data?.pagination?.total || 0);
+      setTotalPages(data?.pagination?.totalPages || 1);
     } catch (err: any) {
       showToast(err.message || 'Erreur lors du chargement des reservations', 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, search, statusFilter, dateFilter, showToast]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await api.admin.reservations.getStats();
+      const o = data?.overview;
+      if (o) {
+        setStats({
+          total: o.total_reservations || 0,
+          enAttente: o.en_attente || 0,
+          confirmees: o.confirmees || 0,
+          terminees: o.terminees || 0,
+          todayCount: o.today_count || 0,
+          next30: o.next_30_jours || 0,
+          completionRate: o.taux_completion || 0,
+        });
+      }
+    } catch { /* les StatCards restent à zéro, pas bloquant pour la liste */ }
+  }, []);
 
   useEffect(() => {
     loadReservations();
   }, [loadReservations]);
 
-  // ── Filtering ────────────────────────────────────────────────────────────
-
-  const filtered = useMemo(() => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const weekFromNow = new Date(now);
-    weekFromNow.setDate(weekFromNow.getDate() + 7);
-    const monthFromNow = new Date(now);
-    monthFromNow.setMonth(monthFromNow.getMonth() + 1);
-
-    return reservations.filter((r) => {
-      // Search
-      if (search) {
-        const q = search.toLowerCase();
-        const match =
-          `${r.client_prenom} ${r.client_nom}`.toLowerCase().includes(q) ||
-          r.client_email.toLowerCase().includes(q) ||
-          r.service_nom.toLowerCase().includes(q) ||
-          r.prestataire_nom.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      // Status
-      if (statusFilter !== 'all' && r.statut !== statusFilter) return false;
-      // Date
-      if (dateFilter !== 'all') {
-        const rDate = r.date_reservation.split('T')[0];
-        if (dateFilter === 'today' && rDate !== todayStr) return false;
-        if (dateFilter === 'week') {
-          const d = new Date(rDate);
-          if (d < now || d > weekFromNow) return false;
-        }
-        if (dateFilter === 'month') {
-          const d = new Date(rDate);
-          if (d < now || d > monthFromNow) return false;
-        }
-      }
-      return true;
-    });
-  }, [reservations, search, statusFilter, dateFilter]);
-
-  const totalPages = Math.ceil(filtered.length / perPage);
-  const paginated = useMemo(
-    () => filtered.slice((page - 1) * perPage, page * perPage),
-    [filtered, page]
-  );
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter, dateFilter]);
-
-  // ── Stats ────────────────────────────────────────────────────────────────
-
-  const stats = useMemo(() => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const thirtyDays = new Date(now);
-    thirtyDays.setDate(thirtyDays.getDate() + 30);
-
-    const total = reservations.length;
-    const enAttente = reservations.filter((r) => r.statut === 'en_attente').length;
-    const confirmees = reservations.filter((r) => r.statut === 'confirmee').length;
-    const terminees = reservations.filter((r) => r.statut === 'terminee').length;
-    const todayCount = reservations.filter((r) => r.date_reservation.split('T')[0] === todayStr).length;
-    const next30 = reservations.filter((r) => {
-      const d = new Date(r.date_reservation);
-      return d >= now && d <= thirtyDays;
-    }).length;
-    const completionRate = total > 0 ? Math.round((terminees / total) * 100) : 0;
-
-    return { total, enAttente, confirmees, terminees, todayCount, next30, completionRate };
-  }, [reservations]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -155,14 +119,14 @@ export default function AdminReservations() {
         showToast('Statut mis a jour avec succes', 'success');
         setConfirmModal(null);
         setSelectedReservation(null);
-        await loadReservations();
+        await Promise.all([loadReservations(), loadStats()]);
       } catch (err: any) {
         showToast(err.message || 'Erreur lors de la mise a jour', 'error');
       } finally {
         setActionLoading(false);
       }
     },
-    [showToast, loadReservations]
+    [showToast, loadReservations, loadStats]
   );
 
   const actionLabel = (action: string) => {
@@ -188,7 +152,7 @@ export default function AdminReservations() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <SectionHeader title="Gestion des Reservations" subtitle={`${reservations.length} reservations au total`}>
+      <SectionHeader title="Gestion des Reservations" subtitle={`${total} reservations au total`}>
         <RefreshButton onClick={loadReservations} loading={loading} />
       </SectionHeader>
 
@@ -279,7 +243,7 @@ export default function AdminReservations() {
       </div>
 
       {/* Table */}
-      {filtered.length === 0 ? (
+      {reservations.length === 0 ? (
         <EmptyState icon={Calendar} message="Aucune reservation trouvee" />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -300,7 +264,7 @@ export default function AdminReservations() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {paginated.map((r) => (
+                {reservations.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -376,7 +340,7 @@ export default function AdminReservations() {
             <Pagination
               page={page}
               totalPages={totalPages}
-              total={filtered.length}
+              total={total}
               label="reservations"
               onPageChange={(dir) => setPage((p) => (dir === 'prev' ? Math.max(1, p - 1) : Math.min(totalPages, p + 1)))}
             />

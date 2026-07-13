@@ -64,10 +64,27 @@ export default function AdminPayments() {
   const [rejectTx, setRejectTx] = useState<WaveTransaction | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [confirmValidate, setConfirmValidate] = useState<WaveTransaction | null>(null);
+  const [summary, setSummary] = useState<TransactionSummary>({ total: 0, validated_amount: 0, pending_amount: 0, today_count: 0 });
 
   const LIMIT = 15;
 
   // ── Data loaders ─────────────────────────────────────────────────────────
+
+  const loadStats = useCallback(async () => {
+    try {
+      const s = await api.admin.getWaveTransactionsStats();
+      setSummary({
+        total: s.total_transactions,
+        validated_amount: s.revenus_total,
+        pending_amount: s.montant_en_attente,
+        today_count: s.today_count,
+      });
+    } catch { /* les StatCards restent à zéro, pas bloquant pour la liste */ }
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -135,23 +152,6 @@ export default function AdminPayments() {
     return result;
   }, [transactions, search, dateFilter]);
 
-  // ── Summary computed from all transactions ───────────────────────────────
-
-  const summary = useMemo<TransactionSummary>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return transactions.reduce<TransactionSummary>(
-      (acc, tx) => {
-        acc.total++;
-        if (tx.statut === 'valide') acc.validated_amount += tx.montant;
-        if (tx.statut === 'en_attente') acc.pending_amount += tx.montant;
-        if (new Date(tx.created_at) >= today) acc.today_count++;
-        return acc;
-      },
-      { total: 0, validated_amount: 0, pending_amount: 0, today_count: 0 }
-    );
-  }, [transactions]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -162,13 +162,13 @@ export default function AdminPayments() {
       showToast('Transaction validee avec succes', 'success');
       setConfirmValidate(null);
       setSelectedTx(null);
-      await loadTransactions();
+      await Promise.all([loadTransactions(), loadStats()]);
     } catch (err: any) {
       showToast('Erreur lors de la validation', 'error');
     } finally {
       setActionLoading(false);
     }
-  }, [loadTransactions, showToast]);
+  }, [loadTransactions, loadStats, showToast]);
 
   const handleReject = useCallback(async () => {
     if (!rejectTx) return;
@@ -183,13 +183,13 @@ export default function AdminPayments() {
       setRejectTx(null);
       setRejectReason('');
       setSelectedTx(null);
-      await loadTransactions();
+      await Promise.all([loadTransactions(), loadStats()]);
     } catch (err: any) {
       showToast('Erreur lors du rejet', 'error');
     } finally {
       setActionLoading(false);
     }
-  }, [rejectTx, rejectReason, loadTransactions, showToast]);
+  }, [rejectTx, rejectReason, loadTransactions, loadStats, showToast]);
 
   const resetFilters = () => {
     setSearch('');
