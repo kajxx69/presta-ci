@@ -60,7 +60,7 @@ router.get('/prestataires', async (req: Request, res: Response) => {
     const { ville, q, lat, lng, radius_km } = req.query;
     const { limit, page, skip } = parsePagination(req);
 
-    const filter: any = {};
+    const filter: any = { is_active: true };
     if (ville) filter.ville = ville;
     if (q && String(q).trim()) {
       const rx = new RegExp(escapeRegex(String(q).trim()), 'i');

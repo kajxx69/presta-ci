@@ -205,7 +205,7 @@ let building: Promise<SearchIndex> | null = null;
 async function buildIndex(): Promise<SearchIndex> {
   const [services, prestataires, categories, subCategories] = await Promise.all([
     Service.find({ is_active: true }),
-    Prestataire.find({}),
+    Prestataire.find({ is_active: true }),
     Category.find({}),
     SubCategory.find({}),
   ]);

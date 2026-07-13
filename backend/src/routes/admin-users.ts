@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { User, UserSession, Role, Prestataire, Plan, Service } from '../models/index.js';
+import { invalidateSearchIndex } from '../utils/search-engine.js';
 
 const router = express.Router();
 
@@ -103,6 +104,17 @@ router.put('/:id/toggle-status', requireAuth, requireRole('admin'), async (req, 
     const newStatus = !user.is_active;
     await User.updateOne({ _id: userId }, { is_active: newStatus });
 
+    // Suspendre/réactiver un prestataire doit avoir le même effet sur sa vitrine
+    // publique que sur son compte (sinon il reste visible partout, suspendu ou non)
+    const prestataire = await Prestataire.findOne({ user_id: userId });
+    if (prestataire) {
+      await Prestataire.updateOne({ _id: prestataire._id }, { is_active: newStatus, updated_at: new Date() });
+      if (!newStatus) {
+        await Service.updateMany({ prestataire_id: prestataire._id }, { is_active: false, updated_at: new Date() });
+      }
+      invalidateSearchIndex();
+    }
+
     res.json({ ok: true, is_active: newStatus, message: newStatus ? 'Utilisateur réactivé avec succès' : 'Utilisateur suspendu avec succès' });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -133,10 +145,13 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     });
     await UserSession.deleteMany({ user_id: userId });
 
-    // Prestataire : ses services ne doivent plus apparaître dans les recherches
+    // Prestataire : lui-même (vitrine) et ses services ne doivent plus apparaître
+    // nulle part (listing, recherche, "populaires", fiche détail)
     const prestataire = await Prestataire.findOne({ user_id: userId });
     if (prestataire) {
+      await Prestataire.updateOne({ _id: prestataire._id }, { is_active: false, updated_at: new Date() });
       await Service.updateMany({ prestataire_id: prestataire._id }, { is_active: false, updated_at: new Date() });
+      invalidateSearchIndex();
     }
 
     res.json({ ok: true, message: 'Utilisateur supprimé avec succès' });

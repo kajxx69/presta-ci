@@ -181,7 +181,9 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const prestataire = await Prestataire.findById(id);
-    if (!prestataire) return res.status(404).json({ error: 'Prestataire non trouvé' });
+    if (!prestataire || prestataire.is_active === false) {
+      return res.status(404).json({ error: 'Prestataire non trouvé' });
+    }
 
     // Compteur de vues (fire-and-forget) + badges calculés
     Prestataire.updateOne({ _id: id }, { $inc: { vues: 1 } }).catch(() => {});
