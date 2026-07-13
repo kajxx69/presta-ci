@@ -1,36 +1,25 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { logger } from '../logger.js';
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const MAIL_FROM = process.env.MAIL_FROM || 'PrestaCI <no-reply@prestaci.com>';
 
-export const isMailerConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+export const isMailerConfigured = Boolean(RESEND_API_KEY);
 
-const transporter = isMailerConfigured
-  ? nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    })
-  : null;
+const resend = isMailerConfigured ? new Resend(RESEND_API_KEY) : null;
 
 export async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
-  if (!transporter) {
-    // Pas de SMTP configuré : on trace côté serveur uniquement (jamais renvoyé au client)
-    logger.warn(`[mailer] SMTP non configuré — email non envoyé à ${to} (sujet: ${subject})`);
+  if (!resend) {
+    // Pas de clé Resend configurée : on trace côté serveur uniquement (jamais renvoyé au client)
+    logger.warn(`[mailer] Resend non configuré — email non envoyé à ${to} (sujet: ${subject})`);
     return false;
   }
-  try {
-    await transporter.sendMail({ from: MAIL_FROM, to, subject, html });
-    return true;
-  } catch (e: any) {
-    logger.error(`[mailer] Échec d'envoi à ${to}: ${e.message}`);
+  const { error } = await resend.emails.send({ from: MAIL_FROM, to, subject, html });
+  if (error) {
+    logger.error(`[mailer] Échec d'envoi à ${to}: ${error.message}`);
     return false;
   }
+  return true;
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
