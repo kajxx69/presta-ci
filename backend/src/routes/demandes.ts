@@ -16,6 +16,15 @@ const MAX_REPONSES = 15;
 const MAX_DEMANDES_OUVERTES = 3;
 /** Nombre maximum de prestataires notifiés à la création */
 const MAX_NOTIFICATIONS = 50;
+/** Avantage des plans payants : fenêtre d'accès anticipé pour répondre avant le plan gratuit */
+const PRIORITE_MINUTES = 5;
+
+/** true si le prestataire a un abonnement payant actif (pas expiré, plan_actuel_id != 1 = Gratuit) */
+function hasActivePaidPlan(prestataire: { plan_actuel_id?: number; abonnement_expires_at?: Date | null }): boolean {
+  if (!prestataire.plan_actuel_id || prestataire.plan_actuel_id === 1) return false;
+  if (!prestataire.abonnement_expires_at) return false;
+  return new Date(prestataire.abonnement_expires_at) > new Date();
+}
 
 /** Prestataires actifs dans une catégorie (via leurs services), même ville en premier */
 async function findMatchingPrestataires(categorieId: number, ville?: string | null): Promise<{ userIds: number[]; total: number }> {
@@ -182,18 +191,27 @@ router.get('/opportunites', async (req: Request, res: Response) => {
     const prestataire = await Prestataire.findOne({ user_id: userId });
     if (!prestataire) return res.status(403).json({ error: 'Profil prestataire requis' });
     const prestataireId = prestataire._id as number;
+    const isPrioritaire = hasActivePaidPlan(prestataire);
 
     // Catégories du prestataire, déduites de ses services actifs
     const sousCatIds: number[] = await Service.distinct('sous_categorie_id', { prestataire_id: prestataireId, is_active: true });
     if (sousCatIds.length === 0) return res.json([]);
     const catIds: number[] = await SubCategory.distinct('categorie_id', { _id: { $in: sousCatIds } });
 
-    const demandes = await Demande.find({
+    // Avantage plans payants : les demandes toutes fraîches (< PRIORITE_MINUTES)
+    // ne sont visibles que par les abonnés actifs — le plan gratuit les voit
+    // dès que la fenêtre expire, jamais avant.
+    const query: any = {
       statut: 'ouverte',
       expires_at: { $gt: new Date() },
       categorie_id: { $in: catIds },
       client_id: { $ne: userId }, // pas ses propres demandes
-    }).sort({ created_at: -1 }).limit(50);
+    };
+    if (!isPrioritaire) {
+      query.created_at = { $lte: new Date(Date.now() - PRIORITE_MINUTES * 60000) };
+    }
+
+    const demandes = await Demande.find(query).sort({ created_at: -1 }).limit(50);
 
     const clientIds = [...new Set(demandes.map(d => d.client_id))];
     const categorieIds = [...new Set(demandes.map(d => d.categorie_id))];
@@ -209,6 +227,7 @@ router.get('/opportunites', async (req: Request, res: Response) => {
       const client = clientById.get(d.client_id);
       const cat = catById.get(d.categorie_id);
       const dejaRepondu = (d.reponses || []).some(r => r.prestataire_id === prestataireId);
+      const priorityWindowEnds = new Date(d.created_at.getTime() + PRIORITE_MINUTES * 60000);
       return {
         id: d._id,
         titre: d.titre,
@@ -226,6 +245,9 @@ router.get('/opportunites', async (req: Request, res: Response) => {
         deja_repondu: dejaRepondu,
         complete: (d.reponses || []).length >= MAX_REPONSES,
         meme_ville: !!villeNorm && (d.ville || '').trim().toLowerCase() === villeNorm,
+        // true si cette demande n'est visible qu'à ce prestataire grâce à son
+        // abonnement payant (le plan gratuit ne la verra qu'après la fenêtre)
+        acces_anticipe: isPrioritaire && new Date() < priorityWindowEnds,
       };
     });
 
@@ -259,6 +281,17 @@ router.post('/:id/repondre', async (req: Request, res: Response) => {
     }
     if ((demande.reponses || []).length >= MAX_REPONSES) {
       return res.status(400).json({ error: 'Cette demande a déjà reçu le maximum de réponses' });
+    }
+
+    // Fenêtre d'accès anticipé réservée aux plans payants : vérifiée ici aussi
+    // (pas seulement à l'affichage) pour qu'un appel direct à l'API ne puisse
+    // pas contourner l'avantage pendant les premières minutes.
+    const priorityWindowEnds = new Date(demande.created_at.getTime() + PRIORITE_MINUTES * 60000);
+    if (new Date() < priorityWindowEnds && !hasActivePaidPlan(prestataire)) {
+      const secondesRestantes = Math.ceil((priorityWindowEnds.getTime() - Date.now()) / 1000);
+      return res.status(403).json({
+        error: `Cette demande est réservée aux prestataires abonnés pendant ${Math.ceil(secondesRestantes / 60)} minute(s). Passez à un plan payant pour répondre en priorité.`,
+      });
     }
 
     // Conversation existante ou nouvelle avec ce client

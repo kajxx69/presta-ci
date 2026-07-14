@@ -16,10 +16,10 @@ interface Plan {
   description: string;
   prix: number;
   devise: string;
-  duree_jours: number;
   max_services?: number;
   max_reservations_mois?: number;
   max_photos_par_service?: number;
+  avantages?: string[];
   is_active: boolean;
   is_popular?: boolean;
 }
@@ -31,12 +31,13 @@ interface PlanFormState {
   max_services: string;
   max_reservations_mois: string;
   max_photos_par_service: string;
+  avantages: string; // une ligne par avantage dans le textarea, jointes par \n
   is_popular: boolean;
 }
 
 const EMPTY_FORM: PlanFormState = {
   nom: '', description: '', prix: '', max_services: '',
-  max_reservations_mois: '', max_photos_par_service: '5', is_popular: false,
+  max_reservations_mois: '', max_photos_par_service: '5', avantages: '', is_popular: false,
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ export default function AdminPlans() {
       max_services: plan.max_services != null ? String(plan.max_services) : '',
       max_reservations_mois: plan.max_reservations_mois != null ? String(plan.max_reservations_mois) : '',
       max_photos_par_service: plan.max_photos_par_service != null ? String(plan.max_photos_par_service) : '5',
+      avantages: (plan.avantages || []).join('\n'),
       is_popular: !!plan.is_popular,
     });
     setFormOpen(true);
@@ -112,6 +114,7 @@ export default function AdminPlans() {
       max_services,
       max_reservations_mois: form.max_reservations_mois ? Number(form.max_reservations_mois) : null,
       max_photos_par_service: form.max_photos_par_service ? Number(form.max_photos_par_service) : 5,
+      avantages: form.avantages.split('\n').map(l => l.trim()).filter(Boolean),
       is_popular: form.is_popular,
     };
 
@@ -227,7 +230,7 @@ export default function AdminPlans() {
                   {formatCurrency(plan.prix, plan.devise || 'FCFA')}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  pour {plan.duree_jours} jour{plan.duree_jours > 1 ? 's' : ''}
+                  pour 30 jours — le prestataire choisit sa durée réelle (1, 3, 6 ou 12 mois) au paiement
                 </p>
               </div>
 
@@ -251,12 +254,16 @@ export default function AdminPlans() {
                     </span>
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span>
-                    Duree : <span className="font-medium">{plan.duree_jours} jours</span>
-                  </span>
-                </div>
+                {plan.avantages && plan.avantages.length > 0 && (
+                  <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                    {plan.avantages.map((a, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span>{a}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
@@ -327,6 +334,16 @@ export default function AdminPlans() {
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Max photos/service</label>
                 <input type="number" min={0} className={inputClass} value={form.max_photos_par_service} onChange={e => setForm(f => ({ ...f, max_photos_par_service: e.target.value }))} />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Avantages affichés au prestataire (un par ligne)</label>
+              <textarea
+                className={inputClass}
+                rows={5}
+                value={form.avantages}
+                onChange={e => setForm(f => ({ ...f, avantages: e.target.value }))}
+                placeholder={'Ex :\n10 services maximum\nBadge vérifié ✓\nDemandes Express en accès anticipé'}
+              />
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input type="checkbox" checked={form.is_popular} onChange={e => setForm(f => ({ ...f, is_popular: e.target.checked }))} />

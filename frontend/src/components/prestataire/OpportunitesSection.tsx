@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Megaphone, MapPin, Wallet, CalendarDays, Send, Loader2, CheckCircle2, Users, ChevronDown } from 'lucide-react';
+import { Megaphone, MapPin, Wallet, CalendarDays, Send, Loader2, CheckCircle2, Users, ChevronDown, Zap } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 
@@ -94,6 +94,12 @@ export default function OpportunitesSection({ onNavigateToTab, hasActiveServices
         Des clients recherchent vos services en ce moment. Premier arrivé, premier servi !
       </p>
 
+      {opportunites.some(o => o.acces_anticipe) && (
+        <p className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 -mt-2 flex items-center gap-1">
+          <Zap className="w-3 h-3" /> Accès anticipé abonné — les autres prestataires ne voient pas encore certaines de ces demandes.
+        </p>
+      )}
+
       <div className="space-y-3">
         {opportunites.slice(0, 5).map(o => (
           <div key={o.id} className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 shadow-soft p-4 space-y-2.5">
@@ -106,11 +112,18 @@ export default function OpportunitesSection({ onNavigateToTab, hasActiveServices
                   Par {o.client_nom}{o.categorie_nom ? ` · ${o.categorie_nom}` : ''}
                 </p>
               </div>
-              {o.meme_ville && (
-                <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                  📍 Votre ville
-                </span>
-              )}
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                {o.acces_anticipe && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 inline-flex items-center gap-0.5">
+                    <Zap className="w-2.5 h-2.5" /> Accès anticipé
+                  </span>
+                )}
+                {o.meme_ville && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                    📍 Votre ville
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-[13px] text-gray-600 dark:text-gray-300 line-clamp-2">{o.description}</p>

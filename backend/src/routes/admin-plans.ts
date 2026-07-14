@@ -129,7 +129,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/plans
 router.post('/', async (req, res) => {
   try {
-    const { nom, description, prix, max_services, max_reservations_mois, max_photos_par_service = 5, features = [], is_popular = false } = req.body;
+    const { nom, description, prix, max_services, max_reservations_mois, max_photos_par_service = 5, features = [], avantages = [], is_popular = false } = req.body;
     if (!nom || !description || prix === undefined || !max_services) return res.status(400).json({ error: 'Nom, description, prix et max_services requis' });
     if (prix < 0) return res.status(400).json({ error: 'Le prix ne peut pas être négatif' });
 
@@ -138,7 +138,8 @@ router.post('/', async (req, res) => {
 
     if (is_popular) await Plan.updateMany({ is_popular: true }, { is_popular: false });
 
-    const plan = await Plan.create({ nom, description, prix, max_services, max_reservations_mois: max_reservations_mois || null, max_photos_par_service, features, is_popular });
+    // avantages : liste affichée au prestataire (PlansTab) ; features : flags internes (ex. verified_badge)
+    const plan = await Plan.create({ nom, description, prix, max_services, max_reservations_mois: max_reservations_mois || null, max_photos_par_service, features, avantages, is_popular });
     res.status(201).json({ success: true, message: 'Plan créé', id: plan._id });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -149,7 +150,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { nom, description, prix, max_services, max_reservations_mois, max_photos_par_service, features, is_active, is_popular } = req.body;
+    const { nom, description, prix, max_services, max_reservations_mois, max_photos_par_service, features, avantages, is_active, is_popular } = req.body;
 
     const existing = await Plan.findById(id);
     if (!existing) return res.status(404).json({ error: 'Plan non trouvé' });
@@ -169,6 +170,7 @@ router.put('/:id', async (req, res) => {
     if (max_reservations_mois !== undefined) update.max_reservations_mois = max_reservations_mois;
     if (max_photos_par_service) update.max_photos_par_service = max_photos_par_service;
     if (features) update.features = features;
+    if (avantages) update.avantages = avantages;
     if (typeof is_active === 'boolean') update.is_active = is_active;
     if (typeof is_popular === 'boolean') update.is_popular = is_popular;
 
