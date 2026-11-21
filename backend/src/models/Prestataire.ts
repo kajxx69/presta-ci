@@ -21,6 +21,10 @@ const prestataireSchema = new mongoose.Schema({
   photos_etablissement: { type: mongoose.Schema.Types.Mixed, default: [] },
   plan_actuel_id: { type: Number, default: 1, ref: 'Plan' },
   abonnement_expires_at: Date,
+  // Relances d'abonnement déjà envoyées, mémorisées par date de fin concernée :
+  // un renouvellement change la date de fin, donc le cycle de relance repart.
+  relance_j3_pour: { type: Date, default: null },
+  relance_expire_pour: { type: Date, default: null },
   note_moyenne: { type: Number, default: 0 },
   nombre_avis: { type: Number, default: 0 },
   // false quand le compte User associé est suspendu ou supprimé par un admin :

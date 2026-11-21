@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, CheckCheck, Trash2, X, RefreshCw, TestTube } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAppStore } from '../store/appStore';
 
@@ -22,6 +23,7 @@ interface NotificationCenterProps {
 
 export default function NotificationCenter({ onClose, onUnreadCountChange }: NotificationCenterProps) {
   const { showToast } = useAppStore();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -299,6 +301,19 @@ export default function NotificationCenter({ onClose, onUnreadCountChange }: Not
                     }`}>
                       {notification.message}
                     </p>
+
+                    {notification.data?.action === 'renouveler_abonnement' && (
+                      <button
+                        onClick={() => {
+                          if (!notification.is_read) handleMarkAsRead(notification.id);
+                          onClose?.();
+                          navigate('/app/plans');
+                        }}
+                        className="mt-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                      >
+                        Renouveler maintenant
+                      </button>
+                    )}
                     
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs text-gray-500 dark:text-gray-500">

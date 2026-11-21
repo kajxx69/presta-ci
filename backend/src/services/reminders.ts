@@ -2,6 +2,7 @@ import { Reservation, StatutReservation, Service, Prestataire, User } from '../m
 import { InAppNotificationService } from './in-app-notifications.js';
 import { sendMail } from '../utils/mailer.js';
 import { logger } from '../logger.js';
+import { runSubscriptionReminderSweep } from './subscription-reminders.js';
 
 const SWEEP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000; // rappel quand le RDV est à moins de 24h
@@ -96,9 +97,11 @@ export async function runReminderSweep(): Promise<number> {
 
 /** Démarre la boucle de rappels (appelée au boot du serveur) */
 export function startReminderLoop() {
-  runReminderSweep().catch(e => logger.error(`[reminders] sweep initial: ${e.message}`));
-  setInterval(() => {
+  const sweep = () => {
     runReminderSweep().catch(e => logger.error(`[reminders] sweep: ${e.message}`));
-  }, SWEEP_INTERVAL_MS);
+    runSubscriptionReminderSweep().catch(e => logger.error(`[relances-abonnement] sweep: ${e.message}`));
+  };
+  sweep();
+  setInterval(sweep, SWEEP_INTERVAL_MS);
   logger.info('[reminders] Boucle de rappels de rendez-vous démarrée (toutes les 15 min)');
 }
