@@ -25,3 +25,11 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      - key: GENIUSPAY_API_KEY
+        sync: false
+      - key: GENIUSPAY_API_SECRET
+        sync: false
+      - key: GENIUSPAY_WEBHOOK_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

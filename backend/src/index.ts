@@ -44,6 +44,7 @@ import conversationsRoutes from './routes/conversations.js';
 import demandesRoutes from './routes/demandes.js';
 import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
+import paiementsRoutes, { geniusPayWebhookHandler, startPaymentSyncLoop } from './routes/paiements.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
 import { UPLOADS_DIR, getUploadsBucket } from './utils/uploads.js';
@@ -134,6 +135,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Webhook GeniusPay : corps brut (avant express.json) pour vérifier la signature HMAC
+app.post('/api/paiements/webhook/geniuspay', express.raw({ type: '*/*', limit: '1mb' }), geniusPayWebhookHandler);
+
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -203,6 +207,7 @@ app.use('/api/conversations', conversationsRoutes);
 app.use('/api/demandes', demandesRoutes);
 app.use('/api/geo', geoRoutes);
 app.use('/api/admin/tickets', adminTicketsSupportRoutes);
+app.use('/api/paiements', paiementsRoutes);
 
 // Sitemap accessible à la racine (les crawlers cherchent /sitemap.xml)
 app.get('/sitemap.xml', (_req, res) => res.redirect(301, '/api/sitemap.xml'));
@@ -250,6 +255,7 @@ const port = Number(process.env.PORT || 4000);
     await connectDB();
     logger.info('Connected to MongoDB Atlas');
     startReminderLoop();
+    startPaymentSyncLoop();
     app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
   } catch (err: any) {
     logger.error(`Database connection failed: ${err.message}`);

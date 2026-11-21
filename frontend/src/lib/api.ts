@@ -587,6 +587,24 @@ export const api = {
     getStatus: (): Promise<{ hasTransaction: boolean; transaction?: any }> =>
       http('/api/wave-transactions/status')
   },
+  // Paiement en ligne des abonnements (GeniusPay : Wave, Orange Money, MTN, Moov, carte)
+  paiements: {
+    getConfig: (): Promise<{ enabled: boolean; durees: number[] }> =>
+      http('/api/paiements/config'),
+    checkout: (data: { plan_id: number; duree_abonnement_jours: number }): Promise<{ ok: boolean; paiement_id: number; checkout_url: string }> =>
+      http('/api/paiements/checkout', { method: 'POST', body: JSON.stringify(data) }),
+    verifier: (id: number): Promise<{ paiement: { id: number; statut: 'en_attente' | 'paye' | 'echoue' | 'expire'; montant: number; plan_nom: string | null; abonnement_expires_at?: string } }> =>
+      http(`/api/paiements/${id}/verifier`),
+    mesPaiements: (): Promise<any[]> => http('/api/paiements/mes-paiements'),
+    admin: (params?: { statut?: string; page?: number; limit?: number }): Promise<{ paiements: any[]; stats: Record<string, { count: number; montant: number; net: number }>; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+      const q = new URLSearchParams();
+      if (params?.statut) q.append('statut', params.statut);
+      if (params?.page) q.append('page', String(params.page));
+      if (params?.limit) q.append('limit', String(params.limit));
+      const qs = q.toString();
+      return http(`/api/paiements/admin${qs ? '?' + qs : ''}`);
+    },
+  },
   avisClient: {
     create: (payload: { reservation_id: number; note: number; commentaire?: string }): Promise<{ ok: boolean; id: number; message: string }> =>
       http('/api/avis-client', { method: 'POST', body: JSON.stringify(payload) }),

@@ -17,6 +17,15 @@ import AdminCategories from './AdminCategories';
 import AdminReservations from './AdminReservations';
 import AdminAvis from './AdminAvis';
 import AdminPayments from './AdminPayments';
+import AdminPaiementsEnLigne from './AdminPaiementsEnLigne';
+
+// Onglet Paiements : paiements en ligne (GeniusPay, automatiques) puis flux Wave manuel
+const AdminPaymentsPage = () => (
+  <div className="space-y-10">
+    <AdminPaiementsEnLigne />
+    <AdminPayments />
+  </div>
+);
 import AdminNotifications from './AdminNotifications';
 import AdminStatistics from './AdminStatistics';
 import AdminPlans from './AdminPlans';
@@ -91,7 +100,7 @@ const tabComponents: Record<AdminTab, React.ComponentType> = {
   signalements: AdminSignalements,
   verifications: AdminVerifications,
   tickets: AdminTickets,
-  payments: AdminPayments,
+  payments: AdminPaymentsPage,
   notifications: AdminNotifications,
   statistics: AdminStatistics,
   plans: AdminPlans,

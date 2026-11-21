@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Check, Crown, Zap, Star, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Crown, Zap, Star, TrendingUp, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import WavePaymentModal from './WavePaymentModal';
+import PaiementEnLigneModal from './PaiementEnLigneModal';
 
 interface PlanInfo {
   id: number;
@@ -58,18 +60,25 @@ export default function PlansTab() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
   const [transactionStatus, setTransactionStatus] = useState<any>(null);
+  const [paiementConfig, setPaiementConfig] = useState<{ enabled: boolean; durees: number[] }>({ enabled: false, durees: [30] });
+  const [showOnlineModal, setShowOnlineModal] = useState(false);
+  // Retour depuis la page GeniusPay (?paiement=<id>)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [retour, setRetour] = useState<{ statut: 'verification' | 'paye' | 'en_attente' | 'echoue' | 'expire'; plan_nom?: string | null; expires?: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const [plansData, subData, transactionData] = await Promise.all([
+        const [plansData, subData, transactionData, configData] = await Promise.all([
           api.subscription.getPlans(),
           api.subscription.getCurrent(),
-          api.waveTransactions.getStatus()
+          api.waveTransactions.getStatus(),
+          api.paiements.getConfig().catch(() => ({ enabled: false, durees: [30] }))
         ]);
         if (!mounted) return;
+        setPaiementConfig(configData);
         setPlans(plansData.map(normalizePlan));
         setCurrentPlan(subData.subscription);
         setTransactionStatus(transactionData);
@@ -80,6 +89,40 @@ export default function PlansTab() {
       }
     })();
     return () => { mounted = false; };
+  }, []);
+
+  // Au retour de GeniusPay : on interroge le serveur (qui re-vérifie auprès de
+  // GeniusPay) jusqu'à confirmation, ~1 min max — le webhook peut arriver après.
+  useEffect(() => {
+    const id = Number(searchParams.get('paiement'));
+    if (!id) return;
+    let stop = false;
+    setRetour({ statut: 'verification' });
+    (async () => {
+      for (let i = 0; i < 20 && !stop; i++) {
+        try {
+          const { paiement } = await api.paiements.verifier(id);
+          if (paiement.statut !== 'en_attente') {
+            setRetour({ statut: paiement.statut, plan_nom: paiement.plan_nom, expires: paiement.abonnement_expires_at });
+            if (paiement.statut === 'paye') {
+              showToast('Paiement reçu — votre abonnement est actif !', 'success');
+              api.subscription.getCurrent().then((d) => setCurrentPlan(d.subscription)).catch(() => {});
+            }
+            break;
+          }
+        } catch { /* coupure réseau : on réessaie */ }
+        if (i === 19) setRetour({ statut: 'en_attente' });
+        else await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (!stop) {
+        const next = new URLSearchParams(searchParams);
+        next.delete('paiement');
+        next.delete('echec');
+        setSearchParams(next, { replace: true });
+      }
+    })();
+    return () => { stop = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const daysLeft = currentPlan?.abonnement_expires_at
@@ -149,7 +192,8 @@ export default function PlansTab() {
 
   const handleSelectPlan = (plan: PlanInfo) => {
     setSelectedPlan(plan);
-    setShowPaymentModal(true);
+    if (paiementConfig.enabled) setShowOnlineModal(true);
+    else setShowPaymentModal(true);
   };
 
   const handlePaymentSuccess = async () => {
@@ -219,6 +263,42 @@ export default function PlansTab() {
           Développez votre activité avec nos plans adaptés à vos besoins. Plus de services, plus de visibilité !
         </p>
       </div>
+
+      {retour && (
+        <div className={`rounded-2xl border p-4 flex items-start gap-3 ${
+          retour.statut === 'paye' ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+          : retour.statut === 'verification' || retour.statut === 'en_attente' ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+          : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+        }`}>
+          {retour.statut === 'verification' ? <Loader2 className="w-5 h-5 text-blue-600 animate-spin mt-0.5" />
+            : retour.statut === 'paye' ? <Check className="w-5 h-5 text-green-600 mt-0.5" />
+            : retour.statut === 'en_attente' ? <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+            : <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />}
+          <div className="flex-1 text-sm">
+            {retour.statut === 'verification' && <p className="font-semibold text-blue-800 dark:text-blue-200">Vérification de votre paiement…</p>}
+            {retour.statut === 'paye' && (
+              <p className="font-semibold text-green-800 dark:text-green-200">
+                Paiement confirmé ! Plan {retour.plan_nom} actif
+                {retour.expires ? ` jusqu'au ${new Date(retour.expires).toLocaleDateString('fr-FR')}` : ''}.
+              </p>
+            )}
+            {retour.statut === 'en_attente' && (
+              <p className="text-blue-800 dark:text-blue-200">
+                <strong>Paiement en cours de confirmation.</strong> Si vous avez validé le paiement sur votre téléphone,
+                votre abonnement s'activera automatiquement dans quelques minutes — vous recevrez une notification.
+              </p>
+            )}
+            {(retour.statut === 'echoue' || retour.statut === 'expire') && (
+              <p className="text-red-800 dark:text-red-200">
+                <strong>Le paiement n'a pas abouti.</strong> Aucun montant n'a été débité. Vous pouvez réessayer ci-dessous.
+              </p>
+            )}
+          </div>
+          {retour.statut !== 'verification' && (
+            <button onClick={() => setRetour(null)} className="text-xs text-gray-500 hover:text-gray-700">Fermer</button>
+          )}
+        </div>
+      )}
 
       {currentPlan && (
         <div className="grid gap-4 md:grid-cols-3">
@@ -582,6 +662,15 @@ export default function PlansTab() {
           </div>
         </div>
       )}
+
+      {/* Paiement en ligne GeniusPay */}
+      <PaiementEnLigneModal
+        isOpen={showOnlineModal}
+        onClose={() => setShowOnlineModal(false)}
+        plan={selectedPlan}
+        durees={paiementConfig.durees}
+        onChooseWaveManuel={() => { setShowOnlineModal(false); setShowPaymentModal(true); }}
+      />
 
       {/* Wave Payment Modal */}
       <WavePaymentModal
