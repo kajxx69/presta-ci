@@ -33,3 +33,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: PEXELS_API_KEY
+        sync: false

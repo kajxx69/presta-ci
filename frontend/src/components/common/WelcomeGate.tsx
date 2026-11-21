@@ -12,22 +12,22 @@ const choices = [
   {
     id: 'search' as const,
     icon: Search,
-    title: 'Je cherche un service précis',
-    desc: 'Coiffure, ménage, imprimerie, traiteur…',
+    title: 'Je cherche un modèle précis',
+    desc: 'Knotless, nattes, nail art, maquillage…',
     gradient: 'from-blue-500 to-indigo-600',
   },
   {
     id: 'discover' as const,
     icon: Compass,
-    title: 'Je veux découvrir autour de moi',
-    desc: 'Parcourez les réalisations des prestataires',
+    title: "Je veux de l'inspiration",
+    desc: 'Swipe des coiffures, ongles et looks, garde tes coups de cœur',
     gradient: 'from-purple-500 to-pink-600',
   },
   {
     id: 'pro' as const,
     icon: Briefcase,
-    title: 'Je suis un professionnel',
-    desc: 'Proposez vos services sur PrestaCI',
+    title: 'Je suis coiffeuse ou esthéticienne',
+    desc: 'Montre tes réalisations et reçois des clientes',
     gradient: 'from-emerald-500 to-teal-600',
   },
 ];
@@ -58,9 +58,9 @@ export default function WelcomeGate({ open, onClose, onSelect }: WelcomeGateProp
               </div>
               <h1 className="text-2xl font-extrabold text-white">Bienvenue sur PrestaCI</h1>
               <p className="text-white/80 text-sm mt-1.5">
-                La marketplace de services près de chez vous, en Côte d'Ivoire.
+                L'inspiration beauté en Côte d'Ivoire : trouve ton style, réserve en un clic.
               </p>
-              <p className="text-white/70 text-sm mt-3 font-medium">Qu'est-ce qui vous amène ?</p>
+              <p className="text-white/70 text-sm mt-3 font-medium">Qu'est-ce qui t'amène ?</p>
             </div>
 
             <div className="space-y-3">

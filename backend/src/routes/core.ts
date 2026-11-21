@@ -3,6 +3,11 @@ import mongoose from 'mongoose';
 import { Category, SubCategory, Plan, Prestataire, Service, Configuration } from '../models/index.js';
 import { serverError } from '../utils/http.js';
 import { searchAll } from '../utils/search-engine.js';
+import { categorieModelePour } from '../services/modeles-sync.js';
+
+// PrestaCI est recentrée sur la beauté femme : les autres catégories sont masquées
+// côté public (pas supprimées). BEAUTE_UNIQUEMENT=false pour tout réafficher.
+const BEAUTE_UNIQUEMENT = process.env.BEAUTE_UNIQUEMENT !== 'false';
 
 const router = Router();
 
@@ -36,7 +41,7 @@ router.get('/wave-payment-info', async (_req: Request, res: Response) => {
 
 router.get('/categories', async (_req: Request, res: Response) => {
   const rows = await Category.find({ is_active: true }).sort({ ordre_affichage: 1, _id: 1 });
-  res.json(rows);
+  res.json(BEAUTE_UNIQUEMENT ? rows.filter(c => categorieModelePour(c.nom, '') !== null) : rows);
 });
 
 router.get('/sous_categories', async (req: Request, res: Response) => {
@@ -44,7 +49,10 @@ router.get('/sous_categories', async (req: Request, res: Response) => {
   const filter: any = { is_active: true };
   if (categorie_id) filter.categorie_id = Number(categorie_id);
   const rows = await SubCategory.find(filter).sort({ ordre_affichage: 1, _id: 1 });
-  res.json(rows);
+  if (!BEAUTE_UNIQUEMENT) return res.json(rows);
+  const cats = await Category.find({ _id: { $in: [...new Set(rows.map(r => r.categorie_id))] } }).select('nom');
+  const nomCat = new Map(cats.map(c => [c._id as number, c.nom]));
+  res.json(rows.filter(r => categorieModelePour(nomCat.get(r.categorie_id) || '', r.nom) !== null));
 });
 
 router.get('/plans_abonnement', async (_req: Request, res: Response) => {

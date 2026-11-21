@@ -1,3 +1,4 @@
+import { syncModelesServiceEnFond } from '../services/modeles-sync.js';
 import express, { Request, Response } from 'express';
 import { Service, Prestataire, Plan, Reservation } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -61,6 +62,7 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
       is_domicile: is_domicile || false
     });
 
+    syncModelesServiceEnFond(service._id as number);
     res.json({ id: service._id });
   } catch (e: any) {
     serverError(res, e);
@@ -101,6 +103,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
     if (stock !== undefined) update.stock = stock === null || stock === '' ? null : Number(stock);
 
     await Service.updateOne({ _id: id, prestataire_id: prestataireId }, update);
+    syncModelesServiceEnFond(id);
     res.json({ ok: true });
   } catch (e: any) {
     serverError(res, e);
@@ -128,6 +131,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     const reservationCount = await Reservation.countDocuments({ service_id: id });
     if (reservationCount > 0) {
       await Service.updateOne({ _id: id, prestataire_id: prestataireId }, { is_active: false, updated_at: new Date() });
+      syncModelesServiceEnFond(id);
       return res.json({
         ok: true,
         message: 'Service désactivé car des réservations existent. Le service ne peut pas être supprimé.',
@@ -136,6 +140,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     }
 
     await Service.deleteOne({ _id: id, prestataire_id: prestataireId });
+    syncModelesServiceEnFond(id);
     res.json({ ok: true, message: 'Service supprimé avec succès', deleted: true });
   } catch (e: any) {
     serverError(res, e);
@@ -153,6 +158,7 @@ router.put('/:id/toggle', requireAuth, async (req: Request, res: Response) => {
     if (!service) return res.status(404).json({ error: 'Service introuvable' });
 
     await Service.updateOne({ _id: id }, { is_active: !service.is_active, updated_at: new Date() });
+    syncModelesServiceEnFond(id);
     res.json({ ok: true });
   } catch (e: any) {
     serverError(res, e);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, Calendar, Camera, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Sparkles, Search, Calendar, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -12,13 +12,16 @@ interface BottomNavigationProps {
 }
 
 const clientTabs = [
-  { id: 'home', label: 'Accueil', icon: Home },
-  { id: 'reservations', label: 'Résa', icon: Calendar },
-  { id: 'publications', label: 'Publis', icon: Camera },
-  { id: 'messages', label: 'Messages', icon: MessageCircle },
+  { id: 'home', label: 'Découvrir', icon: Sparkles },
+  { id: 'search', label: 'Recherche', icon: Search },
   { id: 'favorites', label: 'Favoris', icon: Heart },
   { id: 'profile', label: 'Profil', icon: User },
 ];
+// Le Profil regroupe Réservations, Messages et Mon compte
+const PROFIL_TABS = new Set(['profile', 'reservations', 'messages', 'compte']);
+const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
+  currentTab === tabId || (estCliente && tabId === 'profile' && PROFIL_TABS.has(currentTab));
+
 
 const prestataireTabs = [
   { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
@@ -73,7 +76,7 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
         <div className="flex justify-around items-center h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = currentTab === tab.id;
+            const isActive = estActif(tab.id, currentTab, tabs === clientTabs);
 
             return (
               <motion.button
@@ -111,7 +114,7 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
                   <AnimatedDot visible={isActive} />
 
                   {/* Badge messages non lus */}
-                  {tab.id === 'messages' && unreadMessages > 0 && (
+                  {(tab.id === 'messages' || (tab.id === 'profile' && tabs === clientTabs)) && unreadMessages > 0 && (
                     <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
                       {unreadMessages > 9 ? '9+' : unreadMessages}
                     </span>

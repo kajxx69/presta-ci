@@ -44,6 +44,8 @@ import conversationsRoutes from './routes/conversations.js';
 import demandesRoutes from './routes/demandes.js';
 import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
+import modelesRoutes from './routes/modeles.js';
+import { startModelesSyncLoop } from './services/modeles-sync.js';
 import paiementsRoutes, { geniusPayWebhookHandler, startPaymentSyncLoop } from './routes/paiements.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
@@ -208,6 +210,7 @@ app.use('/api/demandes', demandesRoutes);
 app.use('/api/geo', geoRoutes);
 app.use('/api/admin/tickets', adminTicketsSupportRoutes);
 app.use('/api/paiements', paiementsRoutes);
+app.use('/api/modeles', modelesRoutes);
 
 // Sitemap accessible à la racine (les crawlers cherchent /sitemap.xml)
 app.get('/sitemap.xml', (_req, res) => res.redirect(301, '/api/sitemap.xml'));
@@ -256,6 +259,7 @@ const port = Number(process.env.PORT || 4000);
     logger.info('Connected to MongoDB Atlas');
     startReminderLoop();
     startPaymentSyncLoop();
+    startModelesSyncLoop();
     app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
   } catch (err: any) {
     logger.error(`Database connection failed: ${err.message}`);

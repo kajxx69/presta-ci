@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, TrendingUp, Crown, Settings, Wrench,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle, ShieldCheck
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle, ShieldCheck, Sparkles
 } from 'lucide-react';
+import AdminModeles from './AdminModeles';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
@@ -37,7 +38,7 @@ import AdminTickets from './AdminTickets';
 import AdminVerifications from './AdminVerifications';
 
 type AdminTab =
-  | 'dashboard' | 'users' | 'services' | 'categories'
+  | 'dashboard' | 'users' | 'services' | 'categories' | 'modeles'
   | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'verifications' | 'payments' | 'notifications'
   | 'statistics' | 'plans' | 'settings' | 'maintenance' | 'profile';
 
@@ -63,6 +64,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Gestion',
     items: [
+      { id: 'modeles', label: 'Modèles (Découvrir)', icon: Sparkles },
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'services', label: 'Services', icon: Package },
       { id: 'categories', label: 'Catégories', icon: Grid3X3 },
@@ -95,6 +97,7 @@ const tabComponents: Record<AdminTab, React.ComponentType> = {
   users: AdminUsers,
   services: AdminServices,
   categories: AdminCategories,
+  modeles: AdminModeles,
   reservations: AdminReservations,
   avis: AdminAvis,
   signalements: AdminSignalements,

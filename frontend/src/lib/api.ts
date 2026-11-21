@@ -3,6 +3,10 @@ export interface ApiSubCategory { id: number; categorie_id: number; nom: string;
 export interface ApiPrestataire { id: number; nom_commercial: string; ville?: string; adresse?: string; latitude?: number; longitude?: number; note_moyenne?: number; nombre_avis?: number; is_verified?: number; photos_etablissement?: any; }
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; type_service?: 'prestation' | 'produit'; stock?: number | null; duree_minutes?: number | null; unite?: string | null; quantite_min?: number; quantite_max?: number | null; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 
+export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
+export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; source: 'prestataire' | 'curation'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
+export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number }; }
+
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
 const isLocalHost =
   typeof window !== 'undefined' &&
@@ -586,6 +590,40 @@ export const api = {
       http('/api/wave-transactions/my-transactions'),
     getStatus: (): Promise<{ hasTransaction: boolean; transaction?: any }> =>
       http('/api/wave-transactions/status')
+  },
+  // Modèles d'inspiration beauté (fil « Découvrir » à swiper)
+  modeles: {
+    feed: (body: { categorie?: string; q?: string; exclude?: number[] }): Promise<{ modeles: Modele[] }> =>
+      http('/api/modeles/feed', { method: 'POST', body: JSON.stringify(body) }),
+    recherche: (params: { q?: string; categorie?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
+      const q = new URLSearchParams();
+      if (params.q) q.append('q', params.q);
+      if (params.categorie) q.append('categorie', params.categorie);
+      if (params.page) q.append('page', String(params.page));
+      return http(`/api/modeles/recherche?${q.toString()}`);
+    },
+    detail: (id: number): Promise<{ modele: Modele; ou_le_faire: OuLeFaire[] }> => http(`/api/modeles/${id}`),
+    parIds: (ids: number[]): Promise<{ modeles: Modele[] }> =>
+      http('/api/modeles/par-ids', { method: 'POST', body: JSON.stringify({ ids }) }),
+    swipe: (id: number, action: 'like' | 'pass'): Promise<{ ok: boolean }> =>
+      http(`/api/modeles/${id}/swipe`, { method: 'POST', body: JSON.stringify({ action }) }),
+    unlike: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/${id}/like`, { method: 'DELETE' }),
+    sync: (body: { likes: number[]; passes: number[] }): Promise<{ ok: boolean }> =>
+      http('/api/modeles/sync', { method: 'POST', body: JSON.stringify(body) }),
+    mesLikes: (): Promise<{ modeles: Modele[] }> => http('/api/modeles/mes-likes'),
+    admin: {
+      list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[]; pexels: boolean }> => {
+        const q = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, String(v)); });
+        return http(`/api/modeles/admin?${q.toString()}`);
+      },
+      importPexels: (body: { query: string; categorie: string; nombre: number; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
+        http('/api/modeles/admin/import-pexels', { method: 'POST', body: JSON.stringify(body) }),
+      create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
+        http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
+      toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
+      remove: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/${id}`, { method: 'DELETE' }),
+    },
   },
   // Paiement en ligne des abonnements (GeniusPay : Wave, Orange Money, MTN, Moov, carte)
   paiements: {

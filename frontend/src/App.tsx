@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
 import { useAppStore } from './store/appStore';
 import { api } from './lib/api';
+import { swipesLocaux } from './lib/swipesLocaux';
 import { notificationService } from './services/notifications';
 import ToastContainer from './components/ToastContainer';
 
@@ -18,11 +19,10 @@ const Layout = lazy(() => import('./components/Layout'));
 const BottomNavigation = lazy(() => import('./components/BottomNavigation'));
 
 // ─── Lazy: Client ───
-const HomeTab = lazy(() => import('./components/client/HomeTab'));
-const ReservationsTab = lazy(() => import('./components/client/ReservationsTab'));
-const PublicationsTab = lazy(() => import('./components/client/PublicationsTab'));
-const FavoritesTab = lazy(() => import('./components/client/FavoritesTab'));
-const ProfileTab = lazy(() => import('./components/client/ProfileTab'));
+const DiscoverTab = lazy(() => import('./components/client/DiscoverTab'));
+const SearchTab = lazy(() => import('./components/client/SearchTab'));
+const MesFavorisTab = lazy(() => import('./components/client/MesFavorisTab'));
+const ClientProfileHub = lazy(() => import('./components/client/ClientProfileHub'));
 
 // ─── Lazy: Pages détail (accessibles par tous) ───
 const PrestataireDetailPage = lazy(() => import('./pages/PrestataireDetailPage'));
@@ -84,18 +84,16 @@ function SplashScreen() {
 
 // ─── Role-based tab renderers ───
 
-function ClientTabRenderer({ currentTab, homeTabProps }: {
-  currentTab: string;
-  homeTabProps: { onSelectService: (id: number) => void; onSelectProvider: (id: number) => void };
-}) {
+// Cliente : Découvrir (swipe) · Recherche · Mes favoris · Profil (Réservations / Messages / Mon compte)
+function ClientTabRenderer({ currentTab }: { currentTab: string }) {
   switch (currentTab) {
-    case 'home': return <HomeTab {...homeTabProps} />;
-    case 'reservations': return <ReservationsTab />;
-    case 'publications': return <PublicationsTab />;
-    case 'messages': return <MessagesTab />;
-    case 'favorites': return <FavoritesTab />;
-    case 'profile': return <ProfileTab />;
-    default: return <HomeTab {...homeTabProps} />;
+    case 'search': return <SearchTab />;
+    case 'favorites': return <MesFavorisTab />;
+    case 'profile':
+    case 'reservations': return <ClientProfileHub onglet="reservations" />;
+    case 'messages': return <ClientProfileHub onglet="messages" />;
+    case 'compte': return <ClientProfileHub onglet="compte" />;
+    default: return <DiscoverTab />; // home, publications (ancien lien)…
   }
 }
 
@@ -115,7 +113,7 @@ function PrestataireTabRenderer({ currentTab, setCurrentTab }: {
 }
 
 // Onglets valides par rôle (protège contre les URLs /app/nimportequoi)
-const VALID_TABS = new Set(['home', 'reservations', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
+const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
 
 /** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
 function AppShell() {
@@ -143,7 +141,7 @@ function AppShell() {
       navigate('/register?role=prestataire');
       return;
     }
-    navigate(`/app/${intent === 'discover' ? 'publications' : 'home'}`);
+    navigate(`/app/${intent === 'search' ? 'search' : 'home'}`);
   }, [dismissWelcomeGate, navigate]);
 
   // L'URL est la seule source de vérité pour l'onglet courant : une synchronisation
@@ -170,18 +168,15 @@ function AppShell() {
     if (VALID_TABS.has(t)) navigate(`/app/${t}`);
   }, [navigate, setCurrentTab]);
 
-  const handleSelectService = useCallback((serviceId: number) => {
-    navigate(`/services/${serviceId}`);
-  }, [navigate]);
-
-  const handleSelectProvider = useCallback((providerId: number) => {
-    navigate(`/prestataires/${providerId}`);
-  }, [navigate]);
-
-  const homeTabProps = {
-    onSelectService: handleSelectService,
-    onSelectProvider: handleSelectProvider,
-  };
+  // Favoris swipés avant connexion → rattachés au compte de la cliente
+  useEffect(() => {
+    if (!isAuthenticated || (role && role.nom !== 'client')) return;
+    const { likes, passes } = swipesLocaux.lire();
+    if (!likes.length && !passes.length) return;
+    api.modeles.sync({ likes, passes })
+      .then(() => { swipesLocaux.vider(); window.dispatchEvent(new Event('prestaci-favoris-sync')); })
+      .catch(() => {});
+  }, [isAuthenticated, role]);
 
   if (isAuthenticated && role?.nom === 'admin') {
     return (
@@ -195,7 +190,7 @@ function AppShell() {
   const renderCurrentTab = () => {
     if (!isAuthenticated || !role || role.nom === 'client') {
       // Les visiteurs non connectés naviguent comme des clients
-      return <ClientTabRenderer currentTab={activeTab} homeTabProps={homeTabProps} />;
+      return <ClientTabRenderer currentTab={activeTab} />;
     }
     if (role.nom === 'prestataire') {
       return <PrestataireTabRenderer currentTab={activeTab} setCurrentTab={handleTabChange} />;

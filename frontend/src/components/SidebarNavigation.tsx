@@ -1,4 +1,4 @@
-import { Home, Calendar, Camera, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Sparkles, Search, Calendar, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -11,13 +11,16 @@ interface SidebarNavigationProps {
 }
 
 const clientTabs = [
-  { id: 'home', label: 'Accueil', icon: Home },
-  { id: 'reservations', label: 'Réservations', icon: Calendar },
-  { id: 'publications', label: 'Publications', icon: Camera },
-  { id: 'messages', label: 'Messages', icon: MessageCircle },
+  { id: 'home', label: 'Découvrir', icon: Sparkles },
+  { id: 'search', label: 'Recherche', icon: Search },
   { id: 'favorites', label: 'Favoris', icon: Heart },
   { id: 'profile', label: 'Profil', icon: User },
 ];
+// Le Profil regroupe Réservations, Messages et Mon compte
+const PROFIL_TABS = new Set(['profile', 'reservations', 'messages', 'compte']);
+const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
+  currentTab === tabId || (estCliente && tabId === 'profile' && PROFIL_TABS.has(currentTab));
+
 
 const prestataireTabs = [
   { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
@@ -73,7 +76,7 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
+          const isActive = estActif(tab.id, currentTab, tabs === clientTabs);
 
           return (
             <motion.button
