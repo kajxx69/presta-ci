@@ -216,7 +216,7 @@ app.get('/sitemap.xml', (_req, res) => res.redirect(301, '/api/sitemap.xml'));
 
 // Root endpoint with API info
 app.get('/', (_req, res) => res.json({ 
-  name: 'PrestaCI Backend', 
+  name: 'Chicly Backend', 
   version: '0.1.0',
   status: 'running',
   timestamp: new Date().toISOString(),

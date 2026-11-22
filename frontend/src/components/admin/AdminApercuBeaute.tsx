@@ -129,7 +129,7 @@ export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: Navigue
         <div className="absolute -right-6 -top-6 text-8xl opacity-20 select-none" aria-hidden>💅🏾</div>
         <div className="flex items-start justify-between gap-3 relative">
           <div>
-            <p className="text-sm text-white/80 font-medium">PrestaCI Beauté</p>
+            <p className="text-sm text-white/80 font-medium">Chicly Beauté</p>
             <h2 className="text-2xl font-extrabold">Prêt pour le lancement : {faites}/{etapes.length}</h2>
           </div>
           <button onClick={charger} title="Actualiser" className="p-2 rounded-xl bg-white/20 hover:bg-white/30">

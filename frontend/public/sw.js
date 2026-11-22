@@ -1,5 +1,5 @@
-const CACHE_NAME = 'prestaci-v2.0.0';
-const DATA_CACHE_NAME = 'prestaci-data-v2.0.0';
+const CACHE_NAME = 'chicly-v3.0.0';
+const DATA_CACHE_NAME = 'chicly-data-v3.0.0';
 
 const urlsToCache = [
   '/',
@@ -99,10 +99,10 @@ self.addEventListener('fetch', (event) => {
 // Push notifications
 self.addEventListener('push', (event) => {
   let data = {
-    title: 'PrestaCI',
+    title: 'Chicly',
     body: 'Nouvelle notification',
-    icon: '/prestaci-icon-192.png',
-    badge: '/prestaci-icon-192.png',
+    icon: '/chicly-icon-192.png',
+    badge: '/chicly-icon-64.png',
     data: {}
   };
 

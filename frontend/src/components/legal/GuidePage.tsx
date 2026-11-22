@@ -10,7 +10,7 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
           </button>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Guide de démarrage</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Tout savoir pour bien utiliser PrestaCI</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Tout savoir pour bien utiliser Chicly</p>
           </div>
         </div>
       </div>
@@ -19,7 +19,7 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
 
         {/* Intro */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 text-white">
-          <h2 className="text-lg font-bold mb-1">Bienvenue sur PrestaCI</h2>
+          <h2 className="text-lg font-bold mb-1">Bienvenue sur Chicly</h2>
           <p className="text-blue-100 text-sm">La première plateforme de services à domicile en Côte d'Ivoire. Trouvez, réservez et évaluez des prestataires de confiance en quelques clics.</p>
         </div>
 
@@ -134,8 +134,8 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
           </h3>
           <div className="space-y-2 text-gray-600 dark:text-gray-400 text-xs">
             <p>Les paiements en ligne sont traités par <strong className="text-gray-800 dark:text-gray-200">GeniusPay</strong> (Wave, Orange Money, MTN, Moov ou carte bancaire).</p>
-            <p>PrestaCI ne conserve aucun de vos identifiants de paiement ni données financières. Vos fonds sont sécurisés et les transactions sont irréversibles une fois validées.</p>
-            <p>En cas de litige, contactez le support PrestaCI dans les <strong className="text-gray-800 dark:text-gray-200">30 jours</strong> suivant la transaction.</p>
+            <p>Chicly ne conserve aucun de vos identifiants de paiement ni données financières. Vos fonds sont sécurisés et les transactions sont irréversibles une fois validées.</p>
+            <p>En cas de litige, contactez le support Chicly dans les <strong className="text-gray-800 dark:text-gray-200">30 jours</strong> suivant la transaction.</p>
           </div>
         </div>
 
@@ -174,7 +174,7 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="text-xs text-gray-400 dark:text-gray-500 text-center pt-2 border-t border-gray-200 dark:border-gray-700">
-          PrestaCI v1.0 · Abidjan, Côte d'Ivoire · support@prestaci.com
+          Chicly v1.0 · Abidjan, Côte d'Ivoire · support@prestaci.com
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 // Filtre de pertinence des épingles Pinterest importées automatiquement,
 // sur leur description : écarte hommes, enfants, animaux et nudité.
 
-/** Jamais dans PrestaCI : hommes, enfants, animaux, nudité / lingerie. */
+/** Jamais dans Chicly : hommes, enfants, animaux, nudité / lingerie. */
 const EXCLUS = new Set([
   'man', 'men', 'male', 'boy', 'boys', 'guy', 'beard', 'barber', 'gentleman',
   'child', 'children', 'kid', 'kids', 'toddler', 'baby', 'infant', 'teen', 'teenager', 'little',

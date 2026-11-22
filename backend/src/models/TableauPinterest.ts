@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { getNextId } from './Counter.js';
 
-// Tableau Pinterest public suivi par PrestaCI : ses épingles sont ajoutées
+// Tableau Pinterest public suivi par Chicly : ses épingles sont ajoutées
 // automatiquement au fil (services/pinterest-sync.ts) et affichées via le widget
 // OFFICIEL Pinterest (embedPin). Aucune image copiée.
 const tableauPinterestSchema = new mongoose.Schema({

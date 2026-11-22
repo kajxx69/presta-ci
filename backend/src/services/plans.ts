@@ -117,7 +117,7 @@ export async function offrirMoisProLancement(prestataireId: number, userId: numb
     await InAppNotificationService.createCustom(
       userId,
       '🎁 Ton premier mois Pro est offert !',
-      `Tu fais partie des ${PLACES_OFFRE_LANCEMENT} premières pros de PrestaCI : profite du plan Pro gratuitement jusqu'au ${fin.toLocaleDateString('fr-FR')} (modèles illimités, en premier dans « Réserver chez… », badge Pro ✨).`,
+      `Tu fais partie des ${PLACES_OFFRE_LANCEMENT} premières pros de Chicly : profite du plan Pro gratuitement jusqu'au ${fin.toLocaleDateString('fr-FR')} (modèles illimités, en premier dans « Réserver chez… », badge Pro ✨).`,
       'success',
       { offre_lancement: true, rang },
     );

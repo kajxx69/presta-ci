@@ -15,7 +15,7 @@ export default function ShareProfileModal({ open, onClose, nom, url }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
 
-  const shareText = `Découvrez ${nom} sur PrestaCI — consultez les services et réservez en ligne : ${url}`;
+  const shareText = `Découvrez ${nom} sur Chicly — consultez les services et réservez en ligne : ${url}`;
 
   useEffect(() => {
     if (open && canvasRef.current) {

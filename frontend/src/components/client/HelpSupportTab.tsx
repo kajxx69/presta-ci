@@ -44,7 +44,7 @@ const faqItems = [
   },
   {
     question: 'Les paiements sont-ils sécurisés ?',
-    answer: 'Oui. Les paiements en ligne passent par GeniusPay (Wave, Orange Money, MTN, Moov ou carte bancaire), une plateforme de paiement agréée. PrestaCI ne stocke aucune donnée bancaire et les transactions sont chiffrées.'
+    answer: 'Oui. Les paiements en ligne passent par GeniusPay (Wave, Orange Money, MTN, Moov ou carte bancaire), une plateforme de paiement agréée. Chicly ne stocke aucune donnée bancaire et les transactions sont chiffrées.'
   },
   {
     question: 'Comment signaler un problème ?',
@@ -155,7 +155,7 @@ export default function HelpSupportTab({ onBack }: { onBack: () => void }) {
             <div key={msg._id || msg.id} className={`flex ${msg.is_admin ? 'justify-start' : 'justify-end'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.is_admin ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700' : 'bg-blue-600 text-white'}`}>
                 {msg.is_admin && (
-                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 mb-1">Support PrestaCI</p>
+                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 mb-1">Support Chicly</p>
                 )}
                 <p className={`text-sm ${msg.is_admin ? 'text-gray-800 dark:text-gray-200' : 'text-white'}`}>{msg.contenu}</p>
                 <p className={`text-[10px] mt-1 ${msg.is_admin ? 'text-gray-400' : 'text-blue-100'}`}>
@@ -408,7 +408,7 @@ export default function HelpSupportTab({ onBack }: { onBack: () => void }) {
             <DocLink
               icon={<BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
               label="Guide de démarrage"
-              sub="Comment utiliser PrestaCI"
+              sub="Comment utiliser Chicly"
               onClick={() => setActiveView('guide')}
             />
             <DocLink
@@ -427,7 +427,7 @@ export default function HelpSupportTab({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="text-center text-xs text-gray-400 dark:text-gray-500 pt-2">
-          PrestaCI v1.0 · Abidjan, Côte d'Ivoire<br />
+          Chicly v1.0 · Abidjan, Côte d'Ivoire<br />
           Plateforme soumise au droit ivoirien et au droit OHADA
         </div>
       </div>

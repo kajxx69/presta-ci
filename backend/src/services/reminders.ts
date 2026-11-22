@@ -64,7 +64,7 @@ export async function runReminderSweep(): Promise<number> {
           client.email,
           `Rappel : ${serviceNom} ${r.heure_debut ? `demain à ${r.heure_debut}` : 'demain'}`,
           `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
-            <h2 style="color:#4f46e5;">PrestaCI — Rappel de rendez-vous ⏰</h2>
+            <h2 style="color:#7A1638;">Chicly — Rappel de rendez-vous ⏰</h2>
             <p>Bonjour ${client.prenom || ''},</p>
             <p>Petit rappel : <strong>${serviceNom}</strong> chez <strong>${prestataireNom}</strong>, ${quand}.</p>
             ${r.a_domicile ? '<p>La prestation aura lieu à votre domicile.</p>' : prestataire?.adresse ? `<p>Adresse : ${prestataire.adresse}</p>` : ''}

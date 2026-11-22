@@ -13,7 +13,7 @@ import { logger } from '../logger.js';
 const router = express.Router();
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'PrestaCI/1.0 (marketplace de services, contact: support@prestaci.com)';
+const USER_AGENT = 'Chicly/1.0 (marketplace de services, contact: support@prestaci.com)';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 2000;
 

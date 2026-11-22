@@ -50,7 +50,7 @@ export default function ServiceDetailPage() {
 
   usePageMeta(
     service?.nom,
-    service ? (service.description || `${service.nom} — à partir de ${service.prix} ${service.devise || 'FCFA'}. Réservez sur PrestaCI.`) : null
+    service ? (service.description || `${service.nom} — à partir de ${service.prix} ${service.devise || 'FCFA'}. Réservez sur Chicly.`) : null
   );
 
   const loadServiceDetails = async (withRefresh = false) => {

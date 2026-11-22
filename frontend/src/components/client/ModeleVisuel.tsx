@@ -57,7 +57,7 @@ function EpinglePinterest({ url, compact }: { url: string; compact?: boolean }) 
       <div style={{ width: LARGEUR_PIN, transform: `scale(${echelle})`, transformOrigin: 'center center' }} className="flex-shrink-0">
         <div ref={cible} />
       </div>
-      {/* Calque : le swipe et le tap restent dans PrestaCI */}
+      {/* Calque : le swipe et le tap restent dans Chicly */}
       <div className="absolute inset-0" />
     </div>
   );

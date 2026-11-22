@@ -277,7 +277,7 @@ export default function ForgotPasswordPage() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow">
                 <Logo className="h-6 w-auto" />
               </div>
-              <span className="font-bold text-gray-900 dark:text-white">PrestaCI</span>
+              <span className="font-bold text-gray-900 dark:text-white">Chicly</span>
             </div>
             <button
               onClick={() => navigate('/login')}

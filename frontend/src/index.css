@@ -205,3 +205,9 @@
   background: rgba(31, 41, 55, 0.85) !important;
   color: #d1d5db;
 }
+
+/* Écran de chargement Chicly (même animation que dans index.html) */
+@keyframes chicly-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}

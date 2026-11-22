@@ -15,7 +15,7 @@ export default function ParrainageCard() {
 
   if (!data) return null;
 
-  const shareText = `Rejoins-moi sur PrestaCI, l'appli pour trouver et réserver les meilleurs prestataires en Côte d'Ivoire ! Utilise mon code ${data.code} à l'inscription 🎁 ${window.location.origin}/register`;
+  const shareText = `Rejoins-moi sur Chicly, l'appli beauté pour trouver ton style et réserver les meilleures pros de Côte d'Ivoire ! Utilise mon code ${data.code} à l'inscription 🎁 ${window.location.origin}/register`;
 
   const handleCopy = async () => {
     try {
@@ -30,7 +30,7 @@ export default function ParrainageCard() {
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'PrestaCI', text: shareText });
+        await navigator.share({ title: 'Chicly', text: shareText });
         return;
       } catch { /* annulé par l'utilisateur */ }
     }

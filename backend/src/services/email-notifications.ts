@@ -27,15 +27,15 @@ function layout(titre: string, corps: string, ctaLabel?: string, ctaUrl?: string
   const url = ctaUrl || `${frontendOrigin}/app`;
   return `
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
-      <h2 style="color:#2563eb;">PrestaCI</h2>
+      <h2 style="color:#7A1638;">Chicly</h2>
       <h3 style="color:#111827;">${titre}</h3>
       <div style="color:#374151;font-size:14px;line-height:1.6;">${corps}</div>
       <p style="margin:24px 0;">
-        <a href="${url}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">
-          ${ctaLabel || 'Ouvrir PrestaCI'}
+        <a href="${url}" style="background:#7A1638;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">
+          ${ctaLabel || 'Ouvrir Chicly'}
         </a>
       </p>
-      <p style="color:#9ca3af;font-size:12px;">Vous recevez cet email car les notifications sont activées sur votre compte PrestaCI.</p>
+      <p style="color:#9ca3af;font-size:12px;">Vous recevez cet email car les notifications sont activées sur votre compte Chicly.</p>
     </div>`;
 }
 

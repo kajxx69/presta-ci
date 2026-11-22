@@ -19,17 +19,17 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
 
         <section className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-100 dark:border-green-800">
           <p className="text-green-800 dark:text-green-300 font-medium">
-            PrestaCI s'engage à protéger vos données personnelles conformément à la Loi n° 2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel en Côte d'Ivoire et aux recommandations de l'Autorité de Régulation des Télécommunications / TIC de Côte d'Ivoire (ARTCI).
+            Chicly s'engage à protéger vos données personnelles conformément à la Loi n° 2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel en Côte d'Ivoire et aux recommandations de l'Autorité de Régulation des Télécommunications / TIC de Côte d'Ivoire (ARTCI).
           </p>
         </section>
 
         <Section title="1. Responsable du traitement">
-          <p>Le responsable du traitement de vos données personnelles est la société exploitant PrestaCI, société de droit ivoirien, dont le siège social est situé à Abidjan, Côte d'Ivoire.</p>
+          <p>Le responsable du traitement de vos données personnelles est la société exploitant Chicly, société de droit ivoirien, dont le siège social est situé à Abidjan, Côte d'Ivoire.</p>
           <p className="mt-2">Pour toute question relative à vos données personnelles, vous pouvez contacter notre Délégué à la Protection des Données (DPD) à l'adresse : <strong>privacy@prestaci.com</strong></p>
         </Section>
 
         <Section title="2. Données collectées">
-          <p>PrestaCI collecte les catégories de données personnelles suivantes :</p>
+          <p>Chicly collecte les catégories de données personnelles suivantes :</p>
           <div className="mt-2 space-y-3">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
               <p className="font-semibold text-gray-900 dark:text-white mb-1">Données d'identification</p>
@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
         <Section title="4. Base légale du traitement">
           <p>Conformément à la Loi n° 2013-450, le traitement de vos données est fondé sur :</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li><strong>L'exécution du contrat :</strong> pour les données nécessaires à la fourniture des services PrestaCI</li>
+            <li><strong>L'exécution du contrat :</strong> pour les données nécessaires à la fourniture des services Chicly</li>
             <li><strong>Votre consentement :</strong> pour les communications marketing et la géolocalisation précise</li>
             <li><strong>L'intérêt légitime :</strong> pour la prévention des fraudes et l'amélioration des services</li>
             <li><strong>L'obligation légale :</strong> pour la conservation des données de transaction conformément au Code du Commerce OHADA</li>
@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="6. Partage des données">
-          <p>PrestaCI ne vend, ne loue ni ne cède vos données personnelles à des tiers à des fins commerciales. Vos données peuvent être partagées avec :</p>
+          <p>Chicly ne vend, ne loue ni ne cède vos données personnelles à des tiers à des fins commerciales. Vos données peuvent être partagées avec :</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li><strong>Les prestataires de services :</strong> votre nom, téléphone et adresse de prestation nécessaires à l'exécution de la réservation</li>
             <li><strong>GeniusPay :</strong> pour le traitement des paiements en ligne (Wave, Orange Money, MTN, Moov, carte), soumis à ses propres conditions</li>
@@ -112,7 +112,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="8. Sécurité des données">
-          <p>PrestaCI met en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données contre tout accès non autorisé, perte, destruction ou divulgation. Ces mesures comprennent notamment :</p>
+          <p>Chicly met en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données contre tout accès non autorisé, perte, destruction ou divulgation. Ces mesures comprennent notamment :</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Chiffrement des mots de passe (bcrypt)</li>
             <li>Transmission sécurisée via protocole HTTPS/TLS</li>
@@ -123,7 +123,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="9. Cookies et traceurs">
-          <p>PrestaCI utilise des cookies strictement nécessaires au fonctionnement de l'application (session, authentification, préférences d'affichage). Aucun cookie publicitaire tiers n'est utilisé sans votre consentement explicite.</p>
+          <p>Chicly utilise des cookies strictement nécessaires au fonctionnement de l'application (session, authentification, préférences d'affichage). Aucun cookie publicitaire tiers n'est utilisé sans votre consentement explicite.</p>
         </Section>
 
         <Section title="10. Transfert international de données">
@@ -131,11 +131,11 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="11. Modification de la politique">
-          <p>PrestaCI se réserve le droit de modifier la présente politique à tout moment. En cas de modification substantielle, vous serez informé par notification dans l'application au moins 15 jours avant l'entrée en vigueur des changements.</p>
+          <p>Chicly se réserve le droit de modifier la présente politique à tout moment. En cas de modification substantielle, vous serez informé par notification dans l'application au moins 15 jours avant l'entrée en vigueur des changements.</p>
         </Section>
 
         <div className="text-xs text-gray-400 dark:text-gray-500 text-center pt-4 border-t border-gray-200 dark:border-gray-700">
-          PrestaCI · Abidjan, Côte d'Ivoire<br />
+          Chicly · Abidjan, Côte d'Ivoire<br />
           DPD : privacy@prestaci.com · ARTCI : www.artci.ci
         </div>
       </div>

@@ -60,7 +60,8 @@ export default function Header() {
           onClick={() => navigate('/app')}
           className="flex items-center gap-2 active:scale-95 transition-transform lg:hidden"
         >
-          <Logo className="h-9 w-auto" />
+          <Logo className="h-9 w-9 rounded-full" />
+          <span className="text-xl font-extrabold tracking-tight text-[#7A1638] dark:text-pink-300">Chicly</span>
         </button>
         <div className="hidden lg:block" />
 
@@ -142,7 +143,7 @@ export default function Header() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+              <div className="w-full h-full bg-gradient-to-br from-[#7A1638] to-pink-500 flex items-center justify-center text-white text-sm font-bold">
                 {user?.prenom?.[0]}{user?.nom?.[0]}
               </div>
             )}

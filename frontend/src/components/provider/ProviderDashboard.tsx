@@ -16,7 +16,7 @@ export default function ProviderDashboard() {
             Espace Prestataire Pro
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Gérez votre activité, développez votre visibilité et augmentez vos revenus avec PrestaCI
+            Gérez votre activité, développez votre visibilité et augmentez vos revenus avec Chicly
           </p>
         </div>
 

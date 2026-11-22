@@ -83,7 +83,7 @@ export default function PrestataireDetailPage() {
 
   usePageMeta(
     prestataire?.nom_commercial,
-    prestataire ? (prestataire.bio || `${prestataire.nom_commercial} — services à ${prestataire.ville || 'Côte d\'Ivoire'}. Réservez sur PrestaCI.`) : null
+    prestataire ? (prestataire.bio || `${prestataire.nom_commercial} — services à ${prestataire.ville || 'Côte d\'Ivoire'}. Réservez sur Chicly.`) : null
   );
 
   const handleContact = async () => {

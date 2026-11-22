@@ -59,7 +59,8 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
           onClick={() => navigate('/app')}
           className="flex items-center gap-2 active:scale-95 transition-transform"
         >
-          <Logo className="h-9 w-auto" />
+          <Logo className="h-9 w-9 rounded-full" />
+          <span className="text-xl font-extrabold tracking-tight text-[#7A1638] dark:text-pink-300">Chicly</span>
         </button>
       </div>
 
@@ -76,7 +77,7 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
               onClick={() => handleTabSelect(tab.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                 isActive
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-brand'
+                  ? 'bg-gradient-to-r from-[#7A1638] to-pink-500 text-white shadow-brand'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >

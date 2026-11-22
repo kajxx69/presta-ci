@@ -1,4 +1,4 @@
-# PrestaCI
+# Chicly (ex-PrestaCI)
 
 Avant de lire des fichiers, consulte d'abord `graphify-out/graph.json` (ou `graphify query "<question>"`) pour comprendre la structure et ne lire que le strict nécessaire. Après de gros changements, mets la carte à jour : `graphify . --update --code-only`.
 

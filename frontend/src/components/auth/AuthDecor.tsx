@@ -88,8 +88,8 @@ export function PanneauMarque({ accroche, sousTitre }: { accroche: string; sousT
     <div className="hidden lg:flex lg:w-5/12 relative bg-gradient-to-br from-pink-500 via-rose-500 to-orange-400 p-10 flex-col justify-between overflow-hidden">
       <Flottants />
       <div className="relative z-10 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-lg"><Logo className="h-7 w-auto" /></div>
-        <span className="text-2xl font-extrabold text-white tracking-tight">PrestaCI</span>
+        <div className="w-12 h-12 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-lg"><Logo className="h-12 w-12" /></div>
+        <span className="text-2xl font-extrabold text-white tracking-tight">Chicly</span>
       </div>
       <div className="relative z-10 pt-4 pb-12"><PileDeCartes /></div>
       <div className="relative z-10">

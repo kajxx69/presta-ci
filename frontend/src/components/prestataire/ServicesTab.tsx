@@ -154,7 +154,7 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
   const perks = useMemo(() => {
     const key = planName.toLowerCase();
     return planBenefitsMap[key] || [
-      'Visibilité sur PrestaCI',
+      'Visibilité sur Chicly',
       'Réservations en ligne',
       'Paiement Wave, Orange Money, MTN, Moov ou carte'
     ];

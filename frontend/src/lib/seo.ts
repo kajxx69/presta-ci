@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const DEFAULT_TITLE = "PrestaCI - Services de proximité en Côte d'Ivoire";
+const DEFAULT_TITLE = "Chicly — Découvrez, réservez, brillez";
 const DEFAULT_DESCRIPTION = "Découvrez, réservez et partagez des prestations de services en Côte d'Ivoire";
 
 function setMeta(attr: 'name' | 'property', key: string, content: string) {
@@ -19,7 +19,7 @@ function setMeta(attr: 'name' | 'property', key: string, content: string) {
  */
 export function usePageMeta(title?: string | null, description?: string | null) {
   useEffect(() => {
-    const finalTitle = title ? `${title} | PrestaCI` : DEFAULT_TITLE;
+    const finalTitle = title ? `${title} | Chicly` : DEFAULT_TITLE;
     const finalDescription = (description || DEFAULT_DESCRIPTION).slice(0, 160);
 
     document.title = finalTitle;

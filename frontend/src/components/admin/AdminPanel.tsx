@@ -177,7 +177,7 @@ export default function AdminPanel() {
             <div className="flex items-center gap-3 min-w-0">
               <Logo className="h-8 w-auto flex-shrink-0" />
               <span className="font-bold text-gray-900 dark:text-white text-sm truncate">
-                PrestaCI Admin
+                Chicly Admin
               </span>
             </div>
           )}

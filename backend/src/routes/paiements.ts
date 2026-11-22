@@ -131,7 +131,7 @@ router.post('/checkout', requireAuth, async (req: any, res: Response) => {
 
     const distant = await createPayment({
       amount: montant,
-      description: `PrestaCI — Plan ${plan.nom} (${duree} jours)`.slice(0, 500),
+      description: `Chicly — Plan ${plan.nom} (${duree} jours)`.slice(0, 500),
       customer: {
         name: [user?.prenom, user?.nom].filter(Boolean).join(' ') || undefined,
         email: user?.email || undefined,

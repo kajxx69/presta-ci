@@ -1,5 +1,5 @@
 /**
- * Moteur de recherche PrestaCI.
+ * Moteur de recherche Chicly.
  *
  * - Insensible aux accents et à la casse ("reparation" trouve "Réparation")
  * - Tolérant aux fautes de frappe (distance de Levenshtein ≤ 1-2 selon la longueur)

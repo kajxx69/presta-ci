@@ -5,7 +5,7 @@ interface LogoProps {
   alt?: string;
 }
 
-export default function Logo({ className = '', alt = 'PrestaCI' }: LogoProps) {
+export default function Logo({ className = '', alt = 'Chicly' }: LogoProps) {
   const [hasError, setHasError] = useState(false);
 
   if (hasError) {
@@ -18,7 +18,7 @@ export default function Logo({ className = '', alt = 'PrestaCI' }: LogoProps) {
 
   return (
     <img
-      src="/presta-ci-logo.png"
+      src="/chicly-logo.png"
       alt={alt}
       className={`object-contain ${className}`}
       onError={() => setHasError(true)}

@@ -34,43 +34,21 @@ const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
 
 // ─── Loading fallback ───
-function LoadingFallback() {
+// Écran de chargement Chicly : identique à celui d'index.html (aucun saut visuel)
+function EcranChicly() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-app">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-          <span className="text-white text-lg font-bold">P</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </div>
+    <div className="fixed inset-0 flex items-center justify-center bg-[#F7F5F6]">
+      <img src="/chicly-splash.png" alt="Chicly" className="w-[min(72vw,360px)] h-auto animate-[chicly-pulse_1.6s_ease-in-out_infinite]" />
     </div>
   );
 }
 
+function LoadingFallback() {
+  return <EcranChicly />;
+}
+
 function SplashScreen() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-app">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="flex flex-col items-center gap-4"
-      >
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-glow">
-          <span className="text-white text-2xl font-bold">P</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </motion.div>
-    </div>
-  );
+  return <EcranChicly />;
 }
 
 // ─── Role-based tab renderers ───

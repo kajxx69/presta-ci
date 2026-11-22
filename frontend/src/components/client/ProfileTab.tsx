@@ -422,7 +422,7 @@ export default function ProfileTab() {
           <h1 className={clsx('text-2xl font-bold text-white mb-1 drop-shadow-lg', profileLoading && 'opacity-70 animate-pulse')}>
             {user?.prenom} {user?.nom}
           </h1>
-          <p className="text-white/80 text-sm font-medium">Membre PrestaCI</p>
+          <p className="text-white/80 text-sm font-medium">Membre Chicly</p>
           <div className="flex items-center justify-center mt-1.5 gap-1.5 text-white/70 text-sm">
             <MapPin className="w-3.5 h-3.5" />
             <span>{user?.ville || 'Ville non renseignée'}</span>

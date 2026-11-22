@@ -2,24 +2,32 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/presta-ci-logo.png" />
+    <link rel="icon" type="image/png" href="/chicly-icon-64.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PrestaCI - Services de proximité en Côte d'Ivoire</title>
-    <meta name="description" content="Découvrez, réservez et partagez des prestations de services en Côte d'Ivoire" />
-    <meta name="theme-color" content="#3B82F6" />
+    <title>Chicly — Découvrez, réservez, brillez</title>
+    <meta name="description" content="Chicly : swipe des coiffures, ongles et looks, puis réserve chez les meilleures pros beauté de Côte d'Ivoire." />
+    <meta name="theme-color" content="#7A1638" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="PrestaCI" />
-    <meta property="og:title" content="PrestaCI - Services de proximité en Côte d'Ivoire" />
-    <meta property="og:description" content="Découvrez, réservez et partagez des prestations de services en Côte d'Ivoire" />
-    <meta property="og:image" content="/prestaci-icon-512.png" />
+    <meta property="og:site_name" content="Chicly" />
+    <meta property="og:title" content="Chicly — Découvrez, réservez, brillez" />
+    <meta property="og:description" content="Swipe des coiffures, ongles et looks, puis réserve chez les meilleures pros beauté de Côte d'Ivoire." />
+    <meta property="og:image" content="/chicly-icon-512.png" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/prestaci-icon-192.png" />
+    <link rel="apple-touch-icon" href="/chicly-icon-180.png" />
+    <meta name="apple-mobile-web-app-title" content="Chicly" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <style>
+      /* Écran de chargement affiché dès l'ouverture, avant que l'app ne démarre */
+      #chicly-splash { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #F7F5F6; }
+      #chicly-splash img { width: min(72vw, 360px); height: auto; animation: chicly-pulse 1.6s ease-in-out infinite; }
+      @keyframes chicly-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="chicly-splash"><img src="/chicly-splash.png" alt="Chicly" /></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

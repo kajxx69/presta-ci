@@ -59,7 +59,7 @@ export default function OpportunitesSection({ onNavigateToTab, hasActiveServices
             <h2 className="font-bold text-gray-900 dark:text-white text-sm">Demande Express : recevez du business sans rien faire</h2>
             <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
               Les clients publient leurs besoins et les prestataires de la catégorie sont notifiés.
-              Ajoutez <strong>au moins un service actif</strong> pour que PrestaCI connaisse votre métier et vous envoie leurs demandes.
+              Ajoutez <strong>au moins un service actif</strong> pour que Chicly connaisse votre métier et vous envoie leurs demandes.
             </p>
             <button
               onClick={() => onNavigateToTab('services')}

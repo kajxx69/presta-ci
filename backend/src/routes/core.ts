@@ -5,7 +5,7 @@ import { serverError } from '../utils/http.js';
 import { searchAll } from '../utils/search-engine.js';
 import { categorieModelePour } from '../services/modeles-sync.js';
 
-// PrestaCI est recentrée sur la beauté femme : les autres catégories sont masquées
+// Chicly est recentrée sur la beauté femme : les autres catégories sont masquées
 // côté public (pas supprimées). BEAUTE_UNIQUEMENT=false pour tout réafficher.
 const BEAUTE_UNIQUEMENT = process.env.BEAUTE_UNIQUEMENT !== 'false';
 
@@ -32,7 +32,7 @@ router.get('/wave-payment-info', async (_req: Request, res: Response) => {
     ]);
     res.json({
       numero: numberDoc?.valeur || null,
-      nom: nameDoc?.valeur || 'PrestaCI',
+      nom: nameDoc?.valeur || 'Chicly',
     });
   } catch (e: any) {
     serverError(res, e);
