@@ -57,18 +57,18 @@ const navGroups: NavGroup[] = [
   {
     title: 'Principal',
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-      { id: 'statistics', label: 'Statistiques', icon: TrendingUp },
+      { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
+      { id: 'modeles', label: 'Fil Découvrir & Pinterest', icon: Sparkles },
+      { id: 'payments', label: 'Paiements', icon: CreditCard },
     ],
   },
   {
-    title: 'Gestion',
+    title: 'Communauté',
     items: [
-      { id: 'modeles', label: 'Modèles (Découvrir)', icon: Sparkles },
-      { id: 'users', label: 'Utilisateurs', icon: Users },
-      { id: 'services', label: 'Services', icon: Package },
-      { id: 'categories', label: 'Catégories', icon: Grid3X3 },
+      { id: 'users', label: 'Clientes & pros', icon: Users },
+      { id: 'services', label: 'Prestations', icon: Package },
       { id: 'reservations', label: 'Réservations', icon: Calendar },
+      { id: 'verifications', label: 'Vérifications', icon: ShieldCheck },
     ],
   },
   {
@@ -76,9 +76,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'avis', label: 'Avis', icon: Star },
       { id: 'signalements', label: 'Signalements', icon: ShieldAlert },
-      { id: 'verifications', label: 'Vérifications', icon: ShieldCheck },
       { id: 'tickets', label: 'Support', icon: MessageCircle },
-      { id: 'payments', label: 'Paiements', icon: CreditCard },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
   },
@@ -86,13 +84,15 @@ const navGroups: NavGroup[] = [
     title: 'Configuration',
     items: [
       { id: 'plans', label: 'Abonnements', icon: Crown },
+      { id: 'categories', label: 'Catégories', icon: Grid3X3 },
+      { id: 'statistics', label: 'Statistiques', icon: TrendingUp },
       { id: 'settings', label: 'Paramètres', icon: Settings },
       { id: 'maintenance', label: 'Maintenance', icon: Wrench },
     ],
   },
 ];
 
-const tabComponents: Record<AdminTab, React.ComponentType> = {
+const tabComponents: Record<AdminTab, React.ComponentType<{ onNavigate?: (id: any) => void }>> = {
   dashboard: AdminDashboard,
   users: AdminUsers,
   services: AdminServices,
@@ -231,7 +231,7 @@ export default function AdminPanel() {
                         transition-all duration-200
                         ${sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'}
                         ${isActive
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                          ? 'bg-gradient-to-r from-pink-500 to-orange-400 text-white shadow-md shadow-pink-500/20'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
                         }
                       `}
@@ -262,7 +262,7 @@ export default function AdminPanel() {
               w-full flex items-center gap-3 rounded-xl transition-all duration-200
               ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2'}
               ${activeTab === 'profile'
-                ? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800'
+                ? 'bg-pink-50 dark:bg-pink-900/20 ring-1 ring-pink-200 dark:ring-pink-800'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'
               }
             `}
@@ -271,7 +271,7 @@ export default function AdminPanel() {
               {user?.photo_profil ? (
                 <img src={user.photo_profil} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold">
                   {user?.prenom?.[0]}{user?.nom?.[0]}
                 </div>
               )}
@@ -364,7 +364,7 @@ export default function AdminPanel() {
               {user?.photo_profil ? (
                 <img src={user.photo_profil} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold">
                   {user?.prenom?.[0]}{user?.nom?.[0]}
                 </div>
               )}
@@ -375,7 +375,7 @@ export default function AdminPanel() {
         {/* Page content */}
         <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
-            <ActiveComponent />
+            <ActiveComponent onNavigate={handleNavClick} />
           </div>
         </main>
       </div>

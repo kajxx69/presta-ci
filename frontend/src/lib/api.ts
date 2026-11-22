@@ -637,6 +637,7 @@ export const api = {
         http('/api/modeles/admin/pinterest', { method: 'POST', body: JSON.stringify(body) }),
       retirerPinterest: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/pinterest/${id}`, { method: 'DELETE' }),
       remove: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/${id}`, { method: 'DELETE' }),
+      apercu: (): Promise<ApercuAdmin> => http('/api/modeles/admin/apercu'),
     },
   },
   // Paiement en ligne des abonnements (GeniusPay : Wave, Orange Money, MTN, Moov, carte)
@@ -705,3 +706,15 @@ export const api = {
       http(`/api/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ contenu }) }),
   },
 };
+
+/** Tableau de bord « beauté » du back office (GET /api/modeles/admin/apercu) */
+export interface ApercuAdmin {
+  modeles: { total: number; par_source: Record<string, number>; par_categorie: Record<string, number> };
+  tableaux: TableauPinterest[];
+  activite: { likes_7j: number; swipes_7j: number; likes_total: number; nouvelles_clientes_7j: number; nouveaux_pros_7j: number };
+  offres: { total: number; prestataires: number };
+  paiements: { mois_nb: number; mois_montant: number; en_attente: number };
+  sans_prestataire: Modele[];
+  plus_aimes: Modele[];
+  config: { geniuspay: { configure: boolean; mode: 'live' | 'sandbox' | null; webhook: boolean }; frontend_url: boolean };
+}

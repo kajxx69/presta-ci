@@ -176,7 +176,7 @@ export default function AdminPlans() {
       <SectionHeader title="Plans d'abonnement" subtitle={`${plans.length} plan(s) configures`}>
         <button
           onClick={openCreateForm}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" /> Nouveau plan
         </button>
@@ -361,7 +361,7 @@ export default function AdminPlans() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {saving ? 'Enregistrement...' : editingPlan ? 'Mettre à jour' : 'Créer le plan'}
               </button>

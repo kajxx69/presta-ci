@@ -226,7 +226,7 @@ export default function AdminNotifications() {
             <button
               onClick={handleBroadcast}
               disabled={sending || !title.trim() || !message.trim()}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-pink-600 hover:bg-pink-700 disabled:bg-blue-400 text-white rounded-xl text-sm font-medium transition-colors"
             >
               <Send className="w-4 h-4" />
               {sending ? 'Envoi en cours...' : 'Envoyer'}

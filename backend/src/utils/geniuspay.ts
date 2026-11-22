@@ -31,6 +31,16 @@ export function isGeniusPayConfigured(): boolean {
   return Boolean(API_KEY && API_SECRET);
 }
 
+/** État de la configuration pour l'admin (sans jamais exposer les clés). */
+export function etatGeniusPay() {
+  return {
+    configure: isGeniusPayConfigured(),
+    // Les clés de production commencent par pk_live_ ; tout le reste est un mode d'essai
+    mode: !API_KEY ? null : /^pk_live_/i.test(API_KEY) ? 'live' : 'sandbox',
+    webhook: Boolean(WEBHOOK_SECRET),
+  };
+}
+
 export interface GeniusPayPayment {
   id: number;
   reference: string;

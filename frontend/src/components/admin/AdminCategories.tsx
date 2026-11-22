@@ -329,7 +329,7 @@ export default function AdminCategories() {
         />
         <button
           onClick={() => openCategoryForm()}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           Nouvelle categorie
@@ -466,7 +466,7 @@ export default function AdminCategories() {
               <button
                 onClick={handleSaveCategory}
                 disabled={actionLoading || !categoryForm.nom.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-xl transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 disabled:bg-blue-400 rounded-xl transition-colors"
               >
                 {actionLoading ? 'En cours...' : editingCategory ? 'Modifier' : 'Creer'}
               </button>
@@ -525,7 +525,7 @@ export default function AdminCategories() {
                   <button
                     onClick={handleAddSubCategory}
                     disabled={actionLoading || !subForm.nom.trim()}
-                    className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-lg transition-colors"
+                    className="px-4 py-2 text-xs font-medium text-white bg-pink-600 hover:bg-pink-700 disabled:bg-blue-400 rounded-lg transition-colors"
                   >
                     {actionLoading ? 'En cours...' : editingSub ? 'Modifier' : 'Ajouter'}
                   </button>

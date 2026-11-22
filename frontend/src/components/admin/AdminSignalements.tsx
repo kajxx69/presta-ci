@@ -278,7 +278,7 @@ export default function AdminSignalements() {
                 <button
                   onClick={handleTraiter}
                   disabled={!traiterForm.statut || submitting}
-                  className="w-full p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-sm flex items-center justify-center gap-2"
+                  className="w-full p-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white font-medium text-sm flex items-center justify-center gap-2"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   Valider

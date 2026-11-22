@@ -511,7 +511,7 @@ export default function AdminMaintenance() {
           <button
             onClick={handleCreateBackup}
             disabled={backupLoading}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl text-sm font-medium transition-colors"
+            className="w-full py-2.5 bg-pink-600 hover:bg-pink-700 disabled:bg-blue-400 text-white rounded-xl text-sm font-medium transition-colors"
           >
             {backupLoading ? (
               <span className="inline-flex items-center gap-2">

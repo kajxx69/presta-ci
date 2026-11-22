@@ -3,6 +3,7 @@ import {
   Users, Package, Calendar, DollarSign, TrendingUp, BarChart3, AlertTriangle, Clock, Bell, CreditCard, CheckCircle, ArrowUpRight, Zap
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import AdminApercuBeaute, { NaviguerAdmin } from './AdminApercuBeaute';
 import { useAppStore } from '../../store/appStore';
 import {
   StatCard, StatusBadge, LoadingSpinner, EmptyState,
@@ -15,7 +16,7 @@ import {
 interface AdminStats {
   users: { total_users: number; clients: number; prestataires: number; admins: number; active_users?: number };
   services: { total_services: number; services_actifs: number; pending_approval?: number };
-  reservations: { total_reservations: number; confirmees: number; en_attente: number; today?: number };
+  reservations: { total_reservations: number; confirmées: number; en_attente: number; today?: number };
   financial?: { revenue_today: number; revenue_month: number; pending_payments: number };
   notifications: { total_notifications: number; non_lues: number };
 }
@@ -54,7 +55,7 @@ type Period = '7d' | '30d' | '90d' | '1y';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAdmin }) {
   const { showToast } = useAppStore();
 
   // State
@@ -110,7 +111,7 @@ export default function AdminDashboard() {
   const alerts = useMemo(() => {
     const items: { icon: any; label: string; count: number; color: string }[] = [];
     if (stats?.reservations?.en_attente) {
-      items.push({ icon: Clock, label: 'Reservations en attente', count: stats.reservations.en_attente, color: 'text-yellow-600' });
+      items.push({ icon: Clock, label: 'Réservations en attente', count: stats.reservations.en_attente, color: 'text-yellow-600' });
     }
     if (pendingWave.length > 0) {
       items.push({ icon: CreditCard, label: 'Transactions Wave en attente', count: pendingWave.length, color: 'text-orange-600' });
@@ -132,12 +133,19 @@ export default function AdminDashboard() {
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  if (loading) return <LoadingSpinner message="Chargement du tableau de bord..." />;
+  if (loading) return (
+    <div className="space-y-8">
+      <AdminApercuBeaute onNavigate={onNavigate} />
+      <LoadingSpinner message="Chargement de l'activité générale..." />
+    </div>
+  );
 
   return (
     <div className="space-y-8">
+      <AdminApercuBeaute onNavigate={onNavigate} />
+
       {/* Header */}
-      <SectionHeader title="Tableau de bord" subtitle="Vue d'ensemble de la plateforme">
+      <SectionHeader title="Activité générale" subtitle="Utilisateurs, réservations et revenus">
         <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
           {periods.map(p => (
             <button
@@ -145,7 +153,7 @@ export default function AdminDashboard() {
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 period === p.value
-                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  ? 'bg-white dark:bg-gray-700 text-pink-600 dark:text-pink-400 shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
@@ -163,7 +171,7 @@ export default function AdminDashboard() {
           value={stats?.users?.total_users ?? 0}
           icon={Users}
           trend={overview?.users?.growth_percent}
-          subtitle={`${stats?.users?.clients ?? 0} clients, ${stats?.users?.prestataires ?? 0} prestataires`}
+          subtitle={`${stats?.users?.clients ?? 0} clientes, ${stats?.users?.prestataires ?? 0} pros`}
           color="blue"
         />
         <StatCard
@@ -175,11 +183,11 @@ export default function AdminDashboard() {
           color="green"
         />
         <StatCard
-          title="Reservations aujourd'hui"
+          title="Réservations aujourd'hui"
           value={stats?.reservations?.today ?? 0}
           icon={Calendar}
           trend={overview?.reservations?.growth_percent}
-          subtitle={`${stats?.reservations?.confirmees ?? 0} confirmees`}
+          subtitle={`${stats?.reservations?.confirmées ?? 0} confirmées`}
           color="purple"
         />
         <StatCard
@@ -194,9 +202,9 @@ export default function AdminDashboard() {
 
       {/* Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Vue generale */}
+        {/* Vue générale */}
         <Card>
-          <CardHeader title="Vue generale" icon={BarChart3} />
+          <CardHeader title="Vue générale" icon={BarChart3} />
           <div className="px-6 pb-6 space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500 dark:text-gray-400">Total utilisateurs</span>
@@ -211,7 +219,7 @@ export default function AdminDashboard() {
               <span className="font-semibold text-gray-900 dark:text-white">{overview?.services?.active ?? stats?.services?.services_actifs ?? 0}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Reservations totales</span>
+              <span className="text-gray-500 dark:text-gray-400">Réservations totales</span>
               <span className="font-semibold text-gray-900 dark:text-white">{overview?.reservations?.total ?? stats?.reservations?.total_reservations ?? 0}</span>
             </div>
           </div>
@@ -224,7 +232,7 @@ export default function AdminDashboard() {
             {[
               { label: 'Utilisateurs', value: overview?.users?.growth_percent },
               { label: 'Services', value: overview?.services?.growth_percent },
-              { label: 'Reservations', value: overview?.reservations?.growth_percent },
+              { label: 'Réservations', value: overview?.reservations?.growth_percent },
               { label: 'Revenu', value: overview?.revenue?.growth_percent },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between text-sm">
@@ -257,13 +265,13 @@ export default function AdminDashboard() {
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Temps de reponse moy.</span>
+              <span className="text-gray-500 dark:text-gray-400">Temps de réponse moy.</span>
               <span className="font-semibold text-gray-900 dark:text-white">
                 {overview?.performance?.avg_response_time ?? 0}h
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Reservations en attente</span>
+              <span className="text-gray-500 dark:text-gray-400">Réservations en attente</span>
               <span className="font-semibold text-yellow-600">
                 {overview?.reservations?.pending ?? stats?.reservations?.en_attente ?? 0}
               </span>
@@ -329,10 +337,10 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Reservations */}
         <Card>
-          <CardHeader title="Reservations recentes" icon={Calendar} />
+          <CardHeader title="Réservations récentes" icon={Calendar} />
           <div className="px-6 pb-6">
             {recentReservations.length === 0 ? (
-              <EmptyState icon={Calendar} message="Aucune reservation recente" />
+              <EmptyState icon={Calendar} message="Aucune réservation récente" />
             ) : (
               <div className="space-y-3">
                 {recentReservations.map(res => (

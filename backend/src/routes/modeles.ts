@@ -8,6 +8,8 @@ import { OffreModele } from '../models/index.js';
 import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
+import { User, PaiementEnLigne } from '../models/index.js';
+import { etatGeniusPay } from '../utils/geniuspay.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
@@ -275,6 +277,50 @@ router.get('/mes-offres', requireAuth, async (req: any, res: Response) => {
 });
 
 // ─── Admin ─────────────────────────────────────────────────────────────────
+
+// GET /api/modeles/admin/apercu — tableau de bord « beauté » du back office
+router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+  try {
+    const il7j = new Date(Date.now() - 7 * 86400000);
+    const debutMois = new Date(); debutMois.setDate(1); debutMois.setHours(0, 0, 0, 0);
+    const [
+      parSource, parCategorie, tableaux, likes7j, swipes7j, likesTotal, offres, prestatairesOffrants,
+      nouvellesClientes, nouveauxPros, paiementsMois, paiementsAttente, topAimes,
+    ] = await Promise.all([
+      Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$source', n: { $sum: 1 } } }]),
+      Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$categorie', n: { $sum: 1 } } }]),
+      TableauPinterest.find().select('titre categorie url is_active derniere_synchro nb_importees derniere_erreur').sort({ created_at: -1 }),
+      ModeleSwipe.countDocuments({ action: 'like', created_at: { $gte: il7j } }),
+      ModeleSwipe.countDocuments({ created_at: { $gte: il7j } }),
+      ModeleSwipe.countDocuments({ action: 'like' }),
+      OffreModele.countDocuments(),
+      OffreModele.distinct('prestataire_id'),
+      User.countDocuments({ role_id: 1, created_at: { $gte: il7j } }),
+      User.countDocuments({ role_id: 2, created_at: { $gte: il7j } }),
+      PaiementEnLigne.aggregate([{ $match: { statut: 'paye', paye_at: { $gte: debutMois } } }, { $group: { _id: null, n: { $sum: 1 }, montant: { $sum: '$montant' } } }]),
+      PaiementEnLigne.countDocuments({ statut: 'en_attente' }),
+      Modele.find({ is_active: true, nombre_likes: { $gt: 0 } }).sort({ nombre_likes: -1 }).limit(24).select(CHAMPS_PUBLICS),
+    ]);
+    const enrichis = await enrichirOffres(topAimes);
+    res.json({
+      modeles: {
+        total: parSource.reduce((n: number, s: any) => n + s.n, 0),
+        par_source: Object.fromEntries(parSource.map((s: any) => [s._id, s.n])),
+        par_categorie: Object.fromEntries(parCategorie.map((c: any) => [c._id, c.n])),
+      },
+      tableaux,
+      activite: { likes_7j: likes7j, swipes_7j: swipes7j, likes_total: likesTotal, nouvelles_clientes_7j: nouvellesClientes, nouveaux_pros_7j: nouveauxPros },
+      offres: { total: offres, prestataires: prestatairesOffrants.length },
+      paiements: { mois_nb: paiementsMois[0]?.n || 0, mois_montant: paiementsMois[0]?.montant || 0, en_attente: paiementsAttente },
+      // Demande sans offre : les clientes aiment, personne ne le propose encore → prestataires à recruter
+      sans_prestataire: enrichis.filter((m: any) => !m.nb_offres).slice(0, 8),
+      plus_aimes: enrichis.slice(0, 8),
+      config: { geniuspay: etatGeniusPay(), frontend_url: Boolean(process.env.FRONTEND_URL) },
+    });
+  } catch (e) {
+    serverError(res, e, 'modeles/admin-apercu');
+  }
+});
 
 // GET /api/modeles/admin?source=&categorie=&page=
 router.get('/admin', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
