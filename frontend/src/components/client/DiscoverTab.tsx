@@ -79,7 +79,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
 }
 
 export default function DiscoverTab() {
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { showToast } = useAppStore();
   const navigate = useNavigate();
   const [categorie, setCategorie] = useState<CategorieModele | ''>('');

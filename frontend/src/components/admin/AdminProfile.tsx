@@ -86,7 +86,7 @@ export default function AdminProfile() {
       const [profileResponse, statsResponse, systemResponse, notificationPrefs, unreadCount] = await Promise.all([
         api.users.getMe().catch(() => null),
         api.admin.getStats().catch(() => null),
-        api.admin.maintenance.getStatus().catch(() => null),
+        Promise.resolve(null as any), // ancien état « maintenance » (onglet supprimé)
         api.notificationPreferences.get().catch(() => null),
         api.notifications.getUnreadCount().catch(() => ({ count: 0 }))
       ]);

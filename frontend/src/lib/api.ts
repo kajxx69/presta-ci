@@ -533,6 +533,51 @@ export const api = {
       addMessage: (id: number, contenu: string): Promise<{ ok: boolean }> =>
         http(`/api/admin/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ contenu }) }),
     },
+  },
+  signalements: {
+    create: (payload: { type_cible: string; cible_id: number; motif: string; description: string; preuves?: string[] }): Promise<{ ok: boolean; id: number; message: string }> =>
+      http('/api/signalements', { method: 'POST', body: JSON.stringify(payload) }),
+    mine: (): Promise<any[]> => http('/api/signalements/mine'),
+  },
+  avis: {
+    create: (payload: { reservation_id: number; note: number; commentaire?: string; photos?: string[] }): Promise<{ ok: boolean; id: number; message: string }> =>
+      http('/api/avis', { method: 'POST', body: JSON.stringify(payload) }),
+    getByPrestataire: (prestataire_id: number): Promise<any[]> =>
+      http(`/api/avis/prestataire/${prestataire_id}`),
+    getByService: (service_id: number): Promise<any[]> =>
+      http(`/api/avis/service/${service_id}`),
+    getMyAvis: (): Promise<any[]> =>
+      http('/api/avis/client'),
+    delete: (id: number): Promise<{ ok: boolean; message: string }> =>
+      http(`/api/avis/${id}`, { method: 'DELETE' })
+  },
+  notificationPreferences: {
+    get: (): Promise<any> =>
+      http('/api/notification-preferences'),
+    update: (preferences: any): Promise<{ ok: boolean; message: string; preferences: any }> =>
+      http('/api/notification-preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
+    reset: (): Promise<{ ok: boolean; message: string; preferences: any }> =>
+      http('/api/notification-preferences/reset', { method: 'POST' })
+  },
+  waveTransactions: {
+    create: (data: { plan_id: number; transaction_id_wave: string; montant: number; devise?: string; duree_abonnement_jours?: number }): Promise<{ ok: boolean; message: string; transaction_id: number }> =>
+      http('/api/wave-transactions', { method: 'POST', body: JSON.stringify(data) }),
+    getMyTransactions: (): Promise<any[]> =>
+      http('/api/wave-transactions/my-transactions'),
+    getStatus: (): Promise<{ hasTransaction: boolean; transaction?: any }> =>
+      http('/api/wave-transactions/status')
+  },
+  // Modèles d'inspiration beauté (fil « Découvrir » à swiper)
+  modeles: {
+    feed: (body: { categorie?: string; q?: string; exclude?: number[] }): Promise<{ modeles: Modele[] }> =>
+      http('/api/modeles/feed', { method: 'POST', body: JSON.stringify(body) }),
+    recherche: (params: { q?: string; categorie?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
+      const q = new URLSearchParams();
+      if (params.q) q.append('q', params.q);
+      if (params.categorie) q.append('categorie', params.categorie);
+      if (params.page) q.append('page', String(params.page));
+      return http(`/api/modeles/recherche?${q.toString()}`);
+    },
     detail: (id: number): Promise<DetailModele> => http(`/api/modeles/${id}`),
     proposer: (id: number, body: { prix?: number; duree_minutes?: number; is_domicile?: boolean; service_id?: number }): Promise<{ ok: boolean; service_id: number; mis_a_jour: boolean }> =>
       http(`/api/modeles/${id}/offre`, { method: 'POST', body: JSON.stringify(body) }),

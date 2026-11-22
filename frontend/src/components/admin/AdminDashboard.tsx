@@ -17,7 +17,7 @@ import {
 interface AdminStats {
   users: { total_users: number; clients: number; prestataires: number; admins: number; active_users?: number };
   services: { total_services: number; services_actifs: number; pending_approval?: number };
-  reservations: { total_reservations: number; confirmées: number; en_attente: number; today?: number };
+  reservations: { total_reservations: number; confirmees: number; en_attente: number; today?: number };
   financial?: { revenue_today: number; revenue_month: number; pending_payments: number };
   notifications: { total_notifications: number; non_lues: number };
 }
@@ -188,7 +188,7 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
           value={stats?.reservations?.today ?? 0}
           icon={Calendar}
           trend={overview?.reservations?.growth_percent}
-          subtitle={`${stats?.reservations?.confirmées ?? 0} confirmées`}
+          subtitle={`${stats?.reservations?.confirmees ?? 0} confirmées`}
           color="purple"
         />
         <StatCard
