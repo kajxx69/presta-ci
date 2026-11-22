@@ -10,11 +10,11 @@ interface Props {
   durees: number[];
 }
 
-const LIBELLES: Record<number, string> = { 30: '1 mois', 90: '3 mois', 180: '6 mois', 365: '1 an' };
+const LIBELLES: Record<number, string> = { 30: '1 mois', 90: '3 mois', 180: '6 mois', 365: '1 an · 2 mois offerts 🎁' };
 const MOYENS = ['Wave', 'Orange Money', 'MTN MoMo', 'Moov Money', 'Carte bancaire'];
 
 // Même règle que le serveur (utils/geniuspay.ts → montantPour)
-const moisFactures = (jours: number) => (jours === 365 ? 12 : jours / 30);
+const moisFactures = (jours: number) => (jours === 365 ? 10 : jours / 30); // 1 an = 2 mois offerts
 const prixMensuel = (p: { prix: number; prix_promo?: number | null }) =>
   typeof p.prix_promo === 'number' && p.prix_promo > 0 && p.prix_promo < p.prix ? p.prix_promo : p.prix;
 
@@ -65,7 +65,7 @@ export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees }: 
                   onClick={() => setDuree(d)}
                   className={`rounded-xl border-2 p-3 text-left transition-colors ${
                     duree === d
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30'
+                      ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/30'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                   }`}
                 >

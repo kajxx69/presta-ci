@@ -1,7 +1,8 @@
 import { syncModelesServiceEnFond } from '../services/modeles-sync.js';
 import express, { Request, Response } from 'express';
-import { Service, Prestataire, Plan, Reservation } from '../models/index.js';
+import { Service, Prestataire, Reservation } from '../models/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { planEffectif } from '../services/plans.js';
 import { validateCreateService } from '../utils/validation.js';
 import { serverError } from '../utils/http.js';
 import { computeDaySlots } from '../utils/availability.js';
@@ -31,14 +32,12 @@ router.post('/', requireAuth, validateCreateService, async (req: Request, res: R
     const prestataireId = prestataire._id as number;
 
     // Check plan limits and expiration
-    const plan = await Plan.findById(prestataire.plan_actuel_id);
+    // Abonnement expiré : on retombe sur le plan Gratuit (au lieu de bloquer)
+    const plan = await planEffectif(prestataire as any);
     if (!plan) return res.status(400).json({ error: 'Plan introuvable' });
-    if (prestataire.abonnement_expires_at && new Date(prestataire.abonnement_expires_at) < new Date()) {
-      return res.status(402).json({ error: 'Abonnement expiré' });
-    }
     const count = await Service.countDocuments({ prestataire_id: prestataireId, deleted_at: null });
     if (plan.max_services >= 0 && count >= plan.max_services) {
-      return res.status(403).json({ error: `Limite de services atteinte (${plan.max_services})` });
+      return res.status(403).json({ error: `Le plan ${plan.nom} permet ${plan.max_services} prestations. Passe Pro pour en ajouter autant que tu veux ✨` });
     }
 
     const { sous_categorie_id, nom, description, prix, devise, duree_minutes, photos, is_domicile, unite, quantite_min, quantite_max, type_service, stock } = req.body || {};

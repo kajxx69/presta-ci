@@ -1,20 +1,12 @@
-import { Modele, OffreModele, Service, Prestataire, Plan, SubCategory, Category } from '../models/index.js';
+import { Modele, OffreModele, Service, Prestataire, SubCategory, Category } from '../models/index.js';
 import { categorieModelePour, normaliser } from './modeles-sync.js';
+import { planEffectif, estPro } from './plans.js';
 
 // « Je sais le faire » : un prestataire se propose pour un modèle du fil.
 // L'offre relie le modèle à un service réservable (prix, durée) du prestataire.
 
-const PLAN_GRATUIT_ID = 1;
-
 export class ErreurOffre extends Error {
   constructor(message: string, public status = 400) { super(message); }
-}
-
-/** Plan réellement applicable : un abonnement payant expiré retombe sur le plan gratuit. */
-async function planEffectif(prestataire: any) {
-  const expire = prestataire.abonnement_expires_at && new Date(prestataire.abonnement_expires_at).getTime() < Date.now();
-  const id = expire ? PLAN_GRATUIT_ID : (prestataire.plan_actuel_id || PLAN_GRATUIT_ID);
-  return (await Plan.findById(id)) || (await Plan.findById(PLAN_GRATUIT_ID));
 }
 
 /** Sous-catégorie du modèle (même famille, nom le plus proche des mots du modèle). */
@@ -57,7 +49,7 @@ export async function creerOffre(userId: number, modeleId: number, body: any) {
     const plan: any = await planEffectif(prestataire);
     const nb = await Service.countDocuments({ prestataire_id: prestataire._id, deleted_at: null });
     if (plan && plan.max_services >= 0 && nb >= plan.max_services) {
-      throw new ErreurOffre(`Ton plan ${plan.nom} permet ${plan.max_services} prestations. Passe à un plan supérieur pour en proposer plus.`, 402);
+      throw new ErreurOffre(`Le plan ${plan.nom} permet ${plan.max_services} modèles. Passe Pro pour en proposer autant que tu veux ✨`, 402);
     }
     const nom = String(body?.nom || modele.titre).trim().slice(0, 120) || modele.titre;
     const service = await Service.create({
@@ -95,7 +87,7 @@ export async function retirerOffre(userId: number, modeleId: number) {
 }
 
 interface OffreAffichee {
-  prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null };
+  prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null };
   service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean };
 }
 
@@ -132,15 +124,13 @@ export async function enrichirOffres(modeles: any[]): Promise<any[]> {
 /** Prestataires qui se sont proposés pour ce modèle (abonnés et mieux notés d'abord). */
 export async function offresDuModele(modeleId: number): Promise<OffreAffichee[]> {
   const { offres, services, prestataires } = await offresValides([modeleId]);
-  const now = Date.now();
-  const premium = (p: any) => p.plan_actuel_id && p.plan_actuel_id !== PLAN_GRATUIT_ID && p.abonnement_expires_at && new Date(p.abonnement_expires_at).getTime() > now;
   return offres
     .map(o => ({ o, p: prestataires.get(o.prestataire_id), s: services.get(o.service_id) }))
-    .sort((a, b) => (Number(premium(b.p)) - Number(premium(a.p))) || ((b.p.note_moyenne || 0) - (a.p.note_moyenne || 0)))
+    .sort((a, b) => (Number(estPro(b.p)) - Number(estPro(a.p))) || ((b.p.note_moyenne || 0) - (a.p.note_moyenne || 0)))
     .map(({ p, s }) => ({
       prestataire: {
         id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis,
-        is_verified: p.is_verified, photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null,
+        is_verified: p.is_verified, is_pro: estPro(p), photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null,
       },
       service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
     }));

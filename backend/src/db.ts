@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { migrerPlansGratuitPro } from './services/plans.js';
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ export async function bootstrapSubCategories() {
 export async function connectDB() {
   await mongoose.connect(MONGODB_URI);
   await bootstrapSubCategories();
+  await migrerPlansGratuitPro();
 }
 
 export async function ping() {

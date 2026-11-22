@@ -11,6 +11,7 @@ import bcrypt from 'bcryptjs';
 import { execSync } from 'child_process';
 import { User, Prestataire, Service, SubCategory, Category, Modele } from './models/index.js';
 import { bootstrapSubCategories } from './db.js';
+import { migrerPlansGratuitPro } from './services/plans.js';
 import { categorieModelePour, texteRecherche } from './services/modeles-sync.js';
 import { creerOffre } from './services/offres.js';
 
@@ -93,6 +94,7 @@ async function main() {
   await mongoose.connection.db!.collection('counters').updateOne({ _id: 'categories' as any }, { $set: { seq: 11 } }, { upsert: true });
   await mongoose.connection.db!.collection('counters').updateOne({ _id: 'sous_categories' as any }, { $set: { seq: 0 } }, { upsert: true });
   await bootstrapSubCategories();
+  await migrerPlansGratuitPro();
   // Sous-catégories ajoutées en production par la migration enrich-taxonomy (Sourcils & Cils, Pose de gel…)
   execSync('npx tsx src/migrations/enrich-taxonomy.ts', { env: process.env, stdio: 'ignore' });
 

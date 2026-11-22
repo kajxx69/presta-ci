@@ -30,6 +30,7 @@ function LignePrestataire({ o, onReserver }: { o: OuLeFaire; onReserver: () => v
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1">
           {p.nom_commercial}{p.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+          {p.is_pro && <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white">PRO ✨</span>}
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-2">
           {p.ville && <span className="inline-flex items-center gap-0.5"><MapPin className="w-3 h-3" />{p.ville}</span>}

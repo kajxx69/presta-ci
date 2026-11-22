@@ -140,25 +140,15 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
   const remainingSlots = isUnlimitedPlan ? Infinity : Math.max(maxServices - services.length, 0);
 
   const planBenefitsMap: Record<string, string[]> = {
-    starter: [
-      '2 services mis en avant',
-      'Paiement mobile money inclus',
-      'Support standard'
+    gratuit: [
+      '5 modèles proposés',
+      'Réservations illimitées',
+      'Visible dans le fil Découvrir'
     ],
     pro: [
-      '10 services visibles simultanément',
-      'Réservations illimitées',
-      'Mise en avant hebdomadaire'
-    ],
-    premium: [
-      'Services illimités',
-      'Badge vérifié & boost recherche',
-      'Support prioritaire + stats détaillées'
-    ],
-    business: [
-      'Equipe multi-comptes',
-      'Campagnes de promotion personnalisées',
-      'Gestionnaire dédié'
+      'Modèles proposés illimités',
+      'En premier dans « Réserver chez… »',
+      'Badge Pro ✨'
     ]
   };
   const perks = useMemo(() => {

@@ -18,9 +18,9 @@ export function prixMensuelEffectif(plan: { prix: number; prix_promo?: number | 
   return typeof promo === 'number' && promo > 0 && promo < plan.prix ? promo : plan.prix;
 }
 
-/** Nombre de mois facturés : 1 an = 12 mois pile (et non 365/30 = 12,17). */
+/** Nombre de mois facturés : 1 an = 10 mois (2 mois offerts). */
 export function moisFactures(jours: number): number {
-  return jours === 365 ? 12 : jours / 30;
+  return jours === 365 ? 10 : jours / 30;
 }
 
 export function montantPour(plan: { prix: number; prix_promo?: number | null }, jours: number): number {
