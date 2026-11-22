@@ -102,6 +102,7 @@ export default function PlansTab() {
       for (let i = 0; i < 20 && !stop; i++) {
         try {
           const { paiement } = await api.paiements.verifier(id);
+          if (stop) return; // effet relancé (mode strict React) : un seul message
           if (paiement.statut !== 'en_attente') {
             setRetour({ statut: paiement.statut, plan_nom: paiement.plan_nom, expires: paiement.abonnement_expires_at });
             if (paiement.statut === 'paye') {
@@ -116,8 +117,7 @@ export default function PlansTab() {
       }
       if (!stop) {
         const next = new URLSearchParams(searchParams);
-        next.delete('paiement');
-        next.delete('echec');
+        ['paiement', 'echec', 'reference', 'status'].forEach((k) => next.delete(k)); // GeniusPay ajoute reference & status
         setSearchParams(next, { replace: true });
       }
     })();
@@ -152,8 +152,10 @@ export default function PlansTab() {
         },
         {
           label: 'Réservations mensuelles',
-          value: currentPlan.max_reservations_mois ?? 'Standard',
-          detail: currentPlan.max_reservations_mois
+          value: currentPlan.max_reservations_mois != null && currentPlan.max_reservations_mois < 0 ? 'Illimité' : currentPlan.max_reservations_mois ?? 'Standard',
+          detail: currentPlan.max_reservations_mois != null && currentPlan.max_reservations_mois < 0
+            ? 'Réservations sans limite'
+            : currentPlan.max_reservations_mois
             ? `${currentPlan.max_reservations_mois} réservations incluses`
             : 'Limite par défaut'
         }
@@ -431,11 +433,11 @@ export default function PlansTab() {
 
               <div className="space-y-4 mb-8">
                 <div className="flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  {plan.max_reservations_mois && (
+                  {plan.max_reservations_mois ? (
                     <span className="px-3 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700">
-                      Jusqu'à {plan.max_reservations_mois} réservations/mois
+                      {plan.max_reservations_mois < 0 ? 'Réservations illimitées' : `Jusqu'à ${plan.max_reservations_mois} réservations/mois`}
                     </span>
-                  )}
+                  ) : null}
                   {plan.mise_en_avant ? (
                     <span className="px-3 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700">
                       Mise en avant incluse

@@ -18,8 +18,13 @@ export function prixMensuelEffectif(plan: { prix: number; prix_promo?: number | 
   return typeof promo === 'number' && promo > 0 && promo < plan.prix ? promo : plan.prix;
 }
 
+/** Nombre de mois facturés : 1 an = 12 mois pile (et non 365/30 = 12,17). */
+export function moisFactures(jours: number): number {
+  return jours === 365 ? 12 : jours / 30;
+}
+
 export function montantPour(plan: { prix: number; prix_promo?: number | null }, jours: number): number {
-  return Math.round(prixMensuelEffectif(plan) * (jours / 30));
+  return Math.round(prixMensuelEffectif(plan) * moisFactures(jours));
 }
 
 export function isGeniusPayConfigured(): boolean {
@@ -45,7 +50,7 @@ export interface GeniusPayPayment {
 
 async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  const timer = setTimeout(() => controller.abort(), 45000); // GeniusPay répond en ~12 s
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
       method,

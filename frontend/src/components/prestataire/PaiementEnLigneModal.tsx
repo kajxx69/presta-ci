@@ -14,6 +14,7 @@ const LIBELLES: Record<number, string> = { 30: '1 mois', 90: '3 mois', 180: '6 m
 const MOYENS = ['Wave', 'Orange Money', 'MTN MoMo', 'Moov Money', 'Carte bancaire'];
 
 // Même règle que le serveur (utils/geniuspay.ts → montantPour)
+const moisFactures = (jours: number) => (jours === 365 ? 12 : jours / 30);
 const prixMensuel = (p: { prix: number; prix_promo?: number | null }) =>
   typeof p.prix_promo === 'number' && p.prix_promo > 0 && p.prix_promo < p.prix ? p.prix_promo : p.prix;
 
@@ -25,7 +26,7 @@ export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees }: 
   if (!isOpen || !plan) return null;
 
   const mensuel = prixMensuel(plan);
-  const montant = Math.round(mensuel * (duree / 30));
+  const montant = Math.round(mensuel * moisFactures(duree));
 
   const payer = async () => {
     try {
@@ -69,7 +70,7 @@ export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees }: 
                   }`}
                 >
                   <p className="font-semibold text-gray-900 dark:text-white text-sm">{LIBELLES[d] || `${d} jours`}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{Math.round(mensuel * (d / 30)).toLocaleString('fr-FR')} FCFA</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{Math.round(mensuel * moisFactures(d)).toLocaleString('fr-FR')} FCFA</p>
                 </button>
               ))}
             </div>

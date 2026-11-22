@@ -41,5 +41,6 @@ describe('montantPour', () => {
     expect(montantPour({ prix: 5000, prix_promo: 3000 }, 30)).toBe(3000);
     expect(montantPour({ prix: 5000, prix_promo: 8000 }, 30)).toBe(5000);
     expect(montantPour({ prix: 5000, prix_promo: null }, 90)).toBe(15000);
+    expect(montantPour({ prix: 9900, prix_promo: 5900 }, 365)).toBe(70800); // 1 an = 12 mois pile
   });
 });

@@ -15,6 +15,7 @@ export interface PhotoBanque {
   url: string;               // image à afficher (Unsplash/Pexels) ou à copier (Pixabay)
   a_copier: boolean;         // true = télécharger et stocker chez nous
   titre: string;
+  mots: string;              // étiquettes / description de la banque, pour filtrer la pertinence
   credit_nom: string;
   credit_url: string;
   declarerUsage?: () => Promise<void>; // Unsplash : à appeler quand la photo est importée
@@ -55,6 +56,7 @@ async function pixabay(query: string, nombre: number, page: number): Promise<Pho
     url: h.largeImageURL || h.webformatURL,
     a_copier: true,
     titre: String(h.tags || query).split(',')[0].trim() || query,
+    mots: String(h.tags || ''),
     credit_nom: h.user ? `${h.user} / Pixabay` : 'Pixabay',
     credit_url: h.pageURL || 'https://pixabay.com',
   }));
@@ -69,6 +71,7 @@ async function unsplash(query: string, nombre: number, page: number): Promise<Ph
     url: p.urls?.regular,
     a_copier: false,
     titre: (p.alt_description || p.description || query).slice(0, 120),
+    mots: [p.alt_description, p.description, ...(p.tags || []).map((t: any) => t.title)].filter(Boolean).join(', '),
     credit_nom: p.user?.name ? `${p.user.name} / Unsplash` : 'Unsplash',
     credit_url: `${p.user?.links?.html || 'https://unsplash.com'}?${UTM}`,
     declarerUsage: p.links?.download_location
@@ -85,9 +88,16 @@ async function pexels(query: string, nombre: number, page: number): Promise<Phot
     url: p.src?.portrait || p.src?.large,
     a_copier: false,
     titre: (p.alt || query).slice(0, 120),
+    mots: String(p.alt || ''),
     credit_nom: p.photographer ? `${p.photographer} / Pexels` : 'Pexels',
     credit_url: p.url || 'https://www.pexels.com',
   })).filter((p: PhotoBanque) => !!p.url);
+}
+
+/** Nombre maximal de résultats par requête selon la banque. */
+export function maxParRequete(): number {
+  const b = banqueActive();
+  return b === 'pixabay' ? 200 : b === 'unsplash' ? 30 : 80;
 }
 
 export async function rechercherPhotos(query: string, nombre: number, page = 1): Promise<PhotoBanque[]> {

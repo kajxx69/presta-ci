@@ -11,6 +11,17 @@ import { categorieModelePour, syncTousLesModeles, texteRecherche } from './servi
 import { banqueActive, rechercherPhotos, LIBELLE_BANQUE } from './utils/banques-images.js';
 import { importerPhotos, PACK_LANCEMENT } from './services/modeles-import.js';
 import { copierImageDistante } from './utils/uploads.js';
+import { photoPertinente, ETHNIE } from './services/filtre-photos.js';
+import { maxParRequete } from './utils/banques-images.js';
+
+// Même exigence de pertinence que le pack de lancement
+const REQUIS: Record<string, string[][]> = {
+  coiffure: [['braid', 'cornrow', 'dreadlock', 'locs', 'twist', 'afro', 'curl'], ETHNIE],
+  ongles: [['nail', 'manicure', 'fingernail', 'polish']],
+  maquillage: [['makeup', 'lipstick', 'beauty', 'cosmetic', 'bride', 'glamour'], ETHNIE],
+  cils: [['eyelash', 'lash', 'mascara']],
+  soins: [['skin', 'facial', 'spa', 'massage']],
+};
 
 const URI = process.env.MONGODB_URI || '';
 if (!/^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(URI)) {
@@ -25,16 +36,16 @@ const SALONS = [
     nom_commercial: 'Awa Beauty Braids', ville: 'Cocody', adresse: 'Riviera 2, près du carrefour Duncan', lat: 5.3599, lng: -3.9775,
     prenom: 'Awa', nom: 'Koné', email: 'awa@demo.ci', planPayant: true,
     services: [
-      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Knotless braids longues', prix: 15000, duree: 300, requete: 'knotless braids' },
-      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Nattes collées avec perles', prix: 8000, duree: 120, requete: 'cornrows braids' },
-      { cat: 'coiffure', sous: /tresse|natte|lock/i, nom: 'Twists naturels', prix: 12000, duree: 240, requete: 'twists natural hair' },
+      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Knotless braids longues', prix: 15000, duree: 300, requete: 'box braids' },
+      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Nattes collées avec perles', prix: 8000, duree: 120, requete: 'african woman braids' },
+      { cat: 'coiffure', sous: /tresse|natte|lock/i, nom: 'Twists naturels', prix: 12000, duree: 240, requete: 'afro hair woman' },
     ],
   },
   {
     nom_commercial: 'Nails by Mariam', ville: 'Marcory', adresse: 'Zone 4, rue du Dr Blanchard', lat: 5.2969, lng: -3.9822,
     prenom: 'Mariam', nom: 'Traoré', email: 'mariam@demo.ci', planPayant: false,
     services: [
-      { cat: 'ongles', sous: /gel|r[ée]sine|manucure|ongle/i, nom: 'Pose gel couleur', prix: 10000, duree: 90, requete: 'gel nails manicure' },
+      { cat: 'ongles', sous: /gel|r[ée]sine|manucure|ongle/i, nom: 'Pose gel couleur', prix: 10000, duree: 90, requete: 'manicure nails' },
       { cat: 'ongles', sous: /art|d[ée]co|ongle/i, nom: 'Nail art doré', prix: 12000, duree: 120, requete: 'nail art' },
     ],
   },
@@ -42,15 +53,15 @@ const SALONS = [
     nom_commercial: 'Glam Studio Plateau', ville: 'Plateau', adresse: 'Avenue Chardy', lat: 5.3236, lng: -4.0197,
     prenom: 'Fatou', nom: 'Diallo', email: 'fatou@demo.ci', planPayant: true,
     services: [
-      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage soirée glam', prix: 15000, duree: 60, requete: 'glam makeup black woman' },
-      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage mariée', prix: 40000, duree: 120, requete: 'bridal makeup african' },
+      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage soirée glam', prix: 15000, duree: 60, requete: 'african woman makeup' },
+      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage mariée', prix: 40000, duree: 120, requete: 'african bride' },
     ],
   },
   {
     nom_commercial: 'Lash & Brow Yop', ville: 'Yopougon', adresse: 'Selmer, face pharmacie', lat: 5.3364, lng: -4.0890,
     prenom: 'Aïcha', nom: 'Bamba', email: 'aicha@demo.ci', planPayant: false,
     services: [
-      { cat: 'cils', sous: /cil|sourcil/i, nom: 'Extension de cils volume', prix: 15000, duree: 120, requete: 'eyelash extensions' },
+      { cat: 'cils', sous: /cil|sourcil/i, nom: 'Extension de cils volume', prix: 15000, duree: 120, requete: 'eyelashes' },
     ],
   },
 ];
@@ -65,10 +76,10 @@ const INSPIRATION = [
 ];
 
 let compteurPlaceholder = 1;
-async function photos(requete: string, n: number): Promise<{ url: string; titre?: string; credit_nom?: string; credit_url?: string; id?: string }[]> {
+async function photos(requete: string, n: number, requis: string[][] = []): Promise<{ url: string; titre?: string; credit_nom?: string; credit_url?: string; id?: string }[]> {
   if (banqueActive()) {
     try {
-      const res = await rechercherPhotos(requete, n);
+      const res = (await rechercherPhotos(requete, Math.min(maxParRequete(), n * 10))).filter(p => photoPertinente(p.mots, requis));
       const out = [];
       for (const p of res) {
         // Pixabay : copie locale obligatoire (pas de lien direct permanent)
@@ -108,7 +119,7 @@ async function main() {
   await compte('cliente@demo.ci', 1, 'Mariam', 'Yao', { ville: 'Cocody' });
 
   for (const s of SALONS) {
-    const user = await compte(s.email, 2, s.prenom, s.nom, { photo_profil: (await photos(s.services[0].requete, 1))[0].url });
+    const user = await compte(s.email, 2, s.prenom, s.nom, { photo_profil: (await photos(s.services[0].requete, 1, REQUIS[s.services[0].cat]))[0].url });
     let prest = await Prestataire.findOne({ user_id: user._id });
     if (!prest) {
       prest = await Prestataire.create({
@@ -121,7 +132,7 @@ async function main() {
     }
     for (const svc of s.services) {
       if (await Service.exists({ prestataire_id: prest._id, nom: svc.nom })) continue;
-      const imgs = await photos(svc.requete, 3);
+      const imgs = await photos(svc.requete, 3, REQUIS[svc.cat]);
       if (!prest.photos_etablissement || !(prest.photos_etablissement as any[]).length) {
         await Prestataire.updateOne({ _id: prest._id }, { photos_etablissement: [imgs[0].url] });
         prest.photos_etablissement = [imgs[0].url];
