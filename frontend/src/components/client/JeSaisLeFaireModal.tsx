@@ -6,6 +6,7 @@ import { api, Modele } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import ModeleVisuel from './ModeleVisuel';
+import { useOffreLancement } from '../../lib/offreLancement';
 
 interface Props {
   modele: Modele | null;
@@ -33,6 +34,7 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
   const { isAuthenticated, role, user } = useAuthStore();
   const { showToast } = useAppStore();
   const estPro = role?.nom === 'prestataire';
+  const placesOffre = useOffreLancement();
   const [prix, setPrix] = useState('');
   const [duree, setDuree] = useState(120);
   const [domicile, setDomicile] = useState(false);
@@ -114,7 +116,7 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
                 <>
                   {!estPro && (
                     <div className="space-y-2 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/10 p-3">
-                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Ton espace pro (gratuit)</p>
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Ton espace pro (gratuit){placesOffre > 0 && <span className="ml-1 text-pink-600 dark:text-pink-400">+ 🎁 1 mois Pro offert</span>}</p>
                       <input value={salon} onChange={(e) => setSalon(e.target.value)} placeholder="Nom de ton salon (ou « Coiffure par Awa »)"
                         className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none" />
                       <div className="grid grid-cols-2 gap-2">

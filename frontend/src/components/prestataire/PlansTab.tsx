@@ -278,6 +278,15 @@ export default function PlansTab() {
         </div>
       )}
 
+      {currentPlan?.offre_lancement && currentPlan.abonnement_expires_at && (
+        <div className="rounded-2xl p-4 bg-gradient-to-r from-pink-500 to-orange-400 text-white shadow-md">
+          <p className="font-bold">🎁 Ton mois Pro est offert !</p>
+          <p className="text-sm text-white/90">
+            Tu fais partie des 50 premières pros : profite du Pro gratuitement jusqu'au {new Date(currentPlan.abonnement_expires_at).toLocaleDateString('fr-FR')}. Ensuite, continue pour 2 500 F/mois ou reviens au Gratuit, sans engagement.
+          </p>
+        </div>
+      )}
+
       {currentPlan && (
         <div className="grid gap-4 md:grid-cols-3">
           {planStats.map((stat) => (

@@ -6,6 +6,7 @@ import { serverError } from '../utils/http.js';
 import { materializePhotos, saveDataUri } from '../utils/uploads.js';
 import { computeBadges } from '../utils/badges.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
+import { offrirMoisProLancement } from '../services/plans.js';
 
 const router = Router();
 
@@ -122,10 +123,11 @@ router.post('/devenir', requireAuth, async (req: any, res: Response) => {
     if (ville.length < 2) return res.status(400).json({ error: 'Indique ton quartier ou ta ville' });
 
     if (!(await Prestataire.exists({ user_id: user._id }))) {
-      await Prestataire.create({
+      const nouvellePro = await Prestataire.create({
         user_id: user._id as number, nom_commercial, ville, adresse: adresse || ville,
         telephone_pro: telephone_pro || user.telephone || undefined, pays: "Côte d'Ivoire",
       });
+      await offrirMoisProLancement(nouvellePro._id as number, user._id as number);
     }
     if (user.role_id !== 2) await User.updateOne({ _id: user._id }, { role_id: 2, updated_at: new Date() });
 
@@ -191,7 +193,7 @@ router.post('/setup', async (req: Request, res: Response) => {
       return res.json({ ok: true, updated: true });
     }
 
-    await Prestataire.create({
+    const nouvellePro = await Prestataire.create({
       user_id: userId,
       nom_commercial,
       ville: ville || null,
@@ -204,6 +206,7 @@ router.post('/setup', async (req: Request, res: Response) => {
       horaires_ouverture: horairesData,
       photos_etablissement: photosData
     });
+    await offrirMoisProLancement(nouvellePro._id as number, userId);
 
     res.json({ ok: true, created: true });
   } catch (e: any) {

@@ -106,6 +106,7 @@ export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: Navigue
       action: 'Voir les pros', onAction: () => onNavigate?.('users'),
     },
   ];
+  const offre = d.offre_lancement;
   const faites = etapes.filter((e) => e.ok).length;
 
   return (
@@ -131,6 +132,19 @@ export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: Navigue
           {etapes.map((e) => <Etape key={e.titre} {...e} />)}
         </ul>
       </div>
+
+      {offre && (
+        <div className="rounded-2xl border border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/15 p-4 flex items-center gap-3">
+          <span className="text-2xl">🎁</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Offre de lancement : 1 mois Pro offert</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              {offre.places_total - offre.places_restantes} / {offre.places_total} places prises · activé automatiquement à l'inscription d'une pro
+            </p>
+          </div>
+          <span className="text-lg font-extrabold text-pink-600 dark:text-pink-400">{offre.places_restantes} restantes</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Chiffre icone={Images} label="Photos dans le fil" valeur={d.modeles.total}

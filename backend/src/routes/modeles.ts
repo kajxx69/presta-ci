@@ -10,6 +10,7 @@ import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/au
 import { serverError } from '../utils/http.js';
 import { User, PaiementEnLigne } from '../models/index.js';
 import { etatGeniusPay } from '../utils/geniuspay.js';
+import { placesOffreRestantes, PLACES_OFFRE_LANCEMENT } from '../services/plans.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
@@ -301,7 +302,7 @@ router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Requ
       PaiementEnLigne.countDocuments({ statut: 'en_attente' }),
       Modele.find({ is_active: true, nombre_likes: { $gt: 0 } }).sort({ nombre_likes: -1 }).limit(24).select(CHAMPS_PUBLICS),
     ]);
-    const enrichis = await enrichirOffres(topAimes);
+    const [enrichis, placesRestantes] = await Promise.all([enrichirOffres(topAimes), placesOffreRestantes()]);
     res.json({
       modeles: {
         total: parSource.reduce((n: number, s: any) => n + s.n, 0),
@@ -311,6 +312,7 @@ router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Requ
       tableaux,
       activite: { likes_7j: likes7j, swipes_7j: swipes7j, likes_total: likesTotal, nouvelles_clientes_7j: nouvellesClientes, nouveaux_pros_7j: nouveauxPros },
       offres: { total: offres, prestataires: prestatairesOffrants.length },
+      offre_lancement: { places_restantes: placesRestantes, places_total: PLACES_OFFRE_LANCEMENT },
       paiements: { mois_nb: paiementsMois[0]?.n || 0, mois_montant: paiementsMois[0]?.montant || 0, en_attente: paiementsAttente },
       // Demande sans offre : les clientes aiment, personne ne le propose encore → prestataires à recruter
       sans_prestataire: enrichis.filter((m: any) => !m.nb_offres).slice(0, 8),

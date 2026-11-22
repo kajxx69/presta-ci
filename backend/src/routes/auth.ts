@@ -8,6 +8,7 @@ import { serverError } from '../utils/http.js';
 import { sendPasswordResetEmail } from '../utils/mailer.js';
 import { logger } from '../logger.js';
 import { materializePhotos } from '../utils/uploads.js';
+import { offrirMoisProLancement } from '../services/plans.js';
 
 const router = express.Router();
 
@@ -88,13 +89,14 @@ router.post('/register', validateRegister, async (req: Request, res: Response) =
     }
 
     if (role_id === 2) {
-      await Prestataire.create({
+      const nouvellePro = await Prestataire.create({
         user_id: newUser._id as number,
         nom_commercial, ville, adresse,
         pays: "Côte d'Ivoire",
         latitude: latitude || undefined,
         longitude: longitude || undefined
       });
+      await offrirMoisProLancement(nouvellePro._id as number, newUser._id as number);
     }
 
     const role = await Role.findById(newUser.role_id);

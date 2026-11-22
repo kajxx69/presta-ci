@@ -21,6 +21,8 @@ const prestataireSchema = new mongoose.Schema({
   photos_etablissement: { type: mongoose.Schema.Types.Mixed, default: [] },
   plan_actuel_id: { type: Number, default: 1, ref: 'Plan' },
   abonnement_expires_at: Date,
+  // A reçu le mois Pro offert du lancement (50 premières pros)
+  offre_lancement: { type: Boolean, default: false },
   // Relances d'abonnement déjà envoyées, mémorisées par date de fin concernée :
   // un renouvellement change la date de fin, donc le cycle de relance repart.
   relance_j3_pour: { type: Date, default: null },

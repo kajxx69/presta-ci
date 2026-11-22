@@ -85,6 +85,9 @@ export default function DiscoverTab() {
   const [categorie, setCategorie] = useState<CategorieModele | ''>('');
   const [pile, setPile] = useState<Modele[]>([]);
   const [chargement, setChargement] = useState(true);
+  // Serveur en veille (hébergement gratuit) : on réessaie tout seul avant d'afficher une erreur
+  const [reveil, setReveil] = useState(false);
+  const [erreur, setErreur] = useState(false);
   const [epuise, setEpuise] = useState(false);
   const [direction, setDirection] = useState<Direction>(1);
   const [ouvert, setOuvert] = useState<Modele | null>(null);
@@ -107,7 +110,19 @@ export default function DiscoverTab() {
     setChargement(true);
     try {
       const exclude = [...vusSession.current, ...(isAuthenticated ? [] : swipesLocaux.tousLesVus())];
-      const { modeles } = await api.modeles.feed({ categorie: cat || undefined, exclude: exclude.slice(-1000) });
+      const requete = () => api.modeles.feed({ categorie: cat || undefined, exclude: exclude.slice(-1000) });
+      let modeles: Modele[] = [];
+      for (let essai = 0; ; essai++) {
+        try { ({ modeles } = await requete()); break; } catch (e) {
+          // ~45 s au total : le temps qu'un serveur endormi redémarre
+          const attente = [2000, 4000, 8000, 12000, 18000][essai];
+          if (attente === undefined || gen !== generation.current) throw e;
+          setReveil(true);
+          await new Promise((ok) => setTimeout(ok, attente));
+        }
+      }
+      setReveil(false);
+      setErreur(false);
       if (gen !== generation.current) return; // réponse d'une ancienne catégorie : ignorée
       // Précharger les images pour un swipe fluide
       modeles.forEach((m) => { if (m.photo_url) { const img = new Image(); img.src = m.photo_url; } });
@@ -118,7 +133,8 @@ export default function DiscoverTab() {
       });
       setEpuise(modeles.length === 0);
     } catch {
-      showToast('Connexion difficile — réessaie dans un instant', 'error');
+      setReveil(false);
+      if (gen === generation.current) setErreur(true);
     } finally {
       if (gen === generation.current) {
         enCours.current = false;
@@ -131,8 +147,8 @@ export default function DiscoverTab() {
 
   // Recharger avant d'arriver au bout de la pile
   useEffect(() => {
-    if (!chargement && !epuise && pile.length < 5) charger(categorie);
-  }, [pile.length, chargement, epuise, categorie, charger]);
+    if (!chargement && !epuise && !erreur && pile.length < 5) charger(categorie);
+  }, [pile.length, chargement, epuise, erreur, categorie, charger]);
 
   const enregistrer = (m: Modele, action: 'like' | 'pass') => {
     vusSession.current.add(m.id);
@@ -208,7 +224,18 @@ export default function DiscoverTab() {
         {pile.length === 0 && (
           <div className="absolute inset-0 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-center p-6">
             {chargement ? (
-              <div className="w-full h-full rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              <div className="w-full h-full rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse flex items-center justify-center">
+                {reveil && <p className="text-sm text-gray-500 dark:text-gray-400 px-6">Chargement des modèles… encore quelques secondes ✨</p>}
+              </div>
+            ) : erreur ? (
+              <>
+                <p className="text-4xl mb-2">📶</p>
+                <p className="font-semibold text-gray-900 dark:text-white">Impossible de charger les modèles</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Vérifie ta connexion internet puis réessaie.</p>
+                <button onClick={() => { setErreur(false); charger(categorie, true); }} className="mt-4 px-5 py-2 rounded-full bg-pink-500 text-white text-sm font-semibold">
+                  Réessayer
+                </button>
+              </>
             ) : (
               <>
                 <Sparkles className="w-10 h-10 text-pink-500 mb-3" />

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import AddressMapPicker from '../common/AddressMapPicker';
 import { PanneauMarque, EnTeteMobile } from './AuthDecor';
+import { useOffreLancement } from '../../lib/offreLancement';
 
 async function compressAvatar(file: File): Promise<string> {
   const dataUri: string = await new Promise((resolve, reject) => {
@@ -101,6 +102,7 @@ export default function RegisterForm() {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { register } = useAuthStore();
+  const placesOffre = useOffreLancement();
   const navigate = useNavigate();
 
   const currentSteps = formData.role_id === 2 ? stepsPrestataire : steps;
@@ -241,6 +243,11 @@ export default function RegisterForm() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Je propose mes modèles et je reçois des clientes
                   </p>
+                  {placesOffre > 0 && (
+                    <p className="mt-1.5 inline-block text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white">
+                      🎁 1 mois Pro offert · plus que {placesOffre} place{placesOffre > 1 ? 's' : ''}
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.button>

@@ -156,6 +156,7 @@ export const api = {
   subscription: {
     getPlans: (): Promise<any[]> => http('/api/subscription/plans'),
     getCurrent: (): Promise<{ subscription: any }> => http('/api/subscription'),
+    offreLancement: (): Promise<{ places_restantes: number; places_total: number }> => http('/api/subscription/offre-lancement'),
   },
   reservations: {
     list: (filter?: 'all' | 'upcoming' | 'completed' | 'cancelled'): Promise<any[]> =>
@@ -639,6 +640,7 @@ export interface ApercuAdmin {
   tableaux: TableauPinterest[];
   activite: { likes_7j: number; swipes_7j: number; likes_total: number; nouvelles_clientes_7j: number; nouveaux_pros_7j: number };
   offres: { total: number; prestataires: number };
+  offre_lancement: { places_restantes: number; places_total: number };
   paiements: { mois_nb: number; mois_montant: number; en_attente: number };
   sans_prestataire: Modele[];
   plus_aimes: Modele[];
