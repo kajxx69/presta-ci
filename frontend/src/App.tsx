@@ -20,7 +20,6 @@ const BottomNavigation = lazy(() => import('./components/BottomNavigation'));
 // ─── Lazy: Client ───
 const DiscoverTab = lazy(() => import('./components/client/DiscoverTab'));
 const SearchTab = lazy(() => import('./components/client/SearchTab'));
-const MesFavorisTab = lazy(() => import('./components/client/MesFavorisTab'));
 const ClientProfileHub = lazy(() => import('./components/client/ClientProfileHub'));
 
 // ─── Lazy: Pages détail (accessibles par tous) ───
@@ -83,13 +82,13 @@ function SplashScreen() {
 
 // ─── Role-based tab renderers ───
 
-// Cliente : Découvrir (swipe) · Recherche · Mes favoris · Profil (Réservations / Messages / Mon compte)
+// Cliente : Découvrir (swipe) · Recherche · Profil (Enregistrés / Demandes, + Messages et Mon compte)
 function ClientTabRenderer({ currentTab }: { currentTab: string }) {
   switch (currentTab) {
     case 'search': return <SearchTab />;
-    case 'favorites': return <MesFavorisTab />;
     case 'profile':
-    case 'reservations': return <ClientProfileHub onglet="reservations" />;
+    case 'favorites': return <ClientProfileHub onglet="enregistres" />; // ancien onglet Favoris
+    case 'reservations': return <ClientProfileHub onglet="demandes" />;
     case 'messages': return <ClientProfileHub onglet="messages" />;
     case 'compte': return <ClientProfileHub onglet="compte" />;
     default: return <DiscoverTab />; // home, publications (ancien lien)…

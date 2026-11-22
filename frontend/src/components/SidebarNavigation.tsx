@@ -1,4 +1,4 @@
-import { Sparkles, Search, Calendar, Heart, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Sparkles, Search, Calendar, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -13,11 +13,10 @@ interface SidebarNavigationProps {
 const clientTabs = [
   { id: 'home', label: 'Découvrir', icon: Sparkles },
   { id: 'search', label: 'Recherche', icon: Search },
-  { id: 'favorites', label: 'Favoris', icon: Heart },
   { id: 'profile', label: 'Profil', icon: User },
 ];
-// Le Profil regroupe Réservations, Messages et Mon compte
-const PROFIL_TABS = new Set(['profile', 'reservations', 'messages', 'compte']);
+// Le Profil regroupe Enregistrés (favoris), Demandes (réservations), Messages et Mon compte
+const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'messages', 'compte']);
 const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
   currentTab === tabId || (estCliente && tabId === 'profile' && PROFIL_TABS.has(currentTab));
 

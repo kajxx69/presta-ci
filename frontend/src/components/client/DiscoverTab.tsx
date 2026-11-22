@@ -247,8 +247,8 @@ export default function DiscoverTab() {
                       Voir tout
                     </button>
                   )}
-                  <button onClick={() => navigate('/app/favorites')} className="px-4 py-2 rounded-full bg-pink-500 text-white text-sm font-semibold">
-                    Mes favoris
+                  <button onClick={() => navigate('/app/profile')} className="px-4 py-2 rounded-full bg-pink-500 text-white text-sm font-semibold">
+                    Mes enregistrés
                   </button>
                 </div>
               </>
