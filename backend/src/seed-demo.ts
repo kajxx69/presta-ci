@@ -8,8 +8,9 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { User, Prestataire, Service, SubCategory, Category, Modele } from './models/index.js';
 import { categorieModelePour, syncTousLesModeles, texteRecherche } from './services/modeles-sync.js';
-import { isPexelsConfigured, rechercherPexels } from './utils/pexels.js';
-import { importerPexels, PACK_LANCEMENT } from './services/modeles-import.js';
+import { banqueActive, rechercherPhotos, LIBELLE_BANQUE } from './utils/banques-images.js';
+import { importerPhotos, PACK_LANCEMENT } from './services/modeles-import.js';
+import { copierImageDistante } from './utils/uploads.js';
 
 const URI = process.env.MONGODB_URI || '';
 if (!/^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(URI)) {
@@ -24,37 +25,37 @@ const SALONS = [
     nom_commercial: 'Awa Beauty Braids', ville: 'Cocody', adresse: 'Riviera 2, près du carrefour Duncan', lat: 5.3599, lng: -3.9775,
     prenom: 'Awa', nom: 'Koné', email: 'awa@demo.ci', planPayant: true,
     services: [
-      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Knotless braids longues', prix: 15000, duree: 300, pexels: 'knotless braids' },
-      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Nattes collées avec perles', prix: 8000, duree: 120, pexels: 'cornrows braids' },
-      { cat: 'coiffure', sous: /tresse|natte|lock/i, nom: 'Twists naturels', prix: 12000, duree: 240, pexels: 'twists natural hair' },
+      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Knotless braids longues', prix: 15000, duree: 300, requete: 'knotless braids' },
+      { cat: 'coiffure', sous: /tresse|natte/i, nom: 'Nattes collées avec perles', prix: 8000, duree: 120, requete: 'cornrows braids' },
+      { cat: 'coiffure', sous: /tresse|natte|lock/i, nom: 'Twists naturels', prix: 12000, duree: 240, requete: 'twists natural hair' },
     ],
   },
   {
     nom_commercial: 'Nails by Mariam', ville: 'Marcory', adresse: 'Zone 4, rue du Dr Blanchard', lat: 5.2969, lng: -3.9822,
     prenom: 'Mariam', nom: 'Traoré', email: 'mariam@demo.ci', planPayant: false,
     services: [
-      { cat: 'ongles', sous: /gel|r[ée]sine|manucure|ongle/i, nom: 'Pose gel couleur', prix: 10000, duree: 90, pexels: 'gel nails manicure' },
-      { cat: 'ongles', sous: /art|d[ée]co|ongle/i, nom: 'Nail art doré', prix: 12000, duree: 120, pexels: 'nail art' },
+      { cat: 'ongles', sous: /gel|r[ée]sine|manucure|ongle/i, nom: 'Pose gel couleur', prix: 10000, duree: 90, requete: 'gel nails manicure' },
+      { cat: 'ongles', sous: /art|d[ée]co|ongle/i, nom: 'Nail art doré', prix: 12000, duree: 120, requete: 'nail art' },
     ],
   },
   {
     nom_commercial: 'Glam Studio Plateau', ville: 'Plateau', adresse: 'Avenue Chardy', lat: 5.3236, lng: -4.0197,
     prenom: 'Fatou', nom: 'Diallo', email: 'fatou@demo.ci', planPayant: true,
     services: [
-      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage soirée glam', prix: 15000, duree: 60, pexels: 'glam makeup black woman' },
-      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage mariée', prix: 40000, duree: 120, pexels: 'bridal makeup african' },
+      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage soirée glam', prix: 15000, duree: 60, requete: 'glam makeup black woman' },
+      { cat: 'maquillage', sous: /maquillage/i, nom: 'Maquillage mariée', prix: 40000, duree: 120, requete: 'bridal makeup african' },
     ],
   },
   {
     nom_commercial: 'Lash & Brow Yop', ville: 'Yopougon', adresse: 'Selmer, face pharmacie', lat: 5.3364, lng: -4.0890,
     prenom: 'Aïcha', nom: 'Bamba', email: 'aicha@demo.ci', planPayant: false,
     services: [
-      { cat: 'cils', sous: /cil|sourcil/i, nom: 'Extension de cils volume', prix: 15000, duree: 120, pexels: 'eyelash extensions' },
+      { cat: 'cils', sous: /cil|sourcil/i, nom: 'Extension de cils volume', prix: 15000, duree: 120, requete: 'eyelash extensions' },
     ],
   },
 ];
 
-// Inspiration supplémentaire (comme un import admin Pexels)
+// Inspiration de secours quand aucune banque d'images n'est configurée
 const INSPIRATION = [
   { q: 'box braids', categorie: 'coiffure', tags: 'box braids tresses' },
   { q: 'locs hairstyle', categorie: 'coiffure', tags: 'locks dreadlocks' },
@@ -65,12 +66,18 @@ const INSPIRATION = [
 
 let compteurPlaceholder = 1;
 async function photos(requete: string, n: number): Promise<{ url: string; titre?: string; credit_nom?: string; credit_url?: string; id?: string }[]> {
-  if (isPexelsConfigured()) {
+  if (banqueActive()) {
     try {
-      const res = await rechercherPexels(requete, n);
-      if (res.length) return res.map(p => ({ url: p.photo_url, titre: p.titre, credit_nom: p.credit_nom, credit_url: p.credit_url, id: p.id_externe }));
+      const res = await rechercherPhotos(requete, n);
+      const out = [];
+      for (const p of res) {
+        // Pixabay : copie locale obligatoire (pas de lien direct permanent)
+        try { out.push({ url: p.a_copier ? await copierImageDistante(p.url) : p.url }); } catch { /* image cassée */ }
+        if (out.length >= n) break;
+      }
+      if (out.length) return out;
     } catch (e: any) {
-      console.warn(`  ⚠️ Pexels « ${requete} » : ${e.message} — photos de remplissage utilisées`);
+      console.warn(`  ⚠️ Banque d'images « ${requete} » : ${e.message} — photos de remplissage utilisées`);
     }
   }
   return Array.from({ length: n }, () => ({ url: `https://picsum.photos/seed/prestaci${compteurPlaceholder++}/800/1200` }));
@@ -94,13 +101,14 @@ async function compte(email: string, role_id: number, prenom: string, nom: strin
 async function main() {
   await mongoose.connect(URI);
   console.log(`📦 Base locale : ${URI}`);
-  console.log(isPexelsConfigured() ? '📷 Photos réelles via Pexels' : '📷 PEXELS_API_KEY absente → photos de remplissage (ajoute la clé dans .env pour de vraies photos)');
+  const banque = banqueActive();
+  console.log(banque ? `📷 Vraies photos via ${LIBELLE_BANQUE[banque]}` : '📷 Aucune banque d\'images (PIXABAY_API_KEY absente) → photos de remplissage');
 
   await compte('admin@demo.ci', 3, 'Admin', 'PrestaCI');
   await compte('cliente@demo.ci', 1, 'Mariam', 'Yao', { ville: 'Cocody' });
 
   for (const s of SALONS) {
-    const user = await compte(s.email, 2, s.prenom, s.nom, { photo_profil: (await photos(s.services[0].pexels, 1))[0].url });
+    const user = await compte(s.email, 2, s.prenom, s.nom, { photo_profil: (await photos(s.services[0].requete, 1))[0].url });
     let prest = await Prestataire.findOne({ user_id: user._id });
     if (!prest) {
       prest = await Prestataire.create({
@@ -113,7 +121,7 @@ async function main() {
     }
     for (const svc of s.services) {
       if (await Service.exists({ prestataire_id: prest._id, nom: svc.nom })) continue;
-      const imgs = await photos(svc.pexels, 3);
+      const imgs = await photos(svc.requete, 3);
       if (!prest.photos_etablissement || !(prest.photos_etablissement as any[]).length) {
         await Prestataire.updateOne({ _id: prest._id }, { photos_etablissement: [imgs[0].url] });
         prest.photos_etablissement = [imgs[0].url];
@@ -127,10 +135,10 @@ async function main() {
     console.log(`  💇🏾‍♀️ ${s.nom_commercial} (${s.ville}) — ${s.services.length} services`);
   }
 
-  if (isPexelsConfigured()) {
+  if (banqueActive()) {
     // Même contenu que le bouton « Pack de lancement » de l'admin
     for (const d of PACK_LANCEMENT) {
-      try { await importerPexels({ ...d, nombre: 12 }); } catch (e: any) { console.warn(`  ⚠️ ${d.titre} : ${e.message}`); }
+      try { await importerPhotos({ ...d, nombre: 12 }); } catch (e: any) { console.warn(`  ⚠️ ${d.titre} : ${e.message}`); }
     }
   } else {
     for (const insp of INSPIRATION) {

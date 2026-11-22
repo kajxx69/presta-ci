@@ -4,7 +4,7 @@ import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import { SectionHeader, RefreshButton, FilterSelect, Pagination, LoadingSpinner, EmptyState } from './AdminShared';
 
-// Contenu du fil « Découvrir » : import de photos libres de droits (Pexels)
+// Contenu du fil « Découvrir » : import de photos libres de droits (Pixabay, Unsplash ou Pexels)
 // pour le lancement + suivi des modèles issus des vrais services prestataires.
 
 const CATEGORIES = [
@@ -15,7 +15,7 @@ const CATEGORIES = [
   { value: 'soins', label: 'Soins' },
 ];
 
-// Recherches conseillées (Pexels répond mieux en anglais)
+// Recherches conseillées (les banques d'images répondent mieux en anglais)
 const IDEES: Record<string, string[]> = {
   coiffure: ['knotless braids', 'box braids', 'cornrows', 'locs hairstyle', 'twists natural hair', 'afro puff', 'braided bun', 'wig black woman', 'bantu knots'],
   ongles: ['nail art', 'french manicure', 'acrylic nails', 'gel nails', 'stiletto nails'],
@@ -44,8 +44,8 @@ export default function AdminModeles() {
   const importer = async () => {
     setImporting(true);
     try {
-      const r = await api.modeles.admin.importPexels(imp);
-      showToast(`${r.importes} photo(s) importée(s)${r.doublons ? `, ${r.doublons} déjà présente(s)` : ''}`, 'success');
+      const r = await api.modeles.admin.importPhotos(imp);
+      showToast(`${r.importes} photo(s) importée(s)${r.doublons ? `, ${r.doublons} ignorée(s) (déjà présentes ou illisibles)` : ''}`, 'success');
       load();
     } catch (e: any) {
       showToast(String(e.message).replace(/^HTTP \d+: /, ''), 'error');
@@ -84,7 +84,7 @@ export default function AdminModeles() {
         <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
           <p className="text-xs uppercase text-gray-500">Inspiration importée</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{compte('curation')}</p>
-          <p className="text-xs text-gray-500">Photos Pexels (licence libre, crédit affiché)</p>
+          <p className="text-xs text-gray-500">Banque d'images libre de droits, crédit affiché</p>
         </div>
       </div>
 
@@ -94,15 +94,16 @@ export default function AdminModeles() {
             <p className="font-semibold text-pink-900 dark:text-pink-100">🚀 Pack de lancement</p>
             <p className="text-sm text-pink-800/80 dark:text-pink-200/80">~300 vraies photos en un clic : knotless, nattes collées, locks, perruques, nail art, maquillage mariée, cils… Titres en français. Prend 1 à 2 minutes.</p>
           </div>
-          <button onClick={importerPack} disabled={packEnCours || (data ? !data.pexels : false)}
+          <button onClick={importerPack} disabled={packEnCours || (data ? !data.banque : false)}
             className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold disabled:opacity-50 whitespace-nowrap">
             {packEnCours ? 'Import en cours…' : 'Importer le pack'}
           </button>
         </div>
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 pt-2"><Download className="w-4 h-4" /> Ou importer un style précis</h3>
-        {data && !data.pexels && (
-          <p className="text-sm text-orange-600">Ajoutez la variable <code>PEXELS_API_KEY</code> sur le serveur (clé gratuite sur pexels.com/api).</p>
+        {data && !data.banque && (
+          <p className="text-sm text-orange-600">Ajoutez la variable <code>PIXABAY_API_KEY</code> sur le serveur (clé gratuite et immédiate : créez un compte sur pixabay.com, la clé s'affiche sur pixabay.com/api/docs).</p>
         )}
+        {data?.banque && <p className="text-xs text-gray-500">Banque d'images utilisée : <strong>{data.banque}</strong></p>}
         <div className="grid sm:grid-cols-4 gap-2">
           <input value={imp.query} onChange={(e) => setImp({ ...imp, query: e.target.value })} placeholder="Mot-clé (anglais conseillé)"
             className="sm:col-span-2 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />

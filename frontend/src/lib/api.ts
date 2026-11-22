@@ -612,13 +612,13 @@ export const api = {
       http('/api/modeles/sync', { method: 'POST', body: JSON.stringify(body) }),
     mesLikes: (): Promise<{ modeles: Modele[] }> => http('/api/modeles/mes-likes'),
     admin: {
-      list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[]; pexels: boolean }> => {
+      list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[]; banque: string | null }> => {
         const q = new URLSearchParams();
         Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, String(v)); });
         return http(`/api/modeles/admin?${q.toString()}`);
       },
-      importPexels: (body: { query: string; categorie: string; nombre: number; titre?: string; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
-        http('/api/modeles/admin/import-pexels', { method: 'POST', body: JSON.stringify(body) }),
+      importPhotos: (body: { query: string; categorie: string; nombre: number; titre?: string; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
+        http('/api/modeles/admin/import-photos', { method: 'POST', body: JSON.stringify(body) }),
       importPack: (): Promise<{ ok: boolean; styles: number; trouves: number; importes: number; doublons: number; erreurs: string[] }> =>
         http('/api/modeles/admin/import-pack', { method: 'POST' }),
       create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>

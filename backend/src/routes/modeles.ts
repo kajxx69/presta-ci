@@ -5,8 +5,8 @@ import {
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
-import { isPexelsConfigured } from '../utils/pexels.js';
-import { importerPexels, PACK_LANCEMENT } from '../services/modeles-import.js';
+import { banqueActive, LIBELLE_BANQUE } from '../utils/banques-images.js';
+import { importerPhotos, PACK_LANCEMENT } from '../services/modeles-import.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
@@ -216,38 +216,39 @@ router.get('/admin', requireAuth, requireRole('admin'), async (req: Request, res
       Modele.countDocuments(filter),
       Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: { source: '$source', categorie: '$categorie' }, n: { $sum: 1 } } }]),
     ]);
-    res.json({ modeles, total, page, totalPages: Math.ceil(total / limit), stats, pexels: isPexelsConfigured() });
+    const banque = banqueActive();
+    res.json({ modeles, total, page, totalPages: Math.ceil(total / limit), stats, banque: banque ? LIBELLE_BANQUE[banque] : null });
   } catch (e) {
     serverError(res, e, 'modeles/admin');
   }
 });
 
-// POST /api/modeles/admin/import-pexels { query, categorie, nombre, titre?, tags?, page? }
-router.post('/admin/import-pexels', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+// POST /api/modeles/admin/import-photos { query, categorie, nombre, titre?, tags?, page? }
+router.post('/admin/import-photos', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    if (!isPexelsConfigured()) return res.status(503).json({ error: 'PEXELS_API_KEY manquante côté serveur' });
+    if (!banqueActive()) return res.status(503).json({ error: "Aucune banque d'images configurée : ajoutez PIXABAY_API_KEY sur le serveur" });
     const { query, categorie, titre, tags, page } = req.body || {};
     if (typeof query !== 'string' || !query.trim()) return res.status(400).json({ error: 'Mot-clé requis' });
     if (!estCategorie(categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
-    const r = await importerPexels({
+    const r = await importerPhotos({
       query, categorie, nombre: Number(req.body?.nombre) || 30,
       titre: typeof titre === 'string' ? titre : undefined, tags: typeof tags === 'string' ? tags : undefined, page: Number(page) || 1,
     });
     res.json({ ok: true, ...r });
   } catch (e) {
-    serverError(res, e, 'modeles/import-pexels');
+    serverError(res, e, 'modeles/import-photos');
   }
 });
 
 // POST /api/modeles/admin/import-pack — pack de lancement (~300 photos, ~20 styles)
 router.post('/admin/import-pack', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
-    if (!isPexelsConfigured()) return res.status(503).json({ error: 'PEXELS_API_KEY manquante côté serveur' });
+    if (!banqueActive()) return res.status(503).json({ error: "Aucune banque d'images configurée : ajoutez PIXABAY_API_KEY sur le serveur" });
     let trouves = 0, importes = 0;
     const erreurs: string[] = [];
     for (const d of PACK_LANCEMENT) {
       try {
-        const r = await importerPexels({ ...d, nombre: 15 });
+        const r = await importerPhotos({ ...d, nombre: 15 });
         trouves += r.trouves; importes += r.importes;
       } catch (e: any) {
         erreurs.push(`${d.titre}: ${e.message}`);

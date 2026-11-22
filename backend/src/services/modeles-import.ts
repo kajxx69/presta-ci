@@ -1,35 +1,41 @@
 import { Modele } from '../models/index.js';
 import { normaliser, texteRecherche } from './modeles-sync.js';
-import { rechercherPexels } from '../utils/pexels.js';
+import { rechercherPhotos } from '../utils/banques-images.js';
+import { copierImageDistante } from '../utils/uploads.js';
 
 type Categorie = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
 
 export interface DemandeImport {
-  query: string;      // recherche Pexels (anglais conseillé)
+  query: string;      // recherche dans la banque d'images (anglais conseillé)
   categorie: Categorie;
   nombre: number;     // 1..80
-  titre?: string;     // titre affiché sur les cartes (français). Défaut : description Pexels
+  titre?: string;     // titre affiché sur les cartes (français). Défaut : description de la banque
   tags?: string;      // mots-clés français pour la recherche dans l'app
   page?: number;
 }
 
-/** Importe des photos Pexels comme modèles d'inspiration (sans doublon). */
-export async function importerPexels(d: DemandeImport): Promise<{ trouves: number; importes: number; doublons: number }> {
+/** Importe des photos de la banque d'images active comme modèles d'inspiration (sans doublon). */
+export async function importerPhotos(d: DemandeImport): Promise<{ trouves: number; importes: number; doublons: number }> {
   const tags = [...new Set(normaliser(`${d.titre || ''} ${d.tags || ''} ${d.query}`).split(' ').filter(w => w.length > 2))];
-  const photos = await rechercherPexels(d.query.trim(), Math.min(80, Math.max(1, d.nombre)), Math.max(1, d.page || 1));
+  const photos = await rechercherPhotos(d.query.trim(), Math.min(80, Math.max(1, d.nombre)), Math.max(1, d.page || 1));
   const deja = new Set((await Modele.find({ source_externe_id: { $in: photos.map(p => p.id_externe) } }).distinct('source_externe_id')) as string[]);
   let importes = 0;
   for (const p of photos) {
     if (deja.has(p.id_externe)) continue;
     try {
+      // Pixabay interdit le lien direct permanent : on copie l'image chez nous
+      const photo_url = p.a_copier ? await copierImageDistante(p.url) : p.url;
       await Modele.create({
-        titre: d.titre?.trim() || p.titre, categorie: d.categorie, tags, photo_url: p.photo_url, source: 'curation',
+        titre: d.titre?.trim() || p.titre, categorie: d.categorie, tags, photo_url, source: 'curation',
         credit_nom: p.credit_nom, credit_url: p.credit_url, source_externe_id: p.id_externe,
         recherche: texteRecherche([d.titre, d.tags, p.titre, d.query, d.categorie]),
       });
       importes++;
+      await p.declarerUsage?.(); // Unsplash : obligatoire quand une photo est utilisée
     } catch (e: any) {
-      if (e?.code !== 11000) throw e; // doublon importé en parallèle : ignoré
+      if (e?.code === 11000) continue; // doublon importé en parallèle : ignoré
+      if (/Téléchargement image|Type d'image|trop lourde|aborted/i.test(String(e?.message))) continue; // image cassée : on passe
+      throw e;
     }
   }
   return { trouves: photos.length, importes, doublons: photos.length - importes };
