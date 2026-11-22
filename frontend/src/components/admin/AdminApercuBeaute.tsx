@@ -59,18 +59,32 @@ function Vignettes({ modeles, vide }: { modeles: Modele[]; vide: string }) {
 
 export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: NaviguerAdmin }) {
   const [d, setD] = useState<ApercuAdmin | null>(null);
-  const [erreur, setErreur] = useState(false);
+  const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(true);
 
   const charger = useCallback(async () => {
     setCharge(true);
-    try { setD(await api.modeles.admin.apercu()); setErreur(false); } catch { setErreur(true); } finally { setCharge(false); }
+    // Serveur en veille / en redémarrage : quelques nouvelles tentatives avant d'afficher l'erreur
+    for (let essai = 0; ; essai++) {
+      try { setD(await api.modeles.admin.apercu()); setErreur(''); break; } catch (e: any) {
+        const attente = [2000, 5000, 10000][essai];
+        if (attente === undefined) {
+          let detail = String(e?.message || e);
+          try { detail = JSON.parse(detail.replace(/^HTTP \d+: /, '')).error || detail; } catch { /* texte brut */ }
+          setErreur(detail);
+          break;
+        }
+        await new Promise((ok) => setTimeout(ok, attente));
+      }
+    }
+    setCharge(false);
   }, []);
   useEffect(() => { charger(); }, [charger]);
 
   if (erreur && !d) return (
     <div className="rounded-2xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-300">
       Impossible de charger le tableau de bord beauté. <button onClick={charger} className="underline font-semibold">Réessayer</button>
+      <p className="mt-1 text-xs opacity-80 break-words">Détail : {erreur}</p>
     </div>
   );
   if (!d) return <div className="h-48 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />;
@@ -126,6 +140,12 @@ export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: Navigue
           <div className="h-full bg-white rounded-full transition-all" style={{ width: `${(faites / etapes.length) * 100}%` }} />
         </div>
       </div>
+
+      {!!d.erreurs?.length && (
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/15 p-3 text-xs text-amber-800 dark:text-amber-200">
+          Certains chiffres n'ont pas pu être calculés : {d.erreurs.join(' · ')}
+        </div>
+      )}
 
       <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4">
         <ul className="divide-y divide-gray-100 dark:divide-gray-700">

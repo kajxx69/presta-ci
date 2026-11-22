@@ -8,6 +8,7 @@ import { OffreModele } from '../models/index.js';
 import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
+import { logger } from '../logger.js';
 import { User, PaiementEnLigne } from '../models/index.js';
 import { etatGeniusPay } from '../utils/geniuspay.js';
 import { placesOffreRestantes, PLACES_OFFRE_LANCEMENT } from '../services/plans.js';
@@ -282,27 +283,40 @@ router.get('/mes-offres', requireAuth, async (req: any, res: Response) => {
 // GET /api/modeles/admin/apercu — tableau de bord « beauté » du back office
 router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
   try {
+    // Chaque chiffre est calculé à part : si un calcul échoue, les autres s'affichent
+    // quand même et l'erreur est renvoyée à l'admin (au lieu de tout bloquer).
+    const erreurs: string[] = [];
+    const sur = async <T,>(nom: string, p: PromiseLike<T>, defaut: T): Promise<T> => {
+      try { return await p; } catch (e: any) {
+        erreurs.push(`${nom} : ${e?.message || e}`);
+        logger.error(`[modeles/admin-apercu] ${nom} : ${e?.message || e}`);
+        return defaut;
+      }
+    };
     const il7j = new Date(Date.now() - 7 * 86400000);
     const debutMois = new Date(); debutMois.setDate(1); debutMois.setHours(0, 0, 0, 0);
     const [
       parSource, parCategorie, tableaux, likes7j, swipes7j, likesTotal, offres, prestatairesOffrants,
       nouvellesClientes, nouveauxPros, paiementsMois, paiementsAttente, topAimes,
     ] = await Promise.all([
-      Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$source', n: { $sum: 1 } } }]),
-      Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$categorie', n: { $sum: 1 } } }]),
-      TableauPinterest.find().select('titre categorie url is_active derniere_synchro nb_importees derniere_erreur').sort({ created_at: -1 }),
-      ModeleSwipe.countDocuments({ action: 'like', created_at: { $gte: il7j } }),
-      ModeleSwipe.countDocuments({ created_at: { $gte: il7j } }),
-      ModeleSwipe.countDocuments({ action: 'like' }),
-      OffreModele.countDocuments(),
-      OffreModele.distinct('prestataire_id'),
-      User.countDocuments({ role_id: 1, created_at: { $gte: il7j } }),
-      User.countDocuments({ role_id: 2, created_at: { $gte: il7j } }),
-      PaiementEnLigne.aggregate([{ $match: { statut: 'paye', paye_at: { $gte: debutMois } } }, { $group: { _id: null, n: { $sum: 1 }, montant: { $sum: '$montant' } } }]),
-      PaiementEnLigne.countDocuments({ statut: 'en_attente' }),
-      Modele.find({ is_active: true, nombre_likes: { $gt: 0 } }).sort({ nombre_likes: -1 }).limit(24).select(CHAMPS_PUBLICS),
+      sur('photos par source', Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$source', n: { $sum: 1 } } }]), [] as any[]),
+      sur('photos par catégorie', Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: '$categorie', n: { $sum: 1 } } }]), [] as any[]),
+      sur('tableaux Pinterest', TableauPinterest.find().select('titre categorie url is_active derniere_synchro nb_importees derniere_erreur').sort({ created_at: -1 }), [] as any[]),
+      sur('likes 7 jours', ModeleSwipe.countDocuments({ action: 'like', created_at: { $gte: il7j } }), 0),
+      sur('swipes 7 jours', ModeleSwipe.countDocuments({ created_at: { $gte: il7j } }), 0),
+      sur('likes total', ModeleSwipe.countDocuments({ action: 'like' }), 0),
+      sur('offres', OffreModele.countDocuments(), 0),
+      sur('pros qui proposent', OffreModele.distinct('prestataire_id'), [] as any[]),
+      sur('nouvelles clientes', User.countDocuments({ role_id: 1, created_at: { $gte: il7j } }), 0),
+      sur('nouvelles pros', User.countDocuments({ role_id: 2, created_at: { $gte: il7j } }), 0),
+      sur('paiements du mois', PaiementEnLigne.aggregate([{ $match: { statut: 'paye', paye_at: { $gte: debutMois } } }, { $group: { _id: null, n: { $sum: 1 }, montant: { $sum: '$montant' } } }]), [] as any[]),
+      sur('paiements en attente', PaiementEnLigne.countDocuments({ statut: 'en_attente' }), 0),
+      sur('modèles les plus aimés', Modele.find({ is_active: true, nombre_likes: { $gt: 0 } }).sort({ nombre_likes: -1 }).limit(24).select(CHAMPS_PUBLICS), [] as any[]),
     ]);
-    const [enrichis, placesRestantes] = await Promise.all([enrichirOffres(topAimes), placesOffreRestantes()]);
+    const [enrichis, placesRestantes] = await Promise.all([
+      sur('offres des modèles aimés', enrichirOffres(topAimes), [] as any[]),
+      sur('offre de lancement', placesOffreRestantes(), 0),
+    ]);
     res.json({
       modeles: {
         total: parSource.reduce((n: number, s: any) => n + s.n, 0),
@@ -318,9 +332,12 @@ router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Requ
       sans_prestataire: enrichis.filter((m: any) => !m.nb_offres).slice(0, 8),
       plus_aimes: enrichis.slice(0, 8),
       config: { geniuspay: etatGeniusPay(), frontend_url: Boolean(process.env.FRONTEND_URL) },
+      erreurs,
     });
   } catch (e) {
-    serverError(res, e, 'modeles/admin-apercu');
+    // Message réel renvoyé à l'admin (route réservée aux admins) pour pouvoir diagnostiquer
+    logger.error(`[modeles/admin-apercu] ${(e as any)?.message || e}`);
+    res.status(500).json({ error: `Tableau de bord beauté : ${(e as any)?.message || e}` });
   }
 });
 

@@ -645,4 +645,5 @@ export interface ApercuAdmin {
   sans_prestataire: Modele[];
   plus_aimes: Modele[];
   config: { geniuspay: { configure: boolean; mode: 'live' | 'sandbox' | null; webhook: boolean }; frontend_url: boolean };
+  erreurs?: string[];
 }
