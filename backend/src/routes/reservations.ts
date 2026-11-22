@@ -181,6 +181,12 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     const service = await Service.findOne({ _id: service_id, is_active: true });
     if (!service) return res.status(404).json({ error: 'Service introuvable ou inactif' });
 
+    // Un même compte peut être cliente ET pro : on ne réserve simplement pas chez soi
+    const proDuService = await Prestataire.findById(service.prestataire_id).select('user_id');
+    if (proDuService && proDuService.user_id === userId) {
+      return res.status(400).json({ error: "C'est ta propre prestation : tu ne peux pas la réserver 😉" });
+    }
+
     // Déterminer le booking_type depuis la sous-catégorie
     const subCat = await SubCategory.findById(service.sous_categorie_id);
     const bookingType: 'appointment' | 'order' = (subCat as any)?.booking_type === 'order' ? 'order' : 'appointment';

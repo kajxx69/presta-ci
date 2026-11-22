@@ -1,38 +1,14 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Eye, EyeOff, Mail, Lock, User, Phone, Briefcase, Loader2,
+  Eye, EyeOff, Mail, Lock, User, Phone, Loader2,
   AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft,
-  MapPin, Sparkles, Camera, X
+  Sparkles
 } from 'lucide-react';
-import AddressMapPicker from '../common/AddressMapPicker';
 import { PanneauMarque, EnTeteMobile } from './AuthDecor';
 import { useOffreLancement } from '../../lib/offreLancement';
-
-async function compressAvatar(file: File): Promise<string> {
-  const dataUri: string = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = dataUri;
-  });
-  const MAX = 640;
-  const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-  if (scale === 1 && file.size < 300 * 1024) return dataUri;
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
-  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.85);
-}
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   let score = 0;
@@ -59,24 +35,19 @@ function formatPhoneNumber(value: string): string {
   return parts.join(' ');
 }
 
+// Un seul compte pour tout le monde : on devient pro en proposant un modèle
+// (« Je sais le faire »), on est cliente quand on réserve.
 const steps = [
-  { id: 'role', title: 'Toi' },
-  { id: 'identity', title: 'Tes infos' },
-  { id: 'security', title: 'Ton mot de passe' },
-];
-
-const stepsPrestataire = [
-  { id: 'role', title: 'Toi' },
-  { id: 'business', title: 'Ton salon' },
   { id: 'identity', title: 'Tes infos' },
   { id: 'security', title: 'Ton mot de passe' },
 ];
 
 export default function RegisterForm() {
   const [searchParams] = useSearchParams();
-  const prefillProRole = searchParams.get('role') === 'prestataire';
+  // Arrivée depuis « Je suis coiffeuse » : on rappelle comment proposer ses modèles
+  const vientPourPro = searchParams.get('role') === 'prestataire';
 
-  const [step, setStep] = useState(prefillProRole ? 1 : 0);
+  const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -84,7 +55,7 @@ export default function RegisterForm() {
     nom: '',
     prenom: '',
     telephone: '',
-    role_id: prefillProRole ? 2 : 0,
+    role_id: 1,
     nom_commercial: '',
     ville: '',
     adresse: '',
@@ -98,14 +69,12 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [focused, setFocused] = useState('');
-  const [photoError, setPhotoError] = useState('');
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { register } = useAuthStore();
   const placesOffre = useOffreLancement();
   const navigate = useNavigate();
 
-  const currentSteps = formData.role_id === 2 ? stepsPrestataire : steps;
+  const currentSteps = steps;
   const totalSteps = currentSteps.length;
 
   const passwordStrength = useMemo(() => getPasswordStrength(formData.password), [formData.password]);
@@ -115,8 +84,6 @@ export default function RegisterForm() {
   const canGoNext = () => {
     const currentStepId = currentSteps[step]?.id;
     switch (currentStepId) {
-      case 'role': return formData.role_id > 0;
-      case 'business': return !!(formData.nom_commercial.trim() && formData.ville.trim() && formData.adresse.trim() && formData.photo_profil);
       case 'identity': return formData.prenom.trim() && formData.nom.trim() && formData.email.includes('@') && formData.telephone.trim();
       case 'security': return formData.password.length >= 6 && passwordsMatch;
       default: return false;
@@ -159,12 +126,6 @@ export default function RegisterForm() {
     if (step > 0) setStep(step - 1);
   };
 
-  const selectRole = (roleId: number) => {
-    setFormData({ ...formData, role_id: roleId });
-    // Auto advance after a short delay
-    setTimeout(() => setStep(1), 300);
-  };
-
   const inputWrapperClass = (field: string) =>
     `relative rounded-2xl border-2 transition-all duration-200 ${
       focused === field ? 'border-pink-400 shadow-lg shadow-pink-500/10' : 'border-gray-200 dark:border-gray-600'
@@ -177,207 +138,6 @@ export default function RegisterForm() {
     const currentStepId = currentSteps[step]?.id;
 
     switch (currentStepId) {
-      case 'role':
-        return (
-          <motion.div
-            key="role"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            className="space-y-5"
-          >
-            <div className="text-center mb-2">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', delay: 0.2 }}
-                className="hidden lg:flex w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-pink-500/20 to-orange-400/20 items-center justify-center mb-3"
-              >
-                <Sparkles className="w-7 h-7 text-pink-600 dark:text-pink-400" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tu es plutôt… ?</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tu pourras toujours changer plus tard</p>
-            </div>
-
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => selectRole(1)}
-              className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
-                formData.role_id === 1
-                  ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20 shadow-lg shadow-pink-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br from-pink-100 to-rose-200 dark:from-pink-900/40 dark:to-rose-900/40">💖</div>
-                <div>
-                  <p className={`font-bold text-lg ${formData.role_id === 1 ? 'text-pink-700 dark:text-pink-300' : 'text-gray-900 dark:text-white'}`}>
-                    Je cherche mon prochain style
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Je swipe des modèles et je réserve chez une pro
-                  </p>
-                </div>
-              </div>
-            </motion.button>
-
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => selectRole(2)}
-              className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
-                formData.role_id === 2
-                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-lg shadow-orange-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br from-amber-100 to-orange-200 dark:from-amber-900/40 dark:to-orange-900/40">✂️</div>
-                <div>
-                  <p className={`font-bold text-lg ${formData.role_id === 2 ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
-                    Je suis coiffeuse ou esthéticienne
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Je propose mes modèles et je reçois des clientes
-                  </p>
-                  {placesOffre > 0 && (
-                    <p className="mt-1.5 inline-block text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white">
-                      🎁 1 mois Pro offert · plus que {placesOffre} place{placesOffre > 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.button>
-          </motion.div>
-        );
-
-      case 'business':
-        return (
-          <motion.div
-            key="business"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            className="space-y-4"
-          >
-            <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
-              <p className="text-sm text-orange-800 dark:text-orange-200">
-                <strong>Ton salon ✂️</strong> : c'est ce que verront tes futures clientes
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center gap-2 py-2">
-              <label className={labelClass}>Photo de profil *</label>
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center group hover:border-orange-500 transition-colors"
-              >
-                {formData.photo_profil ? (
-                  <img src={formData.photo_profil} alt="Aperçu" className="w-full h-full object-cover" />
-                ) : (
-                  <Camera className="w-8 h-8 text-orange-400 group-hover:text-orange-600 transition-colors" />
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-white" />
-                </div>
-              </button>
-              {formData.photo_profil && (
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, photo_profil: '' }))}
-                  className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
-                >
-                  <X className="w-3 h-3" /> Retirer
-                </button>
-              )}
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/png, image/jpeg, image/webp"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setPhotoError('');
-                  if (file.size > 5 * 1024 * 1024) {
-                    setPhotoError('Image trop volumineuse (max 5MB)');
-                    return;
-                  }
-                  try {
-                    const compressed = await compressAvatar(file);
-                    setFormData(prev => ({ ...prev, photo_profil: compressed }));
-                  } catch {
-                    setPhotoError('Impossible de charger cette image');
-                  }
-                }}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
-                Une jolie photo de toi ou de ton salon inspire confiance 📸
-              </p>
-              {photoError && <p className="text-xs text-red-500">{photoError}</p>}
-            </div>
-
-            <div>
-              <label className={labelClass}>Nom de ton salon</label>
-              <div className={inputWrapperClass('nom_commercial')}>
-                <Briefcase className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'nom_commercial' ? 'text-pink-500' : 'text-gray-400'
-                }`} />
-                <input
-                  type="text"
-                  name="nom_commercial"
-                  value={formData.nom_commercial}
-                  onChange={handleChange}
-                  onFocus={() => setFocused('nom_commercial')}
-                  onBlur={() => setFocused('')}
-                  className={inputClass}
-                  placeholder="Ex : Awa Beauty, Nails by Mariam…"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClass}>Quartier / ville</label>
-              <div className={inputWrapperClass('ville')}>
-                <MapPin className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'ville' ? 'text-pink-500' : 'text-gray-400'
-                }`} />
-                <input
-                  type="text"
-                  name="ville"
-                  value={formData.ville}
-                  onChange={handleChange}
-                  onFocus={() => setFocused('ville')}
-                  onBlur={() => setFocused('')}
-                  className={inputClass}
-                  placeholder="Cocody, Yopougon, Marcory…"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClass}>Adresse exacte</label>
-              <AddressMapPicker
-                value={formData.adresse}
-                onChange={(address, lat, lng) => {
-                  setFormData({ ...formData, adresse: address, latitude: lat, longitude: lng });
-                }}
-                placeholder="Touche pour te placer sur la carte"
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Tes clientes te trouveront facilement
-              </p>
-            </div>
-          </motion.div>
-        );
-
       case 'identity':
         return (
           <motion.div
@@ -618,11 +378,19 @@ export default function RegisterForm() {
         {step === 0 ? (
           <EnTeteMobile titre="Bienvenue ✨" sousTitre="Crée ton compte gratuit en 30 secondes" />
         ) : (
-          <h1 className="lg:hidden text-xl font-extrabold text-gray-900 dark:text-white mb-4">{formData.role_id === 2 ? 'Ton espace pro ✂️' : 'Presque fini 💖'}</h1>
+          <h1 className="lg:hidden text-xl font-extrabold text-gray-900 dark:text-white mb-4">Presque fini 💖</h1>
+        )}
+
+        {/* Coiffeuse, onglerie, make-up : même compte, on se propose ensuite sur les modèles */}
+        {step === 0 && (
+          <div className={`mb-5 rounded-2xl p-3 text-sm border ${vientPourPro ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700'} text-gray-700 dark:text-gray-200`}>
+            ✂️ <strong>Tu es coiffeuse, onglerie ou make-up ?</strong> Crée ton compte ici, puis touche « Je sais le faire » sur un modèle : tu deviens pro en 1 minute.
+            {placesOffre > 0 && <span className="block mt-1 font-semibold text-pink-600 dark:text-pink-400">🎁 1 mois Pro offert · plus que {placesOffre} place{placesOffre > 1 ? 's' : ''}</span>}
+          </div>
         )}
 
         {/* Progress bar */}
-        {step > 0 && (
+        {(
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -670,9 +438,9 @@ export default function RegisterForm() {
         </AnimatePresence>
 
         {/* Navigation buttons */}
-        {step > 0 && (
+        {(
           <div className="flex gap-3 mt-6">
-            <motion.button
+            {step > 0 && <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="button"
@@ -681,7 +449,7 @@ export default function RegisterForm() {
             >
               <ArrowLeft className="w-4 h-4" />
               Retour
-            </motion.button>
+            </motion.button>}
 
             <motion.button
               whileHover={{ scale: 1.02 }}

@@ -1,18 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Moon, Sun, ArrowLeftRight } from 'lucide-react';
+import { Bell, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationCenter from './NotificationCenter';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import Logo from './Logo';
 
 export default function Header() {
   const { isDarkMode, toggleDarkMode, setCurrentTab } = useAppStore();
-  const { user, role, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -53,8 +52,6 @@ export default function Header() {
 
   if (!isAuthenticated) return null;
 
-  const isPro = location.pathname.startsWith('/pro');
-
   return (
     <header className="sticky top-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm">
       <div className="flex items-center justify-between max-w-lg lg:max-w-none mx-auto px-4 h-14">
@@ -69,22 +66,6 @@ export default function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          {/* Pro/Client switch for prestataires */}
-          {role?.id === 2 && (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => navigate(isPro ? '/app' : '/pro')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                isPro
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
-              }`}
-            >
-              <ArrowLeftRight className="w-3.5 h-3.5" />
-              <span>{isPro ? 'Client' : 'Pro'}</span>
-            </motion.button>
-          )}
-
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <motion.button

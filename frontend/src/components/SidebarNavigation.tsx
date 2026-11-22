@@ -1,4 +1,4 @@
-import { Sparkles, Search, Calendar, User, Package, CreditCard, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Sparkles, Search, User, Package, CreditCard, LayoutDashboard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -16,20 +16,11 @@ const clientTabs = [
   { id: 'profile', label: 'Profil', icon: User },
 ];
 // Le Profil regroupe Enregistrés (favoris), Demandes (réservations), Messages et Mon compte
-const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'messages', 'compte']);
+const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'mes-reservations', 'demandes', 'messages', 'compte', 'dashboard', 'services', 'plans']);
 const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
   currentTab === tabId || (estCliente && tabId === 'profile' && PROFIL_TABS.has(currentTab));
 
 
-const prestataireTabs = [
-  { id: 'home', label: 'Découvrir', icon: Sparkles },
-  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { id: 'services', label: 'Services', icon: Package },
-  { id: 'reservations', label: 'Réservations', icon: Calendar },
-  { id: 'messages', label: 'Messages', icon: MessageCircle },
-  { id: 'plans', label: 'Abonnement', icon: CreditCard },
-  { id: 'profile', label: 'Profil', icon: User },
-];
 
 const adminTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -56,8 +47,8 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
     navigate(`/app/${tabId}`);
   };
 
+  // Clientes et pros ont la même navigation (l'espace pro est dans le Profil)
   let tabs = clientTabs;
-  if (role?.nom === 'prestataire') tabs = prestataireTabs;
   if (role?.nom === 'admin') tabs = adminTabs;
 
   return (

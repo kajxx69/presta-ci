@@ -27,15 +27,8 @@ const PrestataireDetailPage = lazy(() => import('./pages/PrestataireDetailPage')
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 
 // ─── Lazy: Messagerie (client & prestataire) ───
-const MessagesTab = lazy(() => import('./components/common/MessagesTab'));
 
 // ─── Lazy: Prestataire ───
-const DashboardTab = lazy(() => import('./components/prestataire/DashboardTab'));
-const ServicesTab = lazy(() => import('./components/prestataire/ServicesTab'));
-const ReservationsTabP = lazy(() => import('./components/prestataire/ReservationsTab'));
-const PlansTab = lazy(() => import('./components/prestataire/PlansTab'));
-const ProfileTabP = lazy(() => import('./components/prestataire/ProfileTab'));
-const ProviderDashboard = lazy(() => import('./components/provider/ProviderDashboard'));
 
 // ─── Lazy: Admin (chargé UNIQUEMENT si admin) ───
 const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
@@ -82,37 +75,33 @@ function SplashScreen() {
 
 // ─── Role-based tab renderers ───
 
-// Cliente : Découvrir (swipe) · Recherche · Profil (Enregistrés / Demandes, + Messages et Mon compte)
-function ClientTabRenderer({ currentTab }: { currentTab: string }) {
+// Un seul type de compte : tout le monde a Découvrir · Recherche · Profil.
+// On devient pro en proposant un modèle (« Je sais le faire ») ; l'espace pro
+// (Demandes reçues, Mes prestations, Abonnement, Tableau de bord) vit alors dans le Profil.
+function AppTabRenderer({ currentTab, setCurrentTab, estPro }: {
+  currentTab: string;
+  setCurrentTab: (tab: string) => void;
+  estPro: boolean;
+}) {
   switch (currentTab) {
     case 'search': return <SearchTab />;
     case 'profile':
-    case 'favorites': return <ClientProfileHub onglet="enregistres" />; // ancien onglet Favoris
-    case 'reservations': return <ClientProfileHub onglet="demandes" />;
-    case 'messages': return <ClientProfileHub onglet="messages" />;
-    case 'compte': return <ClientProfileHub onglet="compte" />;
+    case 'favorites': return <ClientProfileHub onglet="enregistres" onNavigateToTab={setCurrentTab} />; // ancien onglet Favoris
+    case 'mes-reservations': return <ClientProfileHub onglet="reservations" onNavigateToTab={setCurrentTab} />;
+    // « reservations » : réservations reçues pour une pro (liens des notifications), sinon les siennes
+    case 'reservations': return <ClientProfileHub onglet={estPro ? 'demandes' : 'reservations'} onNavigateToTab={setCurrentTab} />;
+    case 'demandes': return <ClientProfileHub onglet={estPro ? 'demandes' : 'reservations'} onNavigateToTab={setCurrentTab} />;
+    case 'messages': return <ClientProfileHub onglet="messages" onNavigateToTab={setCurrentTab} />;
+    case 'compte': return <ClientProfileHub onglet="compte" onNavigateToTab={setCurrentTab} />;
+    case 'dashboard':
+    case 'services':
+    case 'plans': return estPro ? <ClientProfileHub onglet={currentTab} onNavigateToTab={setCurrentTab} /> : <DiscoverTab />;
     default: return <DiscoverTab />; // home, publications (ancien lien)…
   }
 }
 
-function PrestataireTabRenderer({ currentTab, setCurrentTab }: {
-  currentTab: string;
-  setCurrentTab: (tab: string) => void;
-}) {
-  switch (currentTab) {
-    case 'home': return <DiscoverTab />; // le fil d'inspiration : « Je sais le faire » sur chaque modèle
-    case 'dashboard': return <DashboardTab onNavigateToTab={setCurrentTab} />;
-    case 'reservations': return <ReservationsTabP />;
-    case 'services': return <ServicesTab onNavigateToTab={setCurrentTab} />;
-    case 'messages': return <MessagesTab />;
-    case 'plans': return <PlansTab />;
-    case 'profile': return <ProfileTabP />;
-    default: return <DashboardTab onNavigateToTab={setCurrentTab} />;
-  }
-}
-
 // Onglets valides par rôle (protège contre les URLs /app/nimportequoi)
-const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
+const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-reservations', 'demandes', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
 
 /** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
 function AppShell() {
@@ -147,7 +136,7 @@ function AppShell() {
 
   // Favoris swipés avant connexion → rattachés au compte de la cliente
   useEffect(() => {
-    if (!isAuthenticated || (role && role.nom !== 'client')) return;
+    if (!isAuthenticated || role?.nom === 'admin') return;
     const { likes, passes } = swipesLocaux.lire();
     if (!likes.length && !passes.length) return;
     api.modeles.sync({ likes, passes })
@@ -164,16 +153,10 @@ function AppShell() {
     );
   }
 
-  const renderCurrentTab = () => {
-    if (!isAuthenticated || !role || role.nom === 'client') {
-      // Les visiteurs non connectés naviguent comme des clients
-      return <ClientTabRenderer currentTab={activeTab} />;
-    }
-    if (role.nom === 'prestataire') {
-      return <PrestataireTabRenderer currentTab={activeTab} setCurrentTab={handleTabChange} />;
-    }
-    return null;
-  };
+  const renderCurrentTab = () => (
+    // Les visiteurs non connectés naviguent comme tout le monde
+    <AppTabRenderer currentTab={activeTab} setCurrentTab={handleTabChange} estPro={isAuthenticated && role?.nom === 'prestataire'} />
+  );
 
   return (
     <>
@@ -196,7 +179,7 @@ function AppShell() {
 }
 
 function App() {
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   const [authReady, setAuthReady] = useState(false);
   useEffect(() => {
@@ -278,20 +261,7 @@ function App() {
 
         <Route path="/app/:tab?" element={<AppShell />} />
 
-        <Route
-          path="/pro"
-          element={
-            !isAuthenticated ? (
-              <Navigate to="/login" replace />
-            ) : role?.id !== 2 ? (
-              <Navigate to="/app" replace />
-            ) : (
-              <Layout>
-                <ProviderDashboard />
-              </Layout>
-            )
-          }
-        />
+        <Route path="/pro" element={<Navigate to="/app/profile" replace />} />
 
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ForgotPasswordPage />} />

@@ -109,7 +109,7 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
               {!isAuthenticated ? (
                 <div className="space-y-2 text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-300">Crée ton compte gratuit pour proposer ce modèle à tes futures clientes.</p>
-                  <button onClick={() => { onClose(); navigate('/register?role=prestataire'); }} className="w-full py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold">Créer mon compte pro</button>
+                  <button onClick={() => { onClose(); navigate('/register?role=prestataire'); }} className="w-full py-3 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold">Créer mon compte</button>
                   <button onClick={() => { onClose(); navigate('/login'); }} className="w-full py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold">J'ai déjà un compte</button>
                 </div>
               ) : (
