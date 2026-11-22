@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Download, Eye, EyeOff, Trash2, Image as ImageIcon } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
+import AdminTableauxPinterest from './AdminTableauxPinterest';
 import { SectionHeader, RefreshButton, FilterSelect, Pagination, LoadingSpinner, EmptyState } from './AdminShared';
 
 // Contenu du fil « Découvrir » : import de photos libres de droits (Pixabay, Unsplash ou Pexels)
@@ -128,6 +129,8 @@ export default function AdminModeles() {
         </button>
         <p className="text-xs text-gray-500">Astuce : vérifiez ensuite les photos ci-dessous et masquez celles qui ne collent pas au style ivoirien.</p>
       </div>
+
+      <AdminTableauxPinterest />
 
       <div className="flex flex-wrap gap-2">
         <FilterSelect value={source} onChange={(v) => { setSource(v); setPage(1); }} options={[{ value: '', label: 'Toutes sources' }, { value: 'prestataire', label: 'Prestataires' }, { value: 'curation', label: 'Importées' }]} />

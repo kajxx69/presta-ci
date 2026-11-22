@@ -18,6 +18,10 @@ const demandeSchema = new mongoose.Schema({
   ville: { type: String, default: null },
   budget_max: { type: Number, default: null },
   date_souhaitee: { type: String, default: null }, // YYYY-MM-DD, indicatif
+  // « J'ai mon modèle » : photo de référence (capture Pinterest…) stockée chez nous,
+  // et/ou lien vers l'épingle. Visible uniquement par la cliente et les salons ciblés.
+  photo: { type: String, default: null },
+  lien_inspiration: { type: String, default: null },
   statut: { type: String, enum: ['ouverte', 'pourvue', 'annulee'], default: 'ouverte' },
   expires_at: { type: Date, required: true },
   reponses: [{

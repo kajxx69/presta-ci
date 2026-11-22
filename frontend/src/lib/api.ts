@@ -5,6 +5,7 @@ export interface ApiService { id: number; prestataire_id: number; sous_categorie
 
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; source: 'prestataire' | 'curation'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
+export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number }; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
@@ -611,6 +612,8 @@ export const api = {
     sync: (body: { likes: number[]; passes: number[] }): Promise<{ ok: boolean }> =>
       http('/api/modeles/sync', { method: 'POST', body: JSON.stringify(body) }),
     mesLikes: (): Promise<{ modeles: Modele[] }> => http('/api/modeles/mes-likes'),
+    pinterest: (categorie?: string): Promise<{ tableaux: TableauPinterest[] }> =>
+      http(`/api/modeles/pinterest${categorie ? `?categorie=${categorie}` : ''}`),
     admin: {
       list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[]; banque: string | null }> => {
         const q = new URLSearchParams();
@@ -624,6 +627,9 @@ export const api = {
       create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
         http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
+      ajouterPinterest: (body: { url: string; titre: string; categorie: string }): Promise<{ ok: boolean; tableau: TableauPinterest }> =>
+        http('/api/modeles/admin/pinterest', { method: 'POST', body: JSON.stringify(body) }),
+      retirerPinterest: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/pinterest/${id}`, { method: 'DELETE' }),
       remove: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/${id}`, { method: 'DELETE' }),
     },
   },
@@ -675,7 +681,7 @@ export const api = {
       http(`/api/conversations/${id}/devis/${messageId}`, { method: 'PUT', body: JSON.stringify({ action }) }),
   },
   demandes: {
-    create: (payload: { titre: string; description: string; categorie_id: number; sous_categorie_id?: number; ville?: string; budget_max?: number; date_souhaitee?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
+    create: (payload: { titre: string; description: string; categorie_id: number; sous_categorie_id?: number; ville?: string; budget_max?: number; date_souhaitee?: string; photo?: string; lien_inspiration?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
       http('/api/demandes', { method: 'POST', body: JSON.stringify(payload) }),
     mine: (): Promise<any[]> => http('/api/demandes/mes'),
     opportunites: (): Promise<any[]> => http('/api/demandes/opportunites'),

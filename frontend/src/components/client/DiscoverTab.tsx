@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { X, Heart, Info, Sparkles, MapPin, RotateCcw } from 'lucide-react';
 import { api, Modele, CategorieModele } from '../../lib/api';
@@ -7,6 +7,8 @@ import { swipesLocaux } from '../../lib/swipesLocaux';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import ModeleDetailSheet from './ModeleDetailSheet';
+import JaiMonModeleModal from './JaiMonModeleModal';
+import { extraireLien } from '../../lib/compresserImage';
 
 export const CATEGORIES: { id: CategorieModele | ''; label: string; emoji: string }[] = [
   { id: '', label: 'Tout', emoji: '✨' },
@@ -82,6 +84,16 @@ export default function DiscoverTab() {
   const [direction, setDirection] = useState<Direction>(1);
   const [ouvert, setOuvert] = useState<Modele | null>(null);
   const [dernier, setDernier] = useState<{ modele: Modele; action: 'like' | 'pass' } | null>(null);
+  // Partage depuis l'app Pinterest (Android, PWA installée) → /app/home?title=…&text=…&url=…
+  const [params, setParams] = useSearchParams();
+  const [monModele, setMonModele] = useState(false);
+  const [lienPartage, setLienPartage] = useState('');
+  useEffect(() => {
+    if (!params.get('partage') && !params.get('text') && !params.get('url')) return;
+    setLienPartage(extraireLien(params.get('url'), params.get('text'), params.get('title')));
+    setMonModele(true);
+    setParams({}, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const vusSession = useRef<Set<number>>(new Set());
   const enCours = useRef(false);
   const nbLikes = useRef(0);
@@ -154,6 +166,10 @@ export default function DiscoverTab() {
       ? 'h-[calc(100dvh-8.5rem)] lg:h-[calc(100dvh-5rem)]'
       : 'h-[calc(100dvh-5rem)] lg:h-[calc(100dvh-1.5rem)]'}`}>
       <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
+        <button onClick={() => { setLienPartage(''); setMonModele(true); }}
+          className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-pink-500 to-rose-500 text-white">
+          📸 Mon modèle
+        </button>
         {CATEGORIES.map((c) => (
           <button
             key={c.id || 'tout'}
@@ -227,6 +243,7 @@ export default function DiscoverTab() {
       </div>
 
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} />
+      <JaiMonModeleModal open={monModele} onClose={() => setMonModele(false)} lienInitial={lienPartage} />
     </div>
   );
 }

@@ -126,6 +126,25 @@ export default function OpportunitesSection({ onNavigateToTab, hasActiveServices
               </div>
             </div>
 
+            {(o.photo || o.lien_inspiration) && (
+              <div className="flex items-center gap-3">
+                {o.photo && (
+                  <a href={o.photo} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                    <img src={o.photo} alt="Modèle souhaité" className="w-20 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                  </a>
+                )}
+                <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                  <p className="font-semibold text-pink-600 dark:text-pink-400">📸 La cliente a envoyé son modèle</p>
+                  {o.lien_inspiration && (
+                    <a href={o.lien_inspiration} target="_blank" rel="noreferrer noopener" className="underline underline-offset-2 break-all">
+                      Voir le modèle ({new URL(o.lien_inspiration).hostname.replace(/^www\./, '')})
+                    </a>
+                  )}
+                  <p className="text-gray-500">Répondez avec votre prix pour ce modèle.</p>
+                </div>
+              </div>
+            )}
+
             <p className="text-[13px] text-gray-600 dark:text-gray-300 line-clamp-2">{o.description}</p>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">

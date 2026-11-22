@@ -4,6 +4,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 import { isValidDayString, isPastDay } from '../utils/validation.js';
+import { saveDataUri } from '../utils/uploads.js';
+import { lienInspirationValide } from '../utils/liens.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -60,7 +62,18 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const titre = String(req.body?.titre || '').trim();
-    const description = String(req.body?.description || '').trim();
+    let description = String(req.body?.description || '').trim();
+    // « J'ai mon modèle » : photo de référence et/ou lien Pinterest / Instagram / TikTok
+    const photoBrute = req.body?.photo;
+    if (photoBrute !== undefined && photoBrute !== null && photoBrute !== '' && (typeof photoBrute !== 'string' || !/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(photoBrute))) {
+      return res.status(400).json({ error: 'Photo invalide (JPEG, PNG ou WebP attendu)' });
+    }
+    const lien_inspiration = req.body?.lien_inspiration ? lienInspirationValide(req.body.lien_inspiration) : null;
+    if (req.body?.lien_inspiration && !lien_inspiration) {
+      return res.status(400).json({ error: 'Lien non accepté : collez un lien Pinterest, Instagram ou TikTok' });
+    }
+    const avecModele = !!photoBrute || !!lien_inspiration;
+    if (avecModele && description.length < 10) description = description || 'Je voudrais ce modèle (voir la photo).';
     const categorie_id = Number(req.body?.categorie_id);
     const sous_categorie_id = req.body?.sous_categorie_id ? Number(req.body.sous_categorie_id) : null;
     const ville = req.body?.ville ? String(req.body.ville).trim().slice(0, 80) : null;
@@ -68,7 +81,7 @@ router.post('/', async (req: Request, res: Response) => {
     const date_souhaitee = req.body?.date_souhaitee ? String(req.body.date_souhaitee).slice(0, 10) : null;
 
     if (titre.length < 3 || titre.length > 120) return res.status(400).json({ error: 'Le titre doit faire entre 3 et 120 caractères' });
-    if (description.length < 10 || description.length > 2000) return res.status(400).json({ error: 'Décrivez votre besoin en au moins 10 caractères' });
+    if ((!avecModele && description.length < 10) || description.length > 2000) return res.status(400).json({ error: 'Décrivez votre besoin en au moins 10 caractères' });
     if (!Number.isInteger(categorie_id) || categorie_id <= 0) return res.status(400).json({ error: 'Catégorie requise' });
 
     let budget_max: number | null = null;
@@ -102,9 +115,10 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Vous avez déjà ${MAX_DEMANDES_OUVERTES} demandes en cours. Clôturez-en une avant d'en publier une nouvelle.` });
     }
 
+    const photo = photoBrute ? await saveDataUri(photoBrute) : null; // 2 Mo max, validé par saveDataUri
     const demande = await Demande.create({
       client_id: userId,
-      titre, description, categorie_id, sous_categorie_id, ville, budget_max, date_souhaitee,
+      titre, description, categorie_id, sous_categorie_id, ville, budget_max, date_souhaitee, photo, lien_inspiration,
       expires_at: new Date(Date.now() + DUREE_JOURS * 24 * 3600 * 1000),
     });
 
@@ -118,7 +132,7 @@ router.post('/', async (req: Request, res: Response) => {
         InAppNotificationService.createCustom(
           uid,
           '💼 Nouvelle opportunité près de chez vous',
-          `Un client recherche : « ${titre} »${ville ? ` à ${ville}` : ''}. Soyez le premier à répondre !`,
+          `${photo ? '📸 Une cliente a envoyé la photo de son modèle' : 'Un client recherche'} : « ${titre} »${ville ? ` à ${ville}` : ''}. Soyez le premier à répondre avec votre prix !`,
           'info',
           { demande_id: demande._id, kind: 'demande_express' }
         )
@@ -160,6 +174,8 @@ router.get('/mes', async (req: Request, res: Response) => {
         ville: d.ville,
         budget_max: d.budget_max,
         date_souhaitee: d.date_souhaitee,
+        photo: d.photo || null,
+        lien_inspiration: d.lien_inspiration || null,
         statut: expiree ? 'expiree' : d.statut,
         expires_at: d.expires_at,
         created_at: d.created_at,
@@ -237,6 +253,8 @@ router.get('/opportunites', async (req: Request, res: Response) => {
         ville: d.ville,
         budget_max: d.budget_max,
         date_souhaitee: d.date_souhaitee,
+        photo: d.photo || null,
+        lien_inspiration: d.lien_inspiration || null,
         created_at: d.created_at,
         expires_at: d.expires_at,
         // Prénom + initiale : assez pour humaniser, pas assez pour contourner la plateforme

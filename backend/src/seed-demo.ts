@@ -6,7 +6,9 @@ import 'dotenv/config';
 import './mongoose-setup.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { execSync } from 'child_process';
 import { User, Prestataire, Service, SubCategory, Category, Modele } from './models/index.js';
+import { bootstrapSubCategories } from './db.js';
 import { categorieModelePour, syncTousLesModeles, texteRecherche } from './services/modeles-sync.js';
 import { banqueActive, rechercherPhotos, LIBELLE_BANQUE } from './utils/banques-images.js';
 import { importerPhotos, PACK_LANCEMENT } from './services/modeles-import.js';
@@ -114,6 +116,19 @@ async function main() {
   console.log(`📦 Base locale : ${URI}`);
   const banque = banqueActive();
   console.log(banque ? `📷 Vraies photos via ${LIBELLE_BANQUE[banque]}` : '📷 Aucune banque d\'images (PIXABAY_API_KEY absente) → photos de remplissage');
+
+  // Même classification que la PRODUCTION (11 catégories, sous-catégories de base de db.ts).
+  // Le seed.ts historique utilise une autre numérotation (30 catégories) incompatible.
+  await Promise.all([Category.deleteMany({}), SubCategory.deleteMany({})]);
+  await Category.insertMany([
+    'Beauté & Esthétique', 'Bien-être', 'Coiffure Femme', 'Ongles', 'Massage', 'Coiffure Homme',
+    'Imprimerie & Design', 'Traiteur & Restauration', 'Fleuriste & Décoration', 'Nettoyage & Ménage', 'Fitness',
+  ].map((nom, i) => ({ _id: i + 1, nom, ordre_affichage: i + 1, is_active: true })));
+  await mongoose.connection.db!.collection('counters').updateOne({ _id: 'categories' as any }, { $set: { seq: 11 } }, { upsert: true });
+  await mongoose.connection.db!.collection('counters').updateOne({ _id: 'sous_categories' as any }, { $set: { seq: 0 } }, { upsert: true });
+  await bootstrapSubCategories();
+  // Sous-catégories ajoutées en production par la migration enrich-taxonomy (Sourcils & Cils, Pose de gel…)
+  execSync('npx tsx src/migrations/enrich-taxonomy.ts', { env: process.env, stdio: 'ignore' });
 
   await compte('admin@demo.ci', 3, 'Admin', 'PrestaCI');
   await compte('cliente@demo.ci', 1, 'Mariam', 'Yao', { ville: 'Cocody' });

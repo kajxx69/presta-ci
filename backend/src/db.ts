@@ -42,31 +42,33 @@ const SUBCATEGORIES = [
   { _id: 34, categorie_id: 11, nom: 'Nutrition & Diététique', description: 'Conseils nutritionnels et plans alimentaires', ordre_affichage: 3, booking_type: 'appointment' },
 ];
 
-async function bootstrapSubCategories() {
+/**
+ * Garantit la présence des sous-catégories de base au démarrage.
+ * N'AJOUTE que celles qui manquent : ne supprime ni n'écrase jamais rien.
+ * (L'ancienne version supprimait toute sous-catégorie hors de cette liste et
+ * remettait le compteur à 34 à chaque redémarrage : les sous-catégories créées
+ * par la migration enrich-taxonomy ou par l'admin disparaissaient, et le
+ * compteur recyclait des _id déjà utilisés.)
+ */
+export async function bootstrapSubCategories() {
   try {
-    // Mongoose pluralises 'SubCategory' → 'subcategories'
+    // Mongoose pluralise 'SubCategory' → 'subcategories'
     const col = mongoose.connection.db!.collection('subcategories');
-    const count = await col.countDocuments();
-    // Check if DB already has the correct data
-    const sample = await col.findOne({ _id: 18 as any });
-    const isCorrect = count === 34 && sample?.nom === 'Coupe & Dégradé' && sample?.categorie_id === 6;
-    if (isCorrect) return;
-
-    console.log(`[bootstrap] Rebuilding sous_categories (found ${count}, expected 34 with correct data)...`);
     const ops = SUBCATEGORIES.map(s => ({
-      replaceOne: { filter: { _id: s._id as any }, replacement: { ...s, is_active: true }, upsert: true }
+      updateOne: { filter: { _id: s._id as any }, update: { $setOnInsert: { ...s, is_active: true } }, upsert: true }
     }));
-    await col.bulkWrite(ops as any, { ordered: false });
-    const validIds = SUBCATEGORIES.map(s => s._id);
-    await col.deleteMany({ _id: { $nin: validIds as any } });
-    await mongoose.connection.db!.collection('counters').findOneAndUpdate(
+    const r = await col.bulkWrite(ops as any, { ordered: false });
+    // Le compteur ne doit jamais redescendre sous le plus grand _id existant
+    const max = await col.find({}).sort({ _id: -1 }).limit(1).toArray();
+    const maxId = Math.max(SUBCATEGORIES.length, Number(max[0]?._id) || 0);
+    await mongoose.connection.db!.collection('counters').updateOne(
       { _id: 'sous_categories' as any },
-      { $set: { seq: 34 } },
+      { $max: { seq: maxId } },
       { upsert: true }
     );
-    console.log('[bootstrap] sous_categories rebuilt: 34 entries');
+    if (r.upsertedCount) console.log(`[bootstrap] ${r.upsertedCount} sous-catégorie(s) de base ajoutée(s)`);
   } catch (err) {
-    console.error('[bootstrap] Failed to rebuild sous_categories:', err);
+    console.error('[bootstrap] Échec de la vérification des sous-catégories:', err);
   }
 }
 
