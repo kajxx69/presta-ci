@@ -5,7 +5,8 @@ import {
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
-import { isPexelsConfigured, rechercherPexels } from '../utils/pexels.js';
+import { isPexelsConfigured } from '../utils/pexels.js';
+import { importerPexels, PACK_LANCEMENT } from '../services/modeles-import.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
@@ -221,35 +222,40 @@ router.get('/admin', requireAuth, requireRole('admin'), async (req: Request, res
   }
 });
 
-// POST /api/modeles/admin/import-pexels { query, categorie, nombre, tags? }
+// POST /api/modeles/admin/import-pexels { query, categorie, nombre, titre?, tags?, page? }
 router.post('/admin/import-pexels', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
     if (!isPexelsConfigured()) return res.status(503).json({ error: 'PEXELS_API_KEY manquante côté serveur' });
-    const { query, categorie } = req.body || {};
-    const nombre = Math.min(80, Math.max(1, Number(req.body?.nombre) || 30));
+    const { query, categorie, titre, tags, page } = req.body || {};
     if (typeof query !== 'string' || !query.trim()) return res.status(400).json({ error: 'Mot-clé requis' });
     if (!estCategorie(categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
-    const tags = [...new Set(normaliser(`${query} ${String(req.body?.tags || '')}`).split(' ').filter(w => w.length > 2))];
-
-    const photos = await rechercherPexels(query.trim(), nombre, Math.max(1, Number(req.body?.page) || 1));
-    const deja = new Set((await Modele.find({ source_externe_id: { $in: photos.map(p => p.id_externe) } }).distinct('source_externe_id')) as string[]);
-    let importes = 0;
-    for (const p of photos) {
-      if (deja.has(p.id_externe)) continue;
-      try {
-        await Modele.create({
-          titre: p.titre, categorie, tags, photo_url: p.photo_url, source: 'curation',
-          credit_nom: p.credit_nom, credit_url: p.credit_url, source_externe_id: p.id_externe,
-          recherche: texteRecherche([p.titre, query, req.body?.tags, categorie]),
-        });
-        importes++;
-      } catch (e: any) {
-        if (e?.code !== 11000) throw e; // doublon importé en parallèle : ignoré
-      }
-    }
-    res.json({ ok: true, trouves: photos.length, importes, doublons: photos.length - importes });
+    const r = await importerPexels({
+      query, categorie, nombre: Number(req.body?.nombre) || 30,
+      titre: typeof titre === 'string' ? titre : undefined, tags: typeof tags === 'string' ? tags : undefined, page: Number(page) || 1,
+    });
+    res.json({ ok: true, ...r });
   } catch (e) {
     serverError(res, e, 'modeles/import-pexels');
+  }
+});
+
+// POST /api/modeles/admin/import-pack — pack de lancement (~300 photos, ~20 styles)
+router.post('/admin/import-pack', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+  try {
+    if (!isPexelsConfigured()) return res.status(503).json({ error: 'PEXELS_API_KEY manquante côté serveur' });
+    let trouves = 0, importes = 0;
+    const erreurs: string[] = [];
+    for (const d of PACK_LANCEMENT) {
+      try {
+        const r = await importerPexels({ ...d, nombre: 15 });
+        trouves += r.trouves; importes += r.importes;
+      } catch (e: any) {
+        erreurs.push(`${d.titre}: ${e.message}`);
+      }
+    }
+    res.json({ ok: true, styles: PACK_LANCEMENT.length, trouves, importes, doublons: trouves - importes, erreurs });
+  } catch (e) {
+    serverError(res, e, 'modeles/import-pack');
   }
 });
 

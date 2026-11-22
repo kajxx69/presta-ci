@@ -190,6 +190,10 @@ export default function PlansTab() {
     }
   ];
 
+  // Ancienne demande Wave manuelle en attente : ne bloque le choix d'un plan
+  // que si le paiement en ligne GeniusPay n'est pas disponible
+  const waveEnAttente = !paiementConfig.enabled && !!transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente';
+
   const handleSelectPlan = (plan: PlanInfo) => {
     setSelectedPlan(plan);
     if (paiementConfig.enabled) setShowOnlineModal(true);
@@ -501,18 +505,18 @@ export default function PlansTab() {
 
               <button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={isCurrentPlan || loading || (transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente')}
+                disabled={isCurrentPlan || loading || waveEnAttente}
                 className={`w-full py-3.5 rounded-xl font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isCurrentPlan
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente'
+                    : waveEnAttente
                     ? 'bg-orange-400 cursor-not-allowed'
                     : `bg-gradient-to-r ${colors.button} hover:scale-[1.02]`
                 }`}
               >
                 {isCurrentPlan 
                   ? 'Plan actuel' 
-                  : transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente'
+                  : waveEnAttente
                   ? 'En attente de validation'
                   : loading 
                   ? 'Chargement...' 
@@ -669,7 +673,6 @@ export default function PlansTab() {
         onClose={() => setShowOnlineModal(false)}
         plan={selectedPlan}
         durees={paiementConfig.durees}
-        onChooseWaveManuel={() => { setShowOnlineModal(false); setShowPaymentModal(true); }}
       />
 
       {/* Wave Payment Modal */}

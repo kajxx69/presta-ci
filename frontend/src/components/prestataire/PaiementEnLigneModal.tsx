@@ -8,8 +8,6 @@ interface Props {
   onClose: () => void;
   plan: { id: number; nom: string; prix: number; prix_promo?: number | null; max_services: number } | null;
   durees: number[];
-  /** Ouvre le flux Wave manuel (saisie d'ID + validation admin) */
-  onChooseWaveManuel: () => void;
 }
 
 const LIBELLES: Record<number, string> = { 30: '1 mois', 90: '3 mois', 180: '6 mois', 365: '1 an' };
@@ -19,7 +17,7 @@ const MOYENS = ['Wave', 'Orange Money', 'MTN MoMo', 'Moov Money', 'Carte bancair
 const prixMensuel = (p: { prix: number; prix_promo?: number | null }) =>
   typeof p.prix_promo === 'number' && p.prix_promo > 0 && p.prix_promo < p.prix ? p.prix_promo : p.prix;
 
-export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees, onChooseWaveManuel }: Props) {
+export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees }: Props) {
   const { showToast } = useAppStore();
   const [duree, setDuree] = useState(30);
   const [loading, setLoading] = useState(false);
@@ -103,14 +101,6 @@ export default function PaiementEnLigneModal({ isOpen, onClose, plan, durees, on
               Paiement sécurisé par GeniusPay — activation immédiate
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={onChooseWaveManuel}
-            className="w-full text-center text-sm text-gray-500 dark:text-gray-400 underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-200"
-          >
-            Vous avez déjà envoyé l'argent par Wave ? Saisir l'ID de transaction
-          </button>
         </div>
       </div>
     </div>

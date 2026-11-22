@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { User, Prestataire, Service, SubCategory, Category, Modele } from './models/index.js';
 import { categorieModelePour, syncTousLesModeles, texteRecherche } from './services/modeles-sync.js';
 import { isPexelsConfigured, rechercherPexels } from './utils/pexels.js';
+import { importerPexels, PACK_LANCEMENT } from './services/modeles-import.js';
 
 const URI = process.env.MONGODB_URI || '';
 if (!/^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(URI)) {
@@ -126,15 +127,22 @@ async function main() {
     console.log(`  💇🏾‍♀️ ${s.nom_commercial} (${s.ville}) — ${s.services.length} services`);
   }
 
-  for (const insp of INSPIRATION) {
-    for (const p of await photos(insp.q, 8)) {
-      const idExterne = p.id || `demo:${p.url}`;
-      if (await Modele.exists({ source_externe_id: idExterne })) continue;
-      await Modele.create({
-        titre: p.titre || insp.q, categorie: insp.categorie, tags: insp.tags.split(' '), photo_url: p.url, source: 'curation',
-        credit_nom: p.credit_nom || 'Photo de démonstration', credit_url: p.credit_url || null, source_externe_id: idExterne,
-        recherche: texteRecherche([p.titre, insp.q, insp.tags, insp.categorie]),
-      });
+  if (isPexelsConfigured()) {
+    // Même contenu que le bouton « Pack de lancement » de l'admin
+    for (const d of PACK_LANCEMENT) {
+      try { await importerPexels({ ...d, nombre: 12 }); } catch (e: any) { console.warn(`  ⚠️ ${d.titre} : ${e.message}`); }
+    }
+  } else {
+    for (const insp of INSPIRATION) {
+      for (const p of await photos(insp.q, 8)) {
+        const idExterne = `demo:${p.url}`;
+        if (await Modele.exists({ source_externe_id: idExterne })) continue;
+        await Modele.create({
+          titre: insp.q, categorie: insp.categorie, tags: insp.tags.split(' '), photo_url: p.url, source: 'curation',
+          credit_nom: 'Photo de démonstration', source_externe_id: idExterne,
+          recherche: texteRecherche([insp.q, insp.tags, insp.categorie]),
+        });
+      }
     }
   }
 

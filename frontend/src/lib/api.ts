@@ -617,8 +617,10 @@ export const api = {
         Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, String(v)); });
         return http(`/api/modeles/admin?${q.toString()}`);
       },
-      importPexels: (body: { query: string; categorie: string; nombre: number; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
+      importPexels: (body: { query: string; categorie: string; nombre: number; titre?: string; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
         http('/api/modeles/admin/import-pexels', { method: 'POST', body: JSON.stringify(body) }),
+      importPack: (): Promise<{ ok: boolean; styles: number; trouves: number; importes: number; doublons: number; erreurs: string[] }> =>
+        http('/api/modeles/admin/import-pack', { method: 'POST' }),
       create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
         http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),

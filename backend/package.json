@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:local": "MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development RESEND_API_KEY= GENIUSPAY_WEBHOOK_SECRET= FRONTEND_ORIGIN=http://localhost:5173 FRONTEND_URL=http://localhost:5173 PORT=4000 npx tsx src/index.ts",
-    "seed:local": "MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development npx tsx src/seed.ts && MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development npx tsx src/seed-demo.ts"
+    "seed:local": "MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development npx tsx src/reset-local.ts && MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development npx tsx src/seed.ts && MONGODB_URI=mongodb://127.0.0.1:27017/prestaci_local NODE_ENV=development npx tsx src/seed-demo.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

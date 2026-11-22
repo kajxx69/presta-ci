@@ -31,7 +31,8 @@ export default function AdminModeles() {
   const [source, setSource] = useState('');
   const [filtreCat, setFiltreCat] = useState('');
   const [page, setPage] = useState(1);
-  const [imp, setImp] = useState({ query: 'knotless braids', categorie: 'coiffure', nombre: 40, tags: 'knotless tresses' });
+  const [imp, setImp] = useState({ query: 'knotless braids', categorie: 'coiffure', nombre: 40, titre: 'Knotless braids', tags: 'knotless tresses' });
+  const [packEnCours, setPackEnCours] = useState(false);
   const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
@@ -50,6 +51,19 @@ export default function AdminModeles() {
       showToast(String(e.message).replace(/^HTTP \d+: /, ''), 'error');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const importerPack = async () => {
+    setPackEnCours(true);
+    try {
+      const r = await api.modeles.admin.importPack();
+      showToast(`Pack de lancement : ${r.importes} photos ajoutées sur ${r.styles} styles${r.erreurs.length ? ` (${r.erreurs.length} style(s) en échec)` : ''}`, r.erreurs.length ? 'info' : 'success');
+      load();
+    } catch (e: any) {
+      showToast(String(e.message).replace(/^HTTP \d+: /, ''), 'error');
+    } finally {
+      setPackEnCours(false);
     }
   };
 
@@ -75,7 +89,17 @@ export default function AdminModeles() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 bg-white dark:bg-gray-800 space-y-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2"><Download className="w-4 h-4" /> Importer depuis Pexels</h3>
+        <div className="rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="font-semibold text-pink-900 dark:text-pink-100">🚀 Pack de lancement</p>
+            <p className="text-sm text-pink-800/80 dark:text-pink-200/80">~300 vraies photos en un clic : knotless, nattes collées, locks, perruques, nail art, maquillage mariée, cils… Titres en français. Prend 1 à 2 minutes.</p>
+          </div>
+          <button onClick={importerPack} disabled={packEnCours || (data ? !data.pexels : false)}
+            className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-semibold disabled:opacity-50 whitespace-nowrap">
+            {packEnCours ? 'Import en cours…' : 'Importer le pack'}
+          </button>
+        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 pt-2"><Download className="w-4 h-4" /> Ou importer un style précis</h3>
         {data && !data.pexels && (
           <p className="text-sm text-orange-600">Ajoutez la variable <code>PEXELS_API_KEY</code> sur le serveur (clé gratuite sur pexels.com/api).</p>
         )}
@@ -86,8 +110,12 @@ export default function AdminModeles() {
           <input type="number" min={1} max={80} value={imp.nombre} onChange={(e) => setImp({ ...imp, nombre: Number(e.target.value) })}
             className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
         </div>
-        <input value={imp.tags} onChange={(e) => setImp({ ...imp, tags: e.target.value })} placeholder="Mots-clés de recherche en français (ex : tresses nattes knotless)"
-          className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+        <div className="grid sm:grid-cols-2 gap-2">
+          <input value={imp.titre} onChange={(e) => setImp({ ...imp, titre: e.target.value })} placeholder="Titre affiché sur les cartes (ex : Knotless braids)"
+            className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+          <input value={imp.tags} onChange={(e) => setImp({ ...imp, tags: e.target.value })} placeholder="Mots-clés en français (ex : tresses nattes)"
+            className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {(IDEES[imp.categorie] || []).map((q) => (
             <button key={q} onClick={() => setImp({ ...imp, query: q })} className="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{q}</button>
