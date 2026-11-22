@@ -65,7 +65,7 @@ export default function AdminTableauxPinterest({ onSynchro }: { onSynchro?: () =
     <div className="rounded-2xl border border-red-200 dark:border-red-900 p-5 bg-white dark:bg-gray-800 space-y-3">
       <h3 className="text-lg font-bold text-gray-900 dark:text-white">📌 Ajouter des photos Pinterest</h3>
       <ol className="text-[15px] text-gray-700 dark:text-gray-200 space-y-1.5">
-        <li><strong>1.</strong> Sur Pinterest, ouvre la photo (ou le tableau) qui te plaît.</li>
+        <li><strong>1.</strong> Sur Pinterest, <strong>clique sur la photo</strong> qui te plaît pour l'ouvrir en grand <span className="text-gray-500">(une page de recherche ne marche pas)</span>.</li>
         <li><strong>2.</strong> Copie l'adresse tout en haut du navigateur <span className="text-gray-500">(elle commence par https://…pinterest.com/…)</span>.</li>
         <li><strong>3.</strong> Colle-la ci-dessous, choisis la catégorie, clique sur <strong>Ajouter</strong>. C'est tout.</li>
       </ol>

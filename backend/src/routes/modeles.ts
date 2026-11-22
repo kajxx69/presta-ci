@@ -381,6 +381,26 @@ router.delete('/admin/:id(\\d+)', requireAuth, requireRole('admin'), async (req:
 // POST /api/modeles/admin/lien-pinterest { url, categorie, titre? }
 // UNE seule case pour l'admin : un lien d'épingle → ajoutée au fil ;
 // un lien de tableau → suivi automatique (épingles importées maintenant puis toutes les 6 h).
+/** Explique quoi faire quand le lien collé n'est ni une photo ni un tableau. */
+function messageLienPinterest(brut: string): string {
+  let u: URL | null = null;
+  try { u = new URL(brut); } catch { /* pas une URL */ }
+  if (!u || !/(^|\.)pinterest\.[a-z.]{2,6}$|^pin\.it$/i.test(u.hostname)) {
+    return "Ce lien n'est pas un lien Pinterest. Copie l'adresse d'une page Pinterest (elle commence par https://…pinterest.com/).";
+  }
+  const seg = u.pathname.split('/').filter(Boolean);
+  if (seg[0] === 'search') {
+    return "C'est une page de RECHERCHE Pinterest : Pinterest ne permet pas d'importer une recherche. Clique sur une photo qui te plaît, puis copie l'adresse de cette photo (…/pin/…) et colle-la ici.";
+  }
+  if (seg.length === 1) {
+    return "C'est la page d'un PROFIL Pinterest. Ouvre un de ses tableaux (ou une photo), puis copie cette adresse-là.";
+  }
+  if (seg[0] === 'ideas' || seg[0] === 'today' || seg[0] === 'explore') {
+    return "C'est une page d'idées Pinterest, qui ne peut pas être importée. Clique sur une photo, puis copie l'adresse de cette photo (…/pin/…).";
+  }
+  return "Ce lien Pinterest n'est ni une photo (…/pin/…) ni un tableau (…/compte/tableau/). Ouvre une photo ou un tableau, puis copie son adresse.";
+}
+
 const TITRES_PAR_DEFAUT: Record<string, string> = { coiffure: 'Coiffure', ongles: 'Ongles', maquillage: 'Maquillage', cils: 'Cils & sourcils', soins: 'Soins' };
 router.post('/admin/lien-pinterest', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
@@ -416,7 +436,7 @@ router.post('/admin/lien-pinterest', requireAuth, requireRole('admin'), async (r
       }
     }
 
-    return res.status(400).json({ error: "Ce lien n'est pas un lien Pinterest. Copie l'adresse de la page Pinterest (elle commence par https://…pinterest.com/ ou https://pin.it/)." });
+    return res.status(400).json({ error: messageLienPinterest(brut) });
   } catch (e) {
     serverError(res, e, 'modeles/lien-pinterest');
   }
