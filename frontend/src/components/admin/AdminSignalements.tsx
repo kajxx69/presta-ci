@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import {
-  ShieldAlert, AlertTriangle, Clock, CheckCircle, XCircle,
-  Eye, ChevronLeft, ChevronRight, Loader2, Filter,
-  User, Package, Camera, Store, Ban, Trash2, MessageSquare
+  ShieldAlert, AlertTriangle, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Loader2, Filter, User, Package, Camera, Store, MessageSquare
 } from 'lucide-react';
 
 const statutColors: Record<string, string> = {

@@ -1,15 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Users, UserCheck, UserX, Shield, Crown, Eye, Trash2,
-  Mail, Phone, MapPin, Calendar, Ban, CheckCircle, AlertTriangle
+  Users, UserCheck, Shield, Crown, Eye, Trash2, Mail, Phone, MapPin, Calendar, Ban, CheckCircle, AlertTriangle
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import {
-  StatCard, StatusBadge, SearchInput, FilterSelect, LoadingSpinner, EmptyState,
-  Pagination, Modal, SectionHeader, RefreshButton, ResetButton,
-  TableContainer, TableHead,
-  formatDate, formatCurrency
+  StatCard, StatusBadge, SearchInput, FilterSelect, LoadingSpinner, EmptyState, Pagination, Modal, SectionHeader, RefreshButton, ResetButton, TableContainer, TableHead, formatDate
 } from './AdminShared';
 
 // ── Types ────────────────────────────────────────────────────────────────────

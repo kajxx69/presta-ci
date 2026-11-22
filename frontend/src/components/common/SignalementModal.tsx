@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertTriangle, Send, Loader2, CheckCircle, Camera, ShieldAlert } from 'lucide-react';
+import { X, AlertTriangle, Send, Loader2, CheckCircle, ShieldAlert } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 

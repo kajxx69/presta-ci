@@ -26,7 +26,7 @@ import SignalementModal from '../components/common/SignalementModal';
 import ShareProfileModal from '../components/common/ShareProfileModal';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
+
 import { usePageMeta } from '../lib/seo';
 
 const StarRating = ({ rating, reviewCount }: { rating: number; reviewCount: number }) => (
@@ -190,9 +190,9 @@ export default function PrestataireDetailPage() {
 
   const gallery = useMemo(() => {
     if (!prestataire?.photos_etablissement) return [] as string[];
-    return Array.isArray(prestataire.photos_etablissement)
+    return (Array.isArray(prestataire.photos_etablissement)
       ? prestataire.photos_etablissement
-      : [];
+      : []) as string[];
   }, [prestataire?.photos_etablissement]);
 
   if (loading && !prestataire) {

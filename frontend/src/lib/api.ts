@@ -4,7 +4,7 @@ export interface ApiPrestataire { id: number; nom_commercial: string; ville?: st
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; type_service?: 'prestation' | 'produit'; stock?: number | null; duree_minutes?: number | null; unite?: string | null; quantite_min?: number; quantite_max?: number | null; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
-export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'curation' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
+export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
 export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
@@ -622,17 +622,11 @@ export const api = {
     pinterest: (categorie?: string): Promise<{ tableaux: TableauPinterest[] }> =>
       http(`/api/modeles/pinterest${categorie ? `?categorie=${categorie}` : ''}`),
     admin: {
-      list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[]; banque: string | null }> => {
+      list: (params: { source?: string; categorie?: string; page?: number }): Promise<{ modeles: any[]; total: number; page: number; totalPages: number; stats: { _id: { source: string; categorie: string }; n: number }[] }> => {
         const q = new URLSearchParams();
         Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, String(v)); });
         return http(`/api/modeles/admin?${q.toString()}`);
       },
-      importPhotos: (body: { query: string; categorie: string; nombre: number; titre?: string; tags?: string; page?: number }): Promise<{ ok: boolean; trouves: number; importes: number; doublons: number }> =>
-        http('/api/modeles/admin/import-photos', { method: 'POST', body: JSON.stringify(body) }),
-      importPack: (): Promise<{ ok: boolean; styles: number; trouves: number; importes: number; doublons: number; erreurs: string[] }> =>
-        http('/api/modeles/admin/import-pack', { method: 'POST' }),
-      create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
-        http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
       lienPinterest: (body: { url: string; categorie: string; titre?: string }): Promise<{ ok: boolean; type: 'epingle' | 'tableau'; message: string }> =>
         http('/api/modeles/admin/lien-pinterest', { method: 'POST', body: JSON.stringify(body) }),

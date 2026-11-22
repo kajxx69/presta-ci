@@ -445,7 +445,7 @@ export default function DashboardTab({ onNavigateToTab }: DashboardTabProps) {
             <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8 border border-dashed rounded-2xl">
               Aucune activité récente. Encouragez vos clients à réserver !
             </div>
-          ) : recentReservations.map((reservation, index) => (
+          ) : recentReservations.map((reservation) => (
             <div
               key={reservation.id}
               className="group flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-700/50 dark:to-gray-800/50 border border-gray-100 dark:border-gray-600"

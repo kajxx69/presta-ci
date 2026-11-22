@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modele } from '../../lib/api';
-import { chargerPinit } from './InspirationPinterest';
+import { chargerPinit } from '../../lib/pinterest';
 
 const LARGEUR_PIN = 345; // largeur du widget Pinterest « medium »
 

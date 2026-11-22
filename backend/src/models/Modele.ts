@@ -5,7 +5,6 @@ import { getNextId } from './Counter.js';
 // fil « Découvrir » à swiper. Deux sources :
 //  - 'prestataire' : photo d'un service réel publié par un prestataire beauté
 //    (synchronisé automatiquement, mène à la réservation) — prioritaire dans le fil
-//  - 'curation'    : photo importée par l'admin (Pixabay…, licence libre), crédit du photographe
 //  - 'pinterest'   : épingle Pinterest ajoutée par l'admin, affichée via le widget
 //    OFFICIEL Pinterest (pin_url) — aucune image copiée
 export const CATEGORIES_MODELE = ['coiffure', 'ongles', 'maquillage', 'cils', 'soins'] as const;
@@ -19,11 +18,11 @@ const modeleSchema = new mongoose.Schema({
   pin_url: { type: String, default: null },  // https://www.pinterest.com/pin/<id>/
   tableau_id: { type: Number, default: null }, // tableau Pinterest d'origine (synchro auto)
   retire_avec_tableau: { type: Boolean, default: false }, // désactivé car le tableau n'est plus suivi (≠ masqué par l'admin)
-  source: { type: String, enum: ['prestataire', 'curation', 'pinterest'], required: true },
-  // Crédit / provenance (curation)
+  source: { type: String, enum: ['prestataire', 'pinterest'], required: true },
+  // Crédit / provenance (épingle Pinterest)
   credit_nom: String,
   credit_url: String,
-  source_externe_id: String, // ex. "pexels:123456" — évite les doublons d'import
+  source_externe_id: String, // ex. "pinterest:123456" — évite les doublons d'import
   // Lien vers la prestation réelle (source = prestataire)
   prestataire_id: { type: Number, ref: 'Prestataire', default: null },
   service_id: { type: Number, ref: 'Service', default: null },

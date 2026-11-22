@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Bell, ChevronLeft, Smartphone, Mail, MessageSquare, Heart, Calendar, Star, RotateCcw } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/api';
 
@@ -20,7 +19,6 @@ interface NotificationSettings {
 }
 
 export default function NotificationsSettingsTab({ onBack }: { onBack: () => void }) {
-  const { user } = useAuthStore();
   const { showToast } = useAppStore();
   
   const [settings, setSettings] = useState<NotificationSettings>({

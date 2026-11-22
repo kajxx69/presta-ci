@@ -87,10 +87,10 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                     <Heart className={`w-6 h-6 ${aime ? 'fill-pink-500 text-pink-500' : 'text-gray-700'}`} />
                   </button>
                 )}
-                {(modele.credit_url || modele.pin_url) && (
-                  <a href={(modele.pin_url || modele.credit_url) || undefined} target="_blank" rel="noreferrer"
+                {modele.pin_url && (
+                  <a href={modele.pin_url} target="_blank" rel="noreferrer"
                     className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 text-[11px] text-white/90 bg-black/50 px-2 py-1 rounded-full backdrop-blur">
-                    {modele.source === 'pinterest' ? <>Voir sur Pinterest <ExternalLink className="w-3 h-3" /></> : <>📷 {modele.credit_nom}</>}
+                    Voir sur Pinterest <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
               </div>

@@ -86,26 +86,6 @@ export async function saveBuffer(buffer: Buffer, mime: string): Promise<string> 
   return `${PUBLIC_BASE_URL}/uploads/${name}`;
 }
 
-/**
- * Télécharge une image distante (banque d'images) et la stocke chez nous.
- * Images uniquement (jpeg/png/webp), 5 Mo max, 20 s max.
- */
-export async function copierImageDistante(url: string): Promise<string> {
-  if (!/^https:\/\//.test(url)) throw new Error('URL d\'image invalide');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error(`Téléchargement image HTTP ${res.status}`);
-    const mime = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(mime)) throw new Error(`Type d'image refusé: ${mime || 'inconnu'}`);
-    const buffer = Buffer.from(await res.arrayBuffer());
-    if (buffer.length > 5 * 1024 * 1024) throw new Error('Image trop lourde (> 5 Mo)');
-    return await saveBuffer(buffer, mime);
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 /**
  * Convertit récursivement les data-URIs base64 d'une valeur (string, tableau) en fichiers,

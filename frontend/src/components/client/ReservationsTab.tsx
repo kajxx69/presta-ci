@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, MapPin, Phone, Star, RefreshCw, Info, CheckCircle2, Headphones } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
@@ -10,7 +10,7 @@ import RatingModal from './RatingModal';
 import SupportTicketModal from '../common/SupportTicketModal';
 import { SearchInput } from '../ui/SearchInput';
 import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';

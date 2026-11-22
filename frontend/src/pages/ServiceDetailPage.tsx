@@ -4,25 +4,15 @@ import { api } from '../lib/api';
 import Layout from '../components/Layout';
 import ReservationModal from '../components/client/ReservationModal';
 import {
-  Star,
-  Clock,
-  MapPin,
-  ChevronLeft,
-  Image as ImageIcon,
-  Loader2,
-  Home,
-  RefreshCw,
-  Shield,
-  Info,
-  Flag
+  Star, Clock, MapPin, ChevronLeft, Image as ImageIcon, Loader2, Home, RefreshCw, Shield, Flag
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
 import AuthPromptModal from '../components/common/AuthPromptModal';
 import SignalementModal from '../components/common/SignalementModal';
 import { Skeleton } from '../components/ui/Skeleton';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
+
+
 import { usePageMeta } from '../lib/seo';
 
 const StarRating = ({ rating, reviewCount }: { rating: number; reviewCount: number }) => (
@@ -100,7 +90,7 @@ export default function ServiceDetailPage() {
     void loadReviews();
   }, [id]);
 
-  const photos = useMemo(() => {
+  const photos = useMemo<string[]>(() => {
     if (!service?.photos) return [] as string[];
     if (Array.isArray(service.photos)) return service.photos;
     try {

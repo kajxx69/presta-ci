@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Plus, Edit2, Trash2, FolderOpen, GripVertical, ChevronRight,
-  Layers, Tag, Palette, AlertTriangle, ToggleLeft, ToggleRight, Package
+  Plus, Edit2, Trash2, FolderOpen, GripVertical, Layers, Tag, AlertTriangle, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import {
-  StatCard, StatusBadge, SearchInput, FilterSelect, LoadingSpinner, EmptyState,
-  Pagination, Modal, SectionHeader, RefreshButton, ResetButton,
-  formatDate, formatCurrency
+  StatusBadge, SearchInput, LoadingSpinner, EmptyState, Modal, SectionHeader, RefreshButton
 } from './AdminShared';
 
 // ── Types ────────────────────────────────────────────────────────────────────

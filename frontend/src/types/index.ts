@@ -14,6 +14,7 @@ export interface User {
   langue_preferee: string;
   is_active: boolean;
   email_verified_at?: string;
+  last_login?: string;
   created_at: string;
   updated_at: string;
 }

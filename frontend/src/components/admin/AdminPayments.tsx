@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  CreditCard, DollarSign, Clock, CheckCircle, XCircle,
-  Eye, AlertTriangle, Calendar, Hash, User
+  CreditCard, DollarSign, Clock, CheckCircle, XCircle, Eye, AlertTriangle, Calendar, Hash
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';

@@ -9,8 +9,6 @@ import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pi
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
-import { banqueActive, LIBELLE_BANQUE } from '../utils/banques-images.js';
-import { importerPhotos, PACK_LANCEMENT } from '../services/modeles-import.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
@@ -284,73 +282,16 @@ router.get('/admin', requireAuth, requireRole('admin'), async (req: Request, res
     const page = Math.max(1, parseInt(String(req.query.page || '1')) || 1);
     const limit = 40;
     const filter: Record<string, any> = {};
-    if (['prestataire', 'curation', 'pinterest'].includes(String(req.query.source))) filter.source = req.query.source;
+    if (['prestataire', 'pinterest'].includes(String(req.query.source))) filter.source = req.query.source;
     if (estCategorie(req.query.categorie)) filter.categorie = req.query.categorie;
     const [modeles, total, stats] = await Promise.all([
       Modele.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit),
       Modele.countDocuments(filter),
       Modele.aggregate([{ $match: { is_active: true } }, { $group: { _id: { source: '$source', categorie: '$categorie' }, n: { $sum: 1 } } }]),
     ]);
-    const banque = banqueActive();
-    res.json({ modeles, total, page, totalPages: Math.ceil(total / limit), stats, banque: banque ? LIBELLE_BANQUE[banque] : null });
+    res.json({ modeles, total, page, totalPages: Math.ceil(total / limit), stats });
   } catch (e) {
     serverError(res, e, 'modeles/admin');
-  }
-});
-
-// POST /api/modeles/admin/import-photos { query, categorie, nombre, titre?, tags?, page? }
-router.post('/admin/import-photos', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
-  try {
-    if (!banqueActive()) return res.status(503).json({ error: "Aucune banque d'images configurée : ajoutez PIXABAY_API_KEY sur le serveur" });
-    const { query, categorie, titre, tags, page } = req.body || {};
-    if (typeof query !== 'string' || !query.trim()) return res.status(400).json({ error: 'Mot-clé requis' });
-    if (!estCategorie(categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
-    const r = await importerPhotos({
-      query, categorie, nombre: Number(req.body?.nombre) || 30,
-      titre: typeof titre === 'string' ? titre : undefined, tags: typeof tags === 'string' ? tags : undefined, page: Number(page) || 1,
-    });
-    res.json({ ok: true, ...r });
-  } catch (e) {
-    serverError(res, e, 'modeles/import-photos');
-  }
-});
-
-// POST /api/modeles/admin/import-pack — pack de lancement (~300 photos, ~20 styles)
-router.post('/admin/import-pack', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
-  try {
-    if (!banqueActive()) return res.status(503).json({ error: "Aucune banque d'images configurée : ajoutez PIXABAY_API_KEY sur le serveur" });
-    let trouves = 0, importes = 0;
-    const erreurs: string[] = [];
-    for (const d of PACK_LANCEMENT) {
-      try {
-        const r = await importerPhotos({ ...d, nombre: 15 });
-        trouves += r.trouves; importes += r.importes;
-      } catch (e: any) {
-        erreurs.push(`${d.titre}: ${e.message}`);
-      }
-    }
-    res.json({ ok: true, styles: PACK_LANCEMENT.length, trouves, importes, doublons: trouves - importes, erreurs });
-  } catch (e) {
-    serverError(res, e, 'modeles/import-pack');
-  }
-});
-
-// POST /api/modeles/admin  { photo_url, titre, categorie, tags?, credit_nom?, credit_url? }
-router.post('/admin', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
-  try {
-    const { photo_url, titre, categorie, tags, credit_nom, credit_url } = req.body || {};
-    if (typeof photo_url !== 'string' || !/^https?:\/\//.test(photo_url)) return res.status(400).json({ error: 'URL de photo invalide' });
-    if (typeof titre !== 'string' || !titre.trim()) return res.status(400).json({ error: 'Titre requis' });
-    if (!estCategorie(categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
-    const listeTags = [...new Set(normaliser(String(tags || '')).split(' ').filter(w => w.length > 2))];
-    const m = await Modele.create({
-      titre: titre.trim(), categorie, tags: listeTags, photo_url, source: 'curation',
-      credit_nom: credit_nom || null, credit_url: credit_url || null,
-      recherche: texteRecherche([titre, String(tags || ''), categorie]),
-    });
-    res.json({ ok: true, id: m._id });
-  } catch (e) {
-    serverError(res, e, 'modeles/admin-create');
   }
 });
 
@@ -366,11 +307,11 @@ router.put('/admin/:id(\\d+)/toggle', requireAuth, requireRole('admin'), async (
   }
 });
 
-// DELETE /api/modeles/admin/:id — supprimer (curation uniquement)
+// DELETE /api/modeles/admin/:id — supprimer (épingles Pinterest uniquement)
 router.delete('/admin/:id(\\d+)', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const r = await Modele.deleteOne({ _id: Number(req.params.id), source: { $in: ['curation', 'pinterest'] } });
-    if (!r.deletedCount) return res.status(400).json({ error: 'Seuls les modèles importés peuvent être supprimés (masquez les autres).' });
+    const r = await Modele.deleteOne({ _id: Number(req.params.id), source: 'pinterest' });
+    if (!r.deletedCount) return res.status(400).json({ error: 'Seules les épingles Pinterest peuvent être supprimées (masquez les autres).' });
     await ModeleSwipe.deleteMany({ modele_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e) {

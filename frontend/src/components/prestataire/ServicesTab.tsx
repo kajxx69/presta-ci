@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import { useAppStore } from '../../store/appStore';
-import { api, API_BASE } from '../../lib/api';
+import { api } from '../../lib/api';
 import ServiceForm from './ServiceForm';
 
 interface ServicesTabProps {

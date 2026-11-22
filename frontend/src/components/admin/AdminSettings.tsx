@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Settings, Shield, Plus, Pencil, Trash2, ChevronDown, ChevronRight,
-  Hash, Tag, AlertTriangle
+  Settings, Shield, Plus, Pencil, Trash2, ChevronDown, ChevronRight, Tag, AlertTriangle
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';

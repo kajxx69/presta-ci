@@ -1,25 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { photoPertinente, ETHNIE } from './filtre-photos.js';
+import { photoPertinente } from './filtre-photos.js';
 
-const TRESSES = [['braid'], ETHNIE];
-
+// Filtre appliqué aux descriptions des épingles Pinterest importées automatiquement
 describe('photoPertinente', () => {
-  it('garde une femme noire avec des tresses', () => {
-    expect(photoPertinente('black woman, african, box braids, portrait', TRESSES)).toBe(true);
+  it('garde une épingle de coiffure', () => {
+    expect(photoPertinente('Knotless braids boho, coiffure femme tendance')).toBe(true);
+    expect(photoPertinente('')).toBe(true); // beaucoup d'épingles n'ont pas de description
   });
-  it('écarte des tresses sans étiquette afro', () => {
-    expect(photoPertinente('woman, braided hair, window', TRESSES)).toBe(false);
+  it("écarte les hommes sans confondre « woman » avec « man »", () => {
+    expect(photoPertinente('cornrows for men, barber fade')).toBe(false);
+    expect(photoPertinente('black woman cornrows')).toBe(true);
   });
-  it('écarte les hommes sans confondre « woman » avec « man »', () => {
-    expect(photoPertinente('fashion, iranian man, cornrows', [['cornrow']])).toBe(false);
-    expect(photoPertinente('woman, african, cornrows', [['cornrow'], ETHNIE])).toBe(true);
+  it('écarte nudité, enfants et animaux', () => {
+    expect(photoPertinente('naked woman skin care')).toBe(false);
+    expect(photoPertinente('braids for kids, little girl')).toBe(false);
+    expect(photoPertinente('horse eyelashes')).toBe(false);
   });
-  it('écarte nudité, enfants et animaux même si le style correspond', () => {
-    expect(photoPertinente('portrait, young women, naked woman, skin', [['skin']])).toBe(false);
-    expect(photoPertinente('africa, girl, child, braids', TRESSES)).toBe(false);
-    expect(photoPertinente('horse, eye, eyelashes', [['eyelash']])).toBe(false);
-  });
-  it('accepte les variantes (braid → braids, braided)', () => {
-    expect(photoPertinente('ebony, braided, beauty', TRESSES)).toBe(true);
+  it('vérifie les groupes de mots requis (préfixe)', () => {
+    expect(photoPertinente('ebony, braided, beauty', [['braid']])).toBe(true);
+    expect(photoPertinente('ebony, beauty', [['braid']])).toBe(false);
   });
 });

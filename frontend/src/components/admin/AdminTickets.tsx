@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Headphones, Clock, CheckCircle, Circle, AlertCircle, ChevronRight, Send, RefreshCw } from 'lucide-react';
+import { Headphones, ChevronRight, Send, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 

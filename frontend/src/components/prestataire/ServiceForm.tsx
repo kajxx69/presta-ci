@@ -17,7 +17,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
     sous_categorie_id: service?.sous_categorie_id || '',
     is_domicile: service?.is_domicile || false,
     is_active: service?.is_active !== undefined ? service.is_active : true,
-    photos: service?.photos || [],
+    photos: (service?.photos || []) as string[],
     devise: service?.devise || 'FCFA',
     unite: service?.unite || '',
     quantite_min: service?.quantite_min || 1,
@@ -220,7 +220,7 @@ export default function ServiceForm({ service, onClose, onSubmit }: ServiceFormP
                   const value = e.target.value ? Number(e.target.value) : '';
                   setSelectedCategoryId(value);
                   setFormData(prev => ({ ...prev, sous_categorie_id: '' }));
-                  if (errors.category) setErrors(prev => ({ ...prev, category: '' }));
+                  if (errors.category) setErrors((prev: any) => ({ ...prev, category: '' }));
                 }}
                 className={`w-full px-4 py-3 border ${errors.category ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all`}
                 disabled={categoryLoading}

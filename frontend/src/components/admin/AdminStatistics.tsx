@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Users, Briefcase, DollarSign, TrendingUp, Calendar,
-  AlertTriangle, CheckCircle, Star, Clock, CreditCard,
-  BarChart3, Activity, ArrowUp, ArrowDown
+  Users, Briefcase, DollarSign, TrendingUp, Calendar, AlertTriangle, CheckCircle, CreditCard, BarChart3, Activity
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';

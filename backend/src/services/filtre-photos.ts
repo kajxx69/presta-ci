@@ -1,6 +1,5 @@
-// Filtre de pertinence des photos de banques d'images, sur leurs étiquettes.
-// Les banques généralistes renvoient beaucoup de hors-sujet (hommes, styles
-// non afro, animaux) et parfois de la nudité malgré leur « safesearch ».
+// Filtre de pertinence des épingles Pinterest importées automatiquement,
+// sur leur description : écarte hommes, enfants, animaux et nudité.
 
 /** Jamais dans PrestaCI : hommes, enfants, animaux, nudité / lingerie. */
 const EXCLUS = new Set([
@@ -11,8 +10,6 @@ const EXCLUS = new Set([
   'cosplay', 'goth', 'gothic', 'zombie', 'halloween', 'blood', 'skull',
 ]);
 
-/** Étiquettes indiquant une femme noire / africaine. */
-export const ETHNIE = ['african', 'africa', 'black', 'afro', 'ebony', 'ghana', 'nigeria', 'nigerian', 'kenya', 'senegal', 'ivorian', 'melanin'];
 
 function mots(texte: string): string[] {
   return texte.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[^a-z]+/).filter(Boolean);

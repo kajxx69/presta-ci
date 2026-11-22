@@ -74,7 +74,6 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
             </>
           ) : null}
           {modele.ville && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{modele.ville}</span>}
-          {modele.source === 'curation' && modele.credit_nom && <span className="text-xs text-white/70">📷 {modele.credit_nom}</span>}
         </div>
       </div>
     </motion.div>
