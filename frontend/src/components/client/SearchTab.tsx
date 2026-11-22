@@ -6,7 +6,6 @@ import { useFavoris } from '../../lib/useFavoris';
 import { CATEGORIES } from './DiscoverTab';
 import ModeleGrid from './ModeleGrid';
 import ModeleDetailSheet from './ModeleDetailSheet';
-import JaiMonModeleModal from './JaiMonModeleModal';
 
 const SUGGESTIONS = ['Knotless', 'Nattes collées', 'Locks', 'Tissage', 'Perruque', 'Box braids', 'Twists', 'Nail art', 'French', 'Gel', 'Maquillage mariée', 'Faux cils'];
 
@@ -21,7 +20,6 @@ export default function SearchTab() {
   const [total, setTotal] = useState(0);
   const [chargement, setChargement] = useState(false);
   const [ouvert, setOuvert] = useState<Modele | null>(null);
-  const [monModele, setMonModele] = useState(false);
   const { aimes, basculer } = useFavoris();
   const debounce = useRef<ReturnType<typeof setTimeout>>();
 
@@ -80,17 +78,6 @@ export default function SearchTab() {
       </div>
 
       {!q && (
-        <button onClick={() => setMonModele(true)}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-left shadow-md">
-          <span className="text-3xl">📸</span>
-          <span className="flex-1">
-            <span className="block font-bold">J'ai déjà mon modèle</span>
-            <span className="block text-sm text-white/85">Envoie ta capture Pinterest, les salons te répondent avec leur prix</span>
-          </span>
-        </button>
-      )}
-
-      {!q && (
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <button key={s} onClick={() => setSaisie(s)} className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
@@ -124,7 +111,6 @@ export default function SearchTab() {
         </>
       )}
 
-      <JaiMonModeleModal open={monModele} onClose={() => setMonModele(false)} />
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} aime={ouvert ? aimes.has(ouvert.id) : false} onToggleLike={basculer} />
     </div>
   );

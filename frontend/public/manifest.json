@@ -27,14 +27,5 @@
     "business",
     "social"
   ],
-  "lang": "fr",
-  "share_target": {
-    "action": "/app/home",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  }
+  "lang": "fr"
 }

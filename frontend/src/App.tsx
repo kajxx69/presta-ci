@@ -12,7 +12,6 @@ import ToastContainer from './components/ToastContainer';
 const LoginForm = lazy(() => import('./components/auth/LoginForm'));
 const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
-const WelcomeGate = lazy(() => import('./components/common/WelcomeGate'));
 
 // ─── Lazy: Layout shell (chargé dès qu'on est client/prestataire) ───
 const Layout = lazy(() => import('./components/Layout'));
@@ -123,28 +122,6 @@ function AppShell() {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
-  // Sélecteur d'intention à l'entrée : une fois par session de navigateur pour
-  // un visiteur non connecté (pas localStorage — on ne veut pas priver de ce
-  // moment d'accueil un visiteur qui revient un autre jour sans compte).
-  const [showWelcomeGate, setShowWelcomeGate] = useState(() => {
-    if (isAuthenticated) return false;
-    try { return sessionStorage.getItem('prestaci-welcome-seen') !== '1'; } catch { return false; }
-  });
-
-  const dismissWelcomeGate = useCallback(() => {
-    setShowWelcomeGate(false);
-    try { sessionStorage.setItem('prestaci-welcome-seen', '1'); } catch { /* ignore */ }
-  }, []);
-
-  const handleWelcomeSelect = useCallback((intent: 'search' | 'discover' | 'pro') => {
-    dismissWelcomeGate();
-    if (intent === 'pro') {
-      navigate('/register?role=prestataire');
-      return;
-    }
-    navigate(`/app/${intent === 'search' ? 'search' : 'home'}`);
-  }, [dismissWelcomeGate, navigate]);
-
   // L'URL est la seule source de vérité pour l'onglet courant : une synchronisation
   // bidirectionnelle URL↔store crée une course au montage d'un deep-link
   // (/app/messages) où le store écrase l'URL demandée et fait churner la clé
@@ -201,7 +178,6 @@ function AppShell() {
 
   return (
     <>
-      <WelcomeGate open={showWelcomeGate} onClose={dismissWelcomeGate} onSelect={handleWelcomeSelect} />
       <Layout>
         <AnimatePresence mode="wait">
           <motion.div
