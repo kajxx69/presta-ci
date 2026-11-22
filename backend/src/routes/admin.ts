@@ -90,12 +90,6 @@ router.post('/settings/reset', requireAdmin, async (_req: Request, res: Response
   }
 });
 
-// Note: les routes /maintenance/* (status, cache, backup, logs, mode) vivent
-// exclusivement dans admin-maintenance.ts, monté sur /api/admin/maintenance.
-// Ne pas les redéclarer ici : ce routeur est monté sur /api/admin en premier
-// et absorberait silencieusement ces requêtes avec une réponse différente
-// (shape incompatible avec ce qu'attend le frontend).
-
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
   try {

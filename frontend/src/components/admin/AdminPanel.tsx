@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
-  CreditCard, Bell, TrendingUp, Crown, Settings, Wrench,
+  CreditCard, Bell, Crown, Settings,
   Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle, ShieldCheck, Sparkles
 } from 'lucide-react';
 import AdminModeles from './AdminModeles';
@@ -28,10 +28,8 @@ const AdminPaymentsPage = () => (
   </div>
 );
 import AdminNotifications from './AdminNotifications';
-import AdminStatistics from './AdminStatistics';
 import AdminPlans from './AdminPlans';
 import AdminSettings from './AdminSettings';
-import AdminMaintenance from './AdminMaintenance';
 import AdminProfile from './AdminProfile';
 import AdminSignalements from './AdminSignalements';
 import AdminTickets from './AdminTickets';
@@ -40,7 +38,7 @@ import AdminVerifications from './AdminVerifications';
 type AdminTab =
   | 'dashboard' | 'users' | 'services' | 'categories' | 'modeles'
   | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'verifications' | 'payments' | 'notifications'
-  | 'statistics' | 'plans' | 'settings' | 'maintenance' | 'profile';
+  | 'plans' | 'settings' | 'profile';
 
 interface NavItem {
   id: AdminTab;
@@ -85,9 +83,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'plans', label: 'Abonnements', icon: Crown },
       { id: 'categories', label: 'Catégories', icon: Grid3X3 },
-      { id: 'statistics', label: 'Statistiques', icon: TrendingUp },
       { id: 'settings', label: 'Paramètres', icon: Settings },
-      { id: 'maintenance', label: 'Maintenance', icon: Wrench },
     ],
   },
 ];
@@ -105,10 +101,8 @@ const tabComponents: Record<AdminTab, React.ComponentType<{ onNavigate?: (id: an
   tickets: AdminTickets,
   payments: AdminPaymentsPage,
   notifications: AdminNotifications,
-  statistics: AdminStatistics,
   plans: AdminPlans,
   settings: AdminSettings,
-  maintenance: AdminMaintenance,
   profile: AdminProfile,
 };
 

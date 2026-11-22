@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Users, Package, Calendar, DollarSign, TrendingUp, BarChart3, AlertTriangle, Clock, Bell, CreditCard, CheckCircle, ArrowUpRight, Zap
+  Users, Package, Calendar, DollarSign, BarChart3, AlertTriangle, Clock, Bell, CreditCard, CheckCircle
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import AdminApercuBeaute, { NaviguerAdmin } from './AdminApercuBeaute';
@@ -198,86 +198,6 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
           subtitle={`${formatCurrency(stats?.financial?.revenue_today ?? 0)} aujourd'hui`}
           color="orange"
         />
-      </div>
-
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Vue générale */}
-        <Card>
-          <CardHeader title="Vue générale" icon={BarChart3} />
-          <div className="px-6 pb-6 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Total utilisateurs</span>
-              <span className="font-semibold text-gray-900 dark:text-white">{overview?.users?.total ?? stats?.users?.total_users ?? 0}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Nouveaux ({period})</span>
-              <span className="font-semibold text-green-600">{overview?.users?.new_period ?? 0}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Services actifs</span>
-              <span className="font-semibold text-gray-900 dark:text-white">{overview?.services?.active ?? stats?.services?.services_actifs ?? 0}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Réservations totales</span>
-              <span className="font-semibold text-gray-900 dark:text-white">{overview?.reservations?.total ?? stats?.reservations?.total_reservations ?? 0}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Croissance */}
-        <Card>
-          <CardHeader title="Croissance" icon={TrendingUp} />
-          <div className="px-6 pb-6 space-y-3">
-            {[
-              { label: 'Utilisateurs', value: overview?.users?.growth_percent },
-              { label: 'Services', value: overview?.services?.growth_percent },
-              { label: 'Réservations', value: overview?.reservations?.growth_percent },
-              { label: 'Revenu', value: overview?.revenue?.growth_percent },
-            ].map(item => (
-              <div key={item.label} className="flex items-center justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">{item.label}</span>
-                <span className={`font-semibold flex items-center gap-1 ${
-                  (item.value ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  <ArrowUpRight className={`w-3 h-3 ${(item.value ?? 0) < 0 ? 'rotate-180' : ''}`} />
-                  {Math.abs(item.value ?? 0).toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Performance / Conversions */}
-        <Card>
-          <CardHeader title="Performance" icon={Zap} />
-          <div className="px-6 pb-6 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Taux de conversion</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {(overview?.performance?.conversion_rate ?? 0).toFixed(1)}%
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Note moyenne</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {(overview?.performance?.avg_rating ?? 0).toFixed(1)} / 5
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Temps de réponse moy.</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {overview?.performance?.avg_response_time ?? 0}h
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Réservations en attente</span>
-              <span className="font-semibold text-yellow-600">
-                {overview?.reservations?.pending ?? stats?.reservations?.en_attente ?? 0}
-              </span>
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Revenue Chart */}
