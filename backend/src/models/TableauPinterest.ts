@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { getNextId } from './Counter.js';
 
-// Tableau Pinterest du compte PrestaCI affiché dans l'app via le widget OFFICIEL
-// Pinterest (embedBoard) : les photos restent servies par Pinterest, avec ses
-// crédits et liens. Aucune copie, aucun scraping.
+// Tableau Pinterest public suivi par PrestaCI : ses épingles sont ajoutées
+// automatiquement au fil (services/pinterest-sync.ts) et affichées via le widget
+// OFFICIEL Pinterest (embedPin). Aucune image copiée.
 const tableauPinterestSchema = new mongoose.Schema({
   _id: { type: Number },
   titre: { type: String, required: true, maxlength: 80 },
@@ -11,6 +11,10 @@ const tableauPinterestSchema = new mongoose.Schema({
   url: { type: String, required: true, unique: true },
   ordre: { type: Number, default: 0 },
   is_active: { type: Boolean, default: true },
+  // Synchronisation automatique des épingles du tableau vers le fil « Découvrir »
+  derniere_synchro: { type: Date, default: null },
+  nb_importees: { type: Number, default: 0 },
+  derniere_erreur: { type: String, default: null },
   created_at: { type: Date, default: Date.now },
 }, {
   versionKey: false,

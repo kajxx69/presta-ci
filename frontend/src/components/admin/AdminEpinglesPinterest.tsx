@@ -36,7 +36,7 @@ export default function AdminEpinglesPinterest({ onAjout }: { onAjout?: () => vo
 
   return (
     <div className="rounded-2xl border border-red-200 dark:border-red-900 p-5 bg-white dark:bg-gray-800 space-y-3">
-      <h3 className="font-semibold text-gray-900 dark:text-white">📌 Épingles Pinterest dans le fil Découvrir</h3>
+      <h3 className="font-semibold text-gray-900 dark:text-white">📌 Ou ajouter des épingles une par une</h3>
       <p className="text-sm text-gray-600 dark:text-gray-300">
         Sur Pinterest, ouvre une épingle → <strong>Partager</strong> → <strong>Copier le lien</strong>, puis colle les liens ici (un par ligne).
         Elles s'affichent dans les cartes à swiper via le widget officiel Pinterest.

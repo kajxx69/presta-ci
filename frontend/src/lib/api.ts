@@ -5,7 +5,7 @@ export interface ApiService { id: number; prestataire_id: number; sous_categorie
 
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'curation' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
-export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; }
+export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
 export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
@@ -636,7 +636,8 @@ export const api = {
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
       importerEpingles: (body: { urls: string; categorie: string; titre: string; tags?: string }): Promise<{ ok: boolean; ajoutees: number; doublons: number; refusees: string[] }> =>
         http('/api/modeles/admin/epingles', { method: 'POST', body: JSON.stringify(body) }),
-      ajouterPinterest: (body: { url: string; titre: string; categorie: string }): Promise<{ ok: boolean; tableau: TableauPinterest }> =>
+      synchroniserPinterest: (): Promise<{ ok: boolean; tableaux: TableauPinterest[] }> => http('/api/modeles/admin/pinterest/synchroniser', { method: 'POST' }),
+      ajouterPinterest: (body: { url: string; titre: string; categorie: string }): Promise<{ ok: boolean; tableau: TableauPinterest; synchro: { importees: number; ignorees: number } | null; erreur: string | null }> =>
         http('/api/modeles/admin/pinterest', { method: 'POST', body: JSON.stringify(body) }),
       retirerPinterest: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/pinterest/${id}`, { method: 'DELETE' }),
       remove: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/${id}`, { method: 'DELETE' }),

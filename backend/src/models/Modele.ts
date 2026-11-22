@@ -17,6 +17,8 @@ const modeleSchema = new mongoose.Schema({
   tags: { type: [String], default: [] },
   photo_url: { type: String, default: '' }, // vide pour une épingle Pinterest (affichée par le widget)
   pin_url: { type: String, default: null },  // https://www.pinterest.com/pin/<id>/
+  tableau_id: { type: Number, default: null }, // tableau Pinterest d'origine (synchro auto)
+  retire_avec_tableau: { type: Boolean, default: false }, // désactivé car le tableau n'est plus suivi (≠ masqué par l'admin)
   source: { type: String, enum: ['prestataire', 'curation', 'pinterest'], required: true },
   // Crédit / provenance (curation)
   credit_nom: String,

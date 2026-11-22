@@ -7,7 +7,6 @@ import { CATEGORIES } from './DiscoverTab';
 import ModeleGrid from './ModeleGrid';
 import ModeleDetailSheet from './ModeleDetailSheet';
 import JaiMonModeleModal from './JaiMonModeleModal';
-import InspirationPinterest from './InspirationPinterest';
 
 const SUGGESTIONS = ['Knotless', 'Nattes collées', 'Locks', 'Tissage', 'Perruque', 'Box braids', 'Twists', 'Nail art', 'French', 'Gel', 'Maquillage mariée', 'Faux cils'];
 
@@ -124,8 +123,6 @@ export default function SearchTab() {
           )}
         </>
       )}
-
-      {!q && <InspirationPinterest categorie={categorie || undefined} onJaiMonModele={() => setMonModele(true)} />}
 
       <JaiMonModeleModal open={monModele} onClose={() => setMonModele(false)} />
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} aime={ouvert ? aimes.has(ouvert.id) : false} onToggleLike={basculer} />

@@ -132,9 +132,9 @@ export default function AdminModeles() {
         <p className="text-xs text-gray-500">Astuce : vérifiez ensuite les photos ci-dessous et masquez celles qui ne collent pas au style ivoirien.</p>
       </div>
 
-      <AdminEpinglesPinterest onAjout={load} />
+      <AdminTableauxPinterest onSynchro={load} />
 
-      <AdminTableauxPinterest />
+      <AdminEpinglesPinterest onAjout={load} />
 
       <div className="flex flex-wrap gap-2">
         <FilterSelect value={source} onChange={(v) => { setSource(v); setPage(1); }} options={[{ value: '', label: 'Toutes sources' }, { value: 'prestataire', label: 'Prestataires' }, { value: 'curation', label: 'Importées' }, { value: 'pinterest', label: 'Pinterest' }]} />

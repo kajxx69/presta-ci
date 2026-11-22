@@ -5,6 +5,7 @@ import {
 import { tableauPinterestValide, epinglePinterestValide } from '../utils/liens.js';
 import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre } from '../services/offres.js';
 import { OffreModele } from '../models/index.js';
+import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
@@ -422,16 +423,34 @@ router.post('/admin/pinterest', requireAuth, requireRole('admin'), async (req: R
     if (!estCategorie(req.body?.categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
     if (await TableauPinterest.exists({ url })) return res.status(409).json({ error: 'Ce tableau est déjà ajouté' });
     const t = await TableauPinterest.create({ url, titre, categorie: req.body.categorie, ordre: await TableauPinterest.countDocuments() });
-    res.json({ ok: true, tableau: t });
+    // Première synchronisation immédiate : les épingles arrivent tout de suite dans le fil
+    let synchro: { importees: number; ignorees: number } | null = null;
+    let erreur: string | null = null;
+    try { synchro = await synchroniserTableau(t._id as number); } catch (e: any) { erreur = e.message; }
+    res.json({ ok: true, tableau: await TableauPinterest.findById(t._id), synchro, erreur });
   } catch (e) {
     serverError(res, e, 'modeles/admin-pinterest');
+  }
+});
+
+// POST /api/modeles/admin/pinterest/synchroniser — tout resynchroniser maintenant
+router.post('/admin/pinterest/synchroniser', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+  try {
+    await synchroniserTousLesTableaux();
+    res.json({ ok: true, tableaux: await TableauPinterest.find().sort({ ordre: 1, _id: 1 }) });
+  } catch (e) {
+    serverError(res, e, 'modeles/admin-pinterest-sync');
   }
 });
 
 // DELETE /api/modeles/admin/pinterest/:id
 router.delete('/admin/pinterest/:id(\\d+)', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    await TableauPinterest.deleteOne({ _id: Number(req.params.id) });
+    const id = Number(req.params.id);
+    await TableauPinterest.deleteOne({ _id: id });
+    // Retirer ses épingles du fil, sauf celles où des prestataires se sont proposés
+    const avecOffres = await OffreModele.distinct('modele_id');
+    await Modele.updateMany({ tableau_id: id, source: 'pinterest', is_active: true, _id: { $nin: avecOffres } }, { is_active: false, retire_avec_tableau: true, updated_at: new Date() });
     res.json({ ok: true });
   } catch (e) {
     serverError(res, e, 'modeles/admin-pinterest-delete');

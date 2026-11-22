@@ -46,6 +46,7 @@ import geoRoutes from './routes/geo.js';
 import adminTicketsSupportRoutes from './routes/admin-tickets-support.js';
 import modelesRoutes from './routes/modeles.js';
 import { startModelesSyncLoop } from './services/modeles-sync.js';
+import { startPinterestSyncLoop } from './services/pinterest-sync.js';
 import paiementsRoutes, { geniusPayWebhookHandler, startPaymentSyncLoop } from './routes/paiements.js';
 import { connectDB } from './db.js';
 import { logger } from './logger.js';
@@ -260,6 +261,7 @@ const port = Number(process.env.PORT || 4000);
     startReminderLoop();
     startPaymentSyncLoop();
     startModelesSyncLoop();
+    startPinterestSyncLoop();
     app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
   } catch (err: any) {
     logger.error(`Database connection failed: ${err.message}`);
