@@ -3,7 +3,6 @@ import { Download, Eye, EyeOff, Trash2, Image as ImageIcon } from 'lucide-react'
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import AdminTableauxPinterest from './AdminTableauxPinterest';
-import AdminEpinglesPinterest from './AdminEpinglesPinterest';
 import ModeleVisuel from '../client/ModeleVisuel';
 import { SectionHeader, RefreshButton, FilterSelect, Pagination, LoadingSpinner, EmptyState } from './AdminShared';
 
@@ -78,6 +77,8 @@ export default function AdminModeles() {
         <RefreshButton onClick={load} loading={loading} />
       </SectionHeader>
 
+      <AdminTableauxPinterest onSynchro={load} />
+
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
           <p className="text-xs uppercase text-gray-500">Issus des prestataires</p>
@@ -131,10 +132,6 @@ export default function AdminModeles() {
         </button>
         <p className="text-xs text-gray-500">Astuce : vérifiez ensuite les photos ci-dessous et masquez celles qui ne collent pas au style ivoirien.</p>
       </div>
-
-      <AdminTableauxPinterest onSynchro={load} />
-
-      <AdminEpinglesPinterest onAjout={load} />
 
       <div className="flex flex-wrap gap-2">
         <FilterSelect value={source} onChange={(v) => { setSource(v); setPage(1); }} options={[{ value: '', label: 'Toutes sources' }, { value: 'prestataire', label: 'Prestataires' }, { value: 'curation', label: 'Importées' }, { value: 'pinterest', label: 'Pinterest' }]} />

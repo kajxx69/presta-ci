@@ -634,6 +634,8 @@ export const api = {
       create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
         http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
+      lienPinterest: (body: { url: string; categorie: string; titre?: string }): Promise<{ ok: boolean; type: 'epingle' | 'tableau'; message: string }> =>
+        http('/api/modeles/admin/lien-pinterest', { method: 'POST', body: JSON.stringify(body) }),
       importerEpingles: (body: { urls: string; categorie: string; titre: string; tags?: string }): Promise<{ ok: boolean; ajoutees: number; doublons: number; refusees: string[] }> =>
         http('/api/modeles/admin/epingles', { method: 'POST', body: JSON.stringify(body) }),
       synchroniserPinterest: (): Promise<{ ok: boolean; tableaux: TableauPinterest[] }> => http('/api/modeles/admin/pinterest/synchroniser', { method: 'POST' }),

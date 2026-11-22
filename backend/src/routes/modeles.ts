@@ -378,6 +378,50 @@ router.delete('/admin/:id(\\d+)', requireAuth, requireRole('admin'), async (req:
   }
 });
 
+// POST /api/modeles/admin/lien-pinterest { url, categorie, titre? }
+// UNE seule case pour l'admin : un lien d'épingle → ajoutée au fil ;
+// un lien de tableau → suivi automatique (épingles importées maintenant puis toutes les 6 h).
+const TITRES_PAR_DEFAUT: Record<string, string> = { coiffure: 'Coiffure', ongles: 'Ongles', maquillage: 'Maquillage', cils: 'Cils & sourcils', soins: 'Soins' };
+router.post('/admin/lien-pinterest', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const { categorie } = req.body || {};
+    if (!estCategorie(categorie)) return res.status(400).json({ error: 'Choisis une catégorie' });
+    const titre = String(req.body?.titre || '').trim().slice(0, 80) || TITRES_PAR_DEFAUT[categorie];
+    const brut = String(req.body?.url || '').trim();
+
+    // 1) Une épingle (une photo)
+    const pin = await epinglePinterestValide(brut);
+    if (pin) {
+      if (await Modele.exists({ source_externe_id: `pinterest:${pin.id}` })) {
+        await Modele.updateOne({ source_externe_id: `pinterest:${pin.id}` }, { is_active: true, retire_avec_tableau: false });
+        return res.json({ ok: true, type: 'epingle', message: 'Cette photo est déjà dans le fil' });
+      }
+      await Modele.create({
+        titre, categorie, tags: [...new Set(normaliser(titre).split(' ').filter(w => w.length > 2))], photo_url: '', pin_url: pin.url, source: 'pinterest',
+        credit_nom: 'Pinterest', credit_url: pin.url, source_externe_id: `pinterest:${pin.id}`, recherche: texteRecherche([titre, categorie]),
+      });
+      return res.json({ ok: true, type: 'epingle', message: 'Photo ajoutée au fil ✅' });
+    }
+
+    // 2) Un tableau (suivi automatique)
+    const url = tableauPinterestValide(brut);
+    if (url) {
+      let t: any = await TableauPinterest.findOne({ url });
+      if (!t) t = await TableauPinterest.create({ url, titre, categorie, ordre: await TableauPinterest.countDocuments() });
+      try {
+        const r = await synchroniserTableau(t._id as number);
+        return res.json({ ok: true, type: 'tableau', message: `Tableau suivi ✅ ${r.importees} photo(s) ajoutée(s). Les nouvelles arriveront toutes seules.` });
+      } catch (e: any) {
+        return res.json({ ok: false, type: 'tableau', message: `Tableau enregistré, mais Pinterest répond : ${e.message}` });
+      }
+    }
+
+    return res.status(400).json({ error: "Ce lien n'est pas un lien Pinterest. Copie l'adresse de la page Pinterest (elle commence par https://…pinterest.com/ ou https://pin.it/)." });
+  } catch (e) {
+    serverError(res, e, 'modeles/lien-pinterest');
+  }
+});
+
 // POST /api/modeles/admin/epingles { urls: string[] | string, categorie, titre, tags? }
 // Ajoute des épingles Pinterest au fil (affichées par le widget officiel, rien n'est copié)
 router.post('/admin/epingles', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {

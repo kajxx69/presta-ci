@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Trash2, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { api, TableauPinterest } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
-import { FilterSelect } from './AdminShared';
 
 const CATEGORIES = [
   { value: 'coiffure', label: 'Coiffure' },
@@ -37,9 +36,8 @@ export default function AdminTableauxPinterest({ onSynchro }: { onSynchro?: () =
   const ajouter = async () => {
     setEnvoi(true);
     try {
-      const r = await api.modeles.admin.ajouterPinterest(form);
-      if (r.erreur) showToast(`Tableau ajouté, mais Pinterest a répondu : ${r.erreur}`, 'error');
-      else showToast(`Tableau suivi : ${r.synchro?.importees ?? 0} épingle(s) ajoutée(s) au fil`, 'success');
+      const r = await api.modeles.admin.lienPinterest(form);
+      showToast(r.message, r.ok ? 'success' : 'error');
       setForm({ ...form, url: '', titre: '' });
       charger(); onSynchro?.();
     } catch (e: any) {
@@ -65,32 +63,41 @@ export default function AdminTableauxPinterest({ onSynchro }: { onSynchro?: () =
 
   return (
     <div className="rounded-2xl border border-red-200 dark:border-red-900 p-5 bg-white dark:bg-gray-800 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white">📌 Pinterest → fil Découvrir (automatique)</h3>
-        {tableaux.length > 0 && (
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">📌 Ajouter des photos Pinterest</h3>
+      <ol className="text-[15px] text-gray-700 dark:text-gray-200 space-y-1.5">
+        <li><strong>1.</strong> Sur Pinterest, ouvre la photo (ou le tableau) qui te plaît.</li>
+        <li><strong>2.</strong> Copie l'adresse tout en haut du navigateur <span className="text-gray-500">(elle commence par https://…pinterest.com/…)</span>.</li>
+        <li><strong>3.</strong> Colle-la ci-dessous, choisis la catégorie, clique sur <strong>Ajouter</strong>. C'est tout.</li>
+      </ol>
+      <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="Colle ici le lien Pinterest"
+        className="w-full px-4 py-3.5 text-base border-2 border-red-300 dark:border-red-800 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+      <div className="flex flex-wrap gap-2">
+        {CATEGORIES.map((c) => (
+          <button key={c.value} onClick={() => setForm({ ...form, categorie: c.value })}
+            className={`px-4 py-2 rounded-full text-sm font-semibold ${form.categorie === c.value ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Nom du style (facultatif, ex. Tresses bohème)"
+        className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+      <button onClick={ajouter} disabled={envoi || !form.url.trim()}
+        className="w-full sm:w-auto px-8 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-base font-bold disabled:opacity-50">
+        {envoi ? 'Ajout…' : 'Ajouter'}
+      </button>
+      <p className="text-xs text-gray-500">
+        💡 Astuce : si tu colles le lien d'un <strong>tableau</strong> Pinterest, toutes ses photos sont ajoutées, et les nouvelles que tu y enregistreras arriveront toutes seules (toutes les 6 h).
+      </p>
+
+      {tableaux.length > 0 && (
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Tableaux suivis automatiquement</p>
           <button onClick={toutSynchroniser} disabled={synchro}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${synchro ? 'animate-spin' : ''}`} /> Synchroniser maintenant
           </button>
-        )}
-      </div>
-      <ol className="text-sm text-gray-600 dark:text-gray-300 list-decimal list-inside space-y-0.5">
-        <li>Ajoute ici un <strong>tableau Pinterest public</strong> : le tien (ex. « Knotless ») ou celui d'une créatrice que tu aimes.</li>
-        <li>Ses épingles arrivent <strong>tout de suite</strong> dans le fil, puis les nouvelles sont ajoutées <strong>toutes les 6 h</strong>.</li>
-        <li>Ensuite tu n'as plus rien à faire : enregistre simplement des épingles dans tes tableaux depuis l'app Pinterest.</li>
-      </ol>
-      <p className="text-xs text-gray-500">Affichage via le widget officiel Pinterest (aucune image copiée). Vidéos et photos hors sujet écartées automatiquement.</p>
-      <div className="grid sm:grid-cols-4 gap-2">
-        <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://www.pinterest.com/compte/knotless/"
-          className="sm:col-span-2 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-        <input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Titre des cartes (ex. Knotless)"
-          className="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
-        <FilterSelect value={form.categorie} onChange={(v) => setForm({ ...form, categorie: v })} options={CATEGORIES} />
-      </div>
-      <button onClick={ajouter} disabled={envoi || !form.url.trim() || !form.titre.trim()}
-        className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50">
-        {envoi ? 'Import des épingles…' : 'Suivre ce tableau'}
-      </button>
+        </div>
+      )}
       {tableaux.length > 0 && (
         <ul className="divide-y divide-gray-100 dark:divide-gray-700">
           {tableaux.map((t) => (
