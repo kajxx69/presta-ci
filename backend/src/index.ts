@@ -264,7 +264,20 @@ const port = Number(process.env.PORT || 4000);
     startPinterestSyncLoop();
     app.listen(port, () => logger.info(`Server running on http://localhost:${port}`));
   } catch (err: any) {
-    logger.error(`Database connection failed: ${err.message}`);
+    // console.error est synchrone : le message apparaît dans les logs Render AVANT
+    // l'arrêt (logger.error est asynchrone et était coupé par process.exit).
+    console.error(`❌ Connexion à MongoDB impossible : ${err?.message || err}`);
+    if (!process.env.MONGODB_URI) console.error('   → La variable MONGODB_URI est absente sur le serveur.');
+    else if (/whitelist|IP|ENOTFOUND|ETIMEDOUT|Server selection timed out|querySrv/i.test(String(err?.message))) {
+      console.error('   → Vérifiez MongoDB Atlas : Network Access doit autoriser 0.0.0.0/0 (Render change d\'IP), et que le cluster n\'est pas en pause.');
+    } else if (/auth|password|credentials/i.test(String(err?.message))) {
+      console.error('   → Identifiant ou mot de passe incorrect dans MONGODB_URI.');
+    }
+    await logger.error(`Database connection failed: ${err?.message || err}`).catch(() => {});
     process.exit(1);
   }
 })();
+
+// Toute erreur non gérée est affichée avant l'arrêt
+process.on('unhandledRejection', (e: any) => console.error('❌ Promesse rejetée non gérée :', e?.stack || e));
+process.on('uncaughtException', (e: any) => { console.error('❌ Exception non gérée :', e?.stack || e); process.exit(1); });
