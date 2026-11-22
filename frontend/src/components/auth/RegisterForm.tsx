@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye, EyeOff, Mail, Lock, User, Phone, Briefcase, Loader2,
   AlertCircle, CheckCircle2, XCircle, ArrowRight, ArrowLeft,
-  MapPin, Star, Shield, Zap, Sparkles, Camera, X
+  MapPin, Sparkles, Camera, X
 } from 'lucide-react';
 import AddressMapPicker from '../common/AddressMapPicker';
-import Logo from '../Logo';
+import { PanneauMarque, EnTeteMobile } from './AuthDecor';
 
 async function compressAvatar(file: File): Promise<string> {
   const dataUri: string = await new Promise((resolve, reject) => {
@@ -58,24 +58,17 @@ function formatPhoneNumber(value: string): string {
   return parts.join(' ');
 }
 
-const features = [
-  { icon: MapPin, title: 'Services locaux', desc: 'Trouvez des pros partout en Côte d\'Ivoire' },
-  { icon: Star, title: 'Avis vérifiés', desc: 'Des notes et commentaires authentiques' },
-  { icon: Shield, title: '100% sécurisé', desc: 'Vos données sont protégées' },
-  { icon: Zap, title: 'Simple & rapide', desc: 'Inscrivez-vous en 30 secondes' },
-];
-
 const steps = [
-  { id: 'role', title: 'Type de compte' },
-  { id: 'identity', title: 'Identité' },
-  { id: 'security', title: 'Sécurité' },
+  { id: 'role', title: 'Toi' },
+  { id: 'identity', title: 'Tes infos' },
+  { id: 'security', title: 'Ton mot de passe' },
 ];
 
 const stepsPrestataire = [
-  { id: 'role', title: 'Type de compte' },
-  { id: 'business', title: 'Établissement' },
-  { id: 'identity', title: 'Identité' },
-  { id: 'security', title: 'Sécurité' },
+  { id: 'role', title: 'Toi' },
+  { id: 'business', title: 'Ton salon' },
+  { id: 'identity', title: 'Tes infos' },
+  { id: 'security', title: 'Ton mot de passe' },
 ];
 
 export default function RegisterForm() {
@@ -137,9 +130,9 @@ export default function RegisterForm() {
       navigate('/app', { replace: true });
     } catch (err: any) {
       if (err?.message?.includes('already') || err?.message?.includes('existe') || err?.message?.includes('duplicate') || err?.message?.includes('409')) {
-        setError('Un compte existe déjà avec cet email. Essayez de vous connecter.');
+        setError('Tu as déjà un compte avec cet e-mail. Connecte-toi 😉');
       } else {
-        setError('Impossible de créer le compte. Vérifiez votre connexion et réessayez.');
+        setError('Impossible de créer ton compte. Vérifie ta connexion et réessaie.');
       }
     } finally {
       setIsLoading(false);
@@ -171,8 +164,8 @@ export default function RegisterForm() {
   };
 
   const inputWrapperClass = (field: string) =>
-    `relative rounded-xl border-2 transition-all duration-200 ${
-      focused === field ? 'border-blue-500 shadow-lg shadow-blue-500/10' : 'border-gray-200 dark:border-gray-600'
+    `relative rounded-2xl border-2 transition-all duration-200 ${
+      focused === field ? 'border-pink-400 shadow-lg shadow-pink-500/10' : 'border-gray-200 dark:border-gray-600'
     }`;
 
   const inputClass = "w-full pl-11 pr-4 py-3.5 bg-transparent text-gray-900 dark:text-white focus:outline-none placeholder:text-gray-400 text-sm";
@@ -196,12 +189,12 @@ export default function RegisterForm() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', delay: 0.2 }}
-                className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-3"
+                className="hidden lg:flex w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-pink-500/20 to-orange-400/20 items-center justify-center mb-3"
               >
-                <Sparkles className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                <Sparkles className="w-7 h-7 text-pink-600 dark:text-pink-400" />
               </motion.div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Comment souhaitez-vous utiliser PrestaCI ?</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Choisissez votre type de compte</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tu es plutôt… ?</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tu pourras toujours changer plus tard</p>
             </div>
 
             <motion.button
@@ -211,22 +204,18 @@ export default function RegisterForm() {
               onClick={() => selectRole(1)}
               className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
                 formData.role_id === 1
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-md'
+                  ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20 shadow-lg shadow-pink-500/10'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-pink-300 hover:shadow-md'
               }`}
             >
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                  formData.role_id === 1 ? 'bg-blue-100 dark:bg-blue-800' : 'bg-gray-100 dark:bg-gray-800'
-                }`}>
-                  <User className={`w-7 h-7 ${formData.role_id === 1 ? 'text-blue-600' : 'text-gray-500'}`} />
-                </div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br from-pink-100 to-rose-200 dark:from-pink-900/40 dark:to-rose-900/40">💖</div>
                 <div>
-                  <p className={`font-bold text-lg ${formData.role_id === 1 ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
-                    Je cherche un service
+                  <p className={`font-bold text-lg ${formData.role_id === 1 ? 'text-pink-700 dark:text-pink-300' : 'text-gray-900 dark:text-white'}`}>
+                    Je cherche mon prochain style
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Réserver des prestations de coiffure, ménage, beauté...
+                    Je swipe des modèles et je réserve chez une pro
                   </p>
                 </div>
               </div>
@@ -239,22 +228,18 @@ export default function RegisterForm() {
               onClick={() => selectRole(2)}
               className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-200 ${
                 formData.role_id === 2
-                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg shadow-purple-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 hover:shadow-md'
+                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-lg shadow-orange-500/10'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:shadow-md'
               }`}
             >
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                  formData.role_id === 2 ? 'bg-purple-100 dark:bg-purple-800' : 'bg-gray-100 dark:bg-gray-800'
-                }`}>
-                  <Briefcase className={`w-7 h-7 ${formData.role_id === 2 ? 'text-purple-600' : 'text-gray-500'}`} />
-                </div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br from-amber-100 to-orange-200 dark:from-amber-900/40 dark:to-orange-900/40">✂️</div>
                 <div>
-                  <p className={`font-bold text-lg ${formData.role_id === 2 ? 'text-purple-700 dark:text-purple-300' : 'text-gray-900 dark:text-white'}`}>
-                    Je propose mes services
+                  <p className={`font-bold text-lg ${formData.role_id === 2 ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
+                    Je suis coiffeuse ou esthéticienne
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Publiez vos prestations et recevez des réservations
+                    Je propose mes modèles et je reçois des clientes
                   </p>
                 </div>
               </div>
@@ -271,9 +256,9 @@ export default function RegisterForm() {
             exit={{ opacity: 0, x: -30 }}
             className="space-y-4"
           >
-            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-              <p className="text-sm text-purple-700 dark:text-purple-300">
-                <strong>Votre établissement</strong> — ces informations seront visibles par les clients
+            <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+              <p className="text-sm text-orange-800 dark:text-orange-200">
+                <strong>Ton salon ✂️</strong> : c'est ce que verront tes futures clientes
               </p>
             </div>
 
@@ -282,12 +267,12 @@ export default function RegisterForm() {
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center group hover:border-purple-500 transition-colors"
+                className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center group hover:border-orange-500 transition-colors"
               >
                 {formData.photo_profil ? (
                   <img src={formData.photo_profil} alt="Aperçu" className="w-full h-full object-cover" />
                 ) : (
-                  <Camera className="w-8 h-8 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                  <Camera className="w-8 h-8 text-orange-400 group-hover:text-orange-600 transition-colors" />
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Camera className="w-6 h-6 text-white" />
@@ -324,16 +309,16 @@ export default function RegisterForm() {
                 }}
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
-                Une photo claire de vous ou de votre établissement inspire confiance aux clients
+                Une jolie photo de toi ou de ton salon inspire confiance 📸
               </p>
               {photoError && <p className="text-xs text-red-500">{photoError}</p>}
             </div>
 
             <div>
-              <label className={labelClass}>Nom de l'établissement</label>
+              <label className={labelClass}>Nom de ton salon</label>
               <div className={inputWrapperClass('nom_commercial')}>
                 <Briefcase className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'nom_commercial' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'nom_commercial' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type="text"
@@ -343,17 +328,17 @@ export default function RegisterForm() {
                   onFocus={() => setFocused('nom_commercial')}
                   onBlur={() => setFocused('')}
                   className={inputClass}
-                  placeholder="Ex: Salon BelleVie, Studio Photo Adjamé..."
+                  placeholder="Ex : Awa Beauty, Nails by Mariam…"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className={labelClass}>Ville</label>
+              <label className={labelClass}>Quartier / ville</label>
               <div className={inputWrapperClass('ville')}>
                 <MapPin className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'ville' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'ville' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type="text"
@@ -363,7 +348,7 @@ export default function RegisterForm() {
                   onFocus={() => setFocused('ville')}
                   onBlur={() => setFocused('')}
                   className={inputClass}
-                  placeholder="Abidjan, Yamoussoukro, Bouaké..."
+                  placeholder="Cocody, Yopougon, Marcory…"
                   required
                 />
               </div>
@@ -376,11 +361,11 @@ export default function RegisterForm() {
                 onChange={(address, lat, lng) => {
                   setFormData({ ...formData, adresse: address, latitude: lat, longitude: lng });
                 }}
-                placeholder="Cliquez pour localiser sur la carte"
+                placeholder="Touche pour te placer sur la carte"
                 required
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Vos clients pourront vous trouver facilement
+                Tes clientes te trouveront facilement
               </p>
             </div>
           </motion.div>
@@ -400,7 +385,7 @@ export default function RegisterForm() {
                 <label className={labelClass}>Prénom</label>
                 <div className={inputWrapperClass('prenom')}>
                   <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                    focused === 'prenom' ? 'text-blue-500' : 'text-gray-400'
+                    focused === 'prenom' ? 'text-pink-500' : 'text-gray-400'
                   }`} />
                   <input
                     type="text"
@@ -420,7 +405,7 @@ export default function RegisterForm() {
                 <label className={labelClass}>Nom</label>
                 <div className={inputWrapperClass('nom')}>
                   <User className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                    focused === 'nom' ? 'text-blue-500' : 'text-gray-400'
+                    focused === 'nom' ? 'text-pink-500' : 'text-gray-400'
                   }`} />
                   <input
                     type="text"
@@ -442,7 +427,7 @@ export default function RegisterForm() {
               <label className={labelClass}>Email</label>
               <div className={inputWrapperClass('email')}>
                 <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'email' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'email' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type="email"
@@ -452,7 +437,7 @@ export default function RegisterForm() {
                   onFocus={() => setFocused('email')}
                   onBlur={() => setFocused('')}
                   className={inputClass}
-                  placeholder="votre@email.com"
+                  placeholder="ton@email.com"
                   autoComplete="email"
                   required
                 />
@@ -463,7 +448,7 @@ export default function RegisterForm() {
               <label className={labelClass}>Téléphone</label>
               <div className={inputWrapperClass('telephone')}>
                 <Phone className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'telephone' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'telephone' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type="tel"
@@ -495,7 +480,7 @@ export default function RegisterForm() {
               <label className={labelClass}>Mot de passe</label>
               <div className={inputWrapperClass('password')}>
                 <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'password' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'password' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -513,7 +498,7 @@ export default function RegisterForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -546,12 +531,12 @@ export default function RegisterForm() {
             </div>
 
             <div>
-              <label className={labelClass}>Confirmer le mot de passe</label>
+              <label className={labelClass}>Confirme ton mot de passe</label>
               <div className={`${inputWrapperClass('confirmPassword')} ${
                 passwordsMismatch ? '!border-red-400' : passwordsMatch ? '!border-green-400' : ''
               }`}>
                 <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                  focused === 'confirmPassword' ? 'text-blue-500' : 'text-gray-400'
+                  focused === 'confirmPassword' ? 'text-pink-500' : 'text-gray-400'
                 }`} />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -561,14 +546,14 @@ export default function RegisterForm() {
                   onFocus={() => setFocused('confirmPassword')}
                   onBlur={() => setFocused('')}
                   className="w-full pl-11 pr-12 py-3.5 bg-transparent text-gray-900 dark:text-white focus:outline-none placeholder:text-gray-400 text-sm"
-                  placeholder="Retapez votre mot de passe"
+                  placeholder="Retape ton mot de passe"
                   autoComplete="new-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-600 transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -605,9 +590,9 @@ export default function RegisterForm() {
                 value={formData.code_parrain}
                 onChange={handleChange}
                 placeholder="Ex: AWA-3F2A1B"
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-400 uppercase"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-pink-400 transition-colors placeholder:text-gray-400 uppercase"
               />
-              <p className="text-xs text-gray-400 mt-1">Un ami vous a invité ? Entrez son code ici.</p>
+              <p className="text-xs text-gray-400 mt-1">Une amie t'a invitée ? Mets son code ici 🎁</p>
             </div>
           </motion.div>
         );
@@ -618,68 +603,16 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex rounded-3xl overflow-hidden shadow-soft-lg ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] min-h-[600px]">
-      {/* Left panel — desktop only */}
-      <div className="hidden lg:flex lg:w-5/12 relative bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 p-10 flex-col justify-between overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-2xl" />
-        <div className="absolute -bottom-32 -left-20 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative z-10"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-              <Logo className="h-8 w-auto" />
-            </div>
-            <span className="text-2xl font-bold text-white tracking-tight">PrestaCI</span>
-          </div>
-          <p className="text-blue-100 text-sm mt-1">Créez votre compte en quelques secondes</p>
-        </motion.div>
-
-        <div className="relative z-10 space-y-5">
-          {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 + i * 0.15 }}
-              className="flex items-start gap-3"
-            >
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5">
-                <f.icon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm">{f.title}</p>
-                <p className="text-blue-200 text-xs">{f.desc}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="relative z-10"
-        >
-          <p className="text-blue-200 text-xs">
-            Gratuit et sans engagement
-          </p>
-        </motion.div>
-      </div>
+    <div className="w-full max-w-5xl mx-auto flex min-h-screen sm:min-h-0 sm:rounded-3xl overflow-hidden sm:shadow-soft-lg sm:ring-1 ring-gray-900/[0.06] dark:ring-white/[0.08] min-h-[600px]">
+      <PanneauMarque accroche="Rejoins le club beauté ✨" sousTitre="Gratuit, en 30 secondes. Swipe, garde tes coups de cœur, réserve." />
 
       {/* Right panel — form */}
-      <div className="flex-1 bg-white dark:bg-gray-800 p-6 sm:p-8 flex flex-col">
-        {/* Mobile logo */}
-        <div className="lg:hidden text-center mb-5">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-2">
-            <Logo className="h-9 w-auto" />
-          </div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Rejoignez PrestaCI</h1>
-        </div>
+      <div className="flex-1 bg-white dark:bg-gray-900 p-6 sm:p-8 flex flex-col">
+        {step === 0 ? (
+          <EnTeteMobile titre="Bienvenue ✨" sousTitre="Crée ton compte gratuit en 30 secondes" />
+        ) : (
+          <h1 className="lg:hidden text-xl font-extrabold text-gray-900 dark:text-white mb-4">{formData.role_id === 2 ? 'Ton espace pro ✂️' : 'Presque fini 💖'}</h1>
+        )}
 
         {/* Progress bar */}
         {step > 0 && (
@@ -692,7 +625,7 @@ export default function RegisterForm() {
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 Étape {step + 1} sur {totalSteps}
               </span>
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+              <span className="text-xs font-medium text-pink-600 dark:text-pink-400">
                 {currentSteps[step]?.title}
               </span>
             </div>
@@ -701,7 +634,7 @@ export default function RegisterForm() {
                 initial={{ width: 0 }}
                 animate={{ width: `${((step + 1) / totalSteps) * 100}%` }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                className="h-full bg-gradient-to-r from-pink-500 to-orange-400 rounded-full"
               />
             </div>
           </motion.div>
@@ -749,7 +682,7 @@ export default function RegisterForm() {
               type="button"
               onClick={nextStep}
               disabled={!canGoNext() || isLoading}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 disabled:opacity-50 text-white font-semibold shadow-lg hover:shadow-xl transition-all text-sm"
             >
               {isLoading ? (
                 <>
@@ -758,7 +691,7 @@ export default function RegisterForm() {
                 </>
               ) : step === totalSteps - 1 ? (
                 <>
-                  Créer mon compte
+                  C'est parti !
                   <Sparkles className="w-4 h-4" />
                 </>
               ) : (
@@ -782,31 +715,13 @@ export default function RegisterForm() {
             Déjà un compte ?{' '}
             <button
               onClick={() => navigate('/login')}
-              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+              className="text-pink-600 dark:text-pink-400 font-semibold hover:underline"
             >
               Se connecter
             </button>
           </p>
         </motion.div>
 
-        {/* Mobile features */}
-        {step === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="lg:hidden mt-6 pt-5 border-t border-gray-100 dark:border-gray-700"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              {features.map(f => (
-                <div key={f.title} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <f.icon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  <span>{f.title}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
       </div>
     </div>
   );
