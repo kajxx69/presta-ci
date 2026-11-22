@@ -23,7 +23,8 @@ const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
 
 
 const prestataireTabs = [
-  { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'home', label: 'Découvrir', icon: Sparkles },
+  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { id: 'services', label: 'Services', icon: Package },
   { id: 'reservations', label: 'Réservations', icon: Calendar },
   { id: 'messages', label: 'Messages', icon: MessageCircle },

@@ -7,6 +7,7 @@ import { swipesLocaux } from '../../lib/swipesLocaux';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import ModeleDetailSheet from './ModeleDetailSheet';
+import ModeleVisuel from './ModeleVisuel';
 import JaiMonModeleModal from './JaiMonModeleModal';
 import { extraireLien } from '../../lib/compresserImage';
 
@@ -49,7 +50,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
       exit="sortie"
       onTap={() => dessus && onOuvrir()}
     >
-      <img src={modele.photo_url} alt={modele.titre} draggable={false} className="w-full h-full object-cover pointer-events-none" />
+      <ModeleVisuel modele={modele} className="w-full h-full" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 
       <motion.div style={{ opacity: opaciteJaime }} className="absolute top-8 left-6 -rotate-12 border-4 border-green-400 text-green-400 font-extrabold text-3xl px-3 py-1 rounded-xl pointer-events-none">
@@ -62,11 +63,18 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
       <div className="absolute inset-x-0 bottom-0 p-5 text-white pointer-events-none">
         <h2 className="text-2xl font-bold leading-tight line-clamp-2 first-letter:uppercase">{modele.titre}</h2>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/90">
-          {modele.prix ? <span className="font-semibold">{modele.prix.toLocaleString('fr-FR')} FCFA</span> : null}
+          {modele.nb_offres ? (
+            <span className="px-2 py-0.5 rounded-full bg-pink-500/90 text-xs font-semibold">
+              {modele.nb_offres} prestataire{modele.nb_offres > 1 ? 's' : ''} · dès {(modele.prix_min || 0).toLocaleString('fr-FR')} F
+            </span>
+          ) : modele.source === 'prestataire' ? (
+            <>
+              {modele.prix ? <span className="font-semibold">{modele.prix.toLocaleString('fr-FR')} FCFA</span> : null}
+              <span className="px-2 py-0.5 rounded-full bg-pink-500/90 text-xs font-semibold">Réservable</span>
+            </>
+          ) : null}
           {modele.ville && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{modele.ville}</span>}
-          {modele.source === 'prestataire'
-            ? <span className="px-2 py-0.5 rounded-full bg-pink-500/90 text-xs font-semibold">Réservable</span>
-            : modele.credit_nom && <span className="text-xs text-white/70">📷 {modele.credit_nom}</span>}
+          {modele.source === 'curation' && modele.credit_nom && <span className="text-xs text-white/70">📷 {modele.credit_nom}</span>}
         </div>
       </div>
     </motion.div>
@@ -74,7 +82,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
 }
 
 export default function DiscoverTab() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, role } = useAuthStore();
   const { showToast } = useAppStore();
   const navigate = useNavigate();
   const [categorie, setCategorie] = useState<CategorieModele | ''>('');
@@ -83,6 +91,11 @@ export default function DiscoverTab() {
   const [epuise, setEpuise] = useState(false);
   const [direction, setDirection] = useState<Direction>(1);
   const [ouvert, setOuvert] = useState<Modele | null>(null);
+  const [ouvrirProposition, setOuvrirProposition] = useState(false);
+  // Barre d'actions après un like : Réserver / Je sais le faire (disparaît seule)
+  const [apresLike, setApresLike] = useState<Modele | null>(null);
+  const minuteur = useRef<ReturnType<typeof setTimeout>>();
+  const ouvrir = (m: Modele, proposer = false) => { setApresLike(null); setOuvrirProposition(proposer); setOuvert(m); };
   const [dernier, setDernier] = useState<{ modele: Modele; action: 'like' | 'pass' } | null>(null);
   // Partage depuis l'app Pinterest (Android, PWA installée) → /app/home?title=…&text=…&url=…
   const [params, setParams] = useSearchParams();
@@ -96,17 +109,21 @@ export default function DiscoverTab() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const vusSession = useRef<Set<number>>(new Set());
   const enCours = useRef(false);
+  // Génération de requête : un changement de catégorie invalide la requête en cours
+  const generation = useRef(0);
   const nbLikes = useRef(0);
 
   const charger = useCallback(async (cat: CategorieModele | '', reset = false) => {
-    if (enCours.current) return;
+    if (enCours.current && !reset) return; // complément de pile déjà en cours
+    const gen = reset ? ++generation.current : generation.current;
     enCours.current = true;
     setChargement(true);
     try {
       const exclude = [...vusSession.current, ...(isAuthenticated ? [] : swipesLocaux.tousLesVus())];
       const { modeles } = await api.modeles.feed({ categorie: cat || undefined, exclude: exclude.slice(-1000) });
+      if (gen !== generation.current) return; // réponse d'une ancienne catégorie : ignorée
       // Précharger les images pour un swipe fluide
-      modeles.forEach((m) => { const img = new Image(); img.src = m.photo_url; });
+      modeles.forEach((m) => { if (m.photo_url) { const img = new Image(); img.src = m.photo_url; } });
       setPile((p) => {
         const base = reset ? [] : p;
         const deja = new Set(base.map((m) => m.id));
@@ -116,8 +133,10 @@ export default function DiscoverTab() {
     } catch {
       showToast('Connexion difficile — réessaie dans un instant', 'error');
     } finally {
-      enCours.current = false;
-      setChargement(false);
+      if (gen === generation.current) {
+        enCours.current = false;
+        setChargement(false);
+      }
     }
   }, [isAuthenticated, showToast]);
 
@@ -145,6 +164,11 @@ export default function DiscoverTab() {
     setDirection(d);
     enregistrer(m, d === 1 ? 'like' : 'pass');
     setDernier({ modele: m, action: d === 1 ? 'like' : 'pass' });
+    clearTimeout(minuteur.current);
+    if (d === 1) {
+      setApresLike(m);
+      minuteur.current = setTimeout(() => setApresLike(null), 6000);
+    } else setApresLike(null);
     setPile((p) => p.slice(1));
   };
 
@@ -166,10 +190,12 @@ export default function DiscoverTab() {
       ? 'h-[calc(100dvh-8.5rem)] lg:h-[calc(100dvh-5rem)]'
       : 'h-[calc(100dvh-5rem)] lg:h-[calc(100dvh-1.5rem)]'}`}>
       <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
-        <button onClick={() => { setLienPartage(''); setMonModele(true); }}
-          className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-pink-500 to-rose-500 text-white">
-          📸 Mon modèle
-        </button>
+        {role?.nom !== 'prestataire' && (
+          <button onClick={() => { setLienPartage(''); setMonModele(true); }}
+            className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-pink-500 to-rose-500 text-white">
+            📸 Mon modèle
+          </button>
+        )}
         {CATEGORIES.map((c) => (
           <button
             key={c.id || 'tout'}
@@ -193,7 +219,7 @@ export default function DiscoverTab() {
               modele={m}
               dessus={m.id === visibles[0].id}
               onSwipe={swiper}
-              onOuvrir={() => setOuvert(m)}
+              onOuvrir={() => ouvrir(m)}
             />
           ))}
         </AnimatePresence>
@@ -223,6 +249,21 @@ export default function DiscoverTab() {
         )}
       </div>
 
+      <AnimatePresence>
+        {apresLike && (
+          <motion.div key={apresLike.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+            className="mt-3 flex items-center gap-2 p-2 rounded-2xl bg-white dark:bg-gray-800 shadow-lg border border-gray-100 dark:border-gray-700">
+            <span className="pl-1 text-sm text-gray-700 dark:text-gray-200 flex-1 truncate">❤️ <strong>Aimé !</strong> Et maintenant ?</span>
+            <button onClick={() => ouvrir(apresLike)} className="px-3 py-2 rounded-xl bg-pink-500 text-white text-sm font-semibold whitespace-nowrap">
+              Réserver{apresLike.nb_offres ? ` (${apresLike.nb_offres})` : ''}
+            </button>
+            <button onClick={() => ouvrir(apresLike, true)} className="px-3 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold whitespace-nowrap">
+              ✋ Je sais le faire
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center justify-center gap-5 py-4">
         <button onClick={annuler} disabled={!dernier} aria-label="Revenir en arrière"
           className="w-11 h-11 rounded-full bg-white dark:bg-gray-800 shadow-md flex items-center justify-center disabled:opacity-30">
@@ -236,13 +277,13 @@ export default function DiscoverTab() {
           className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 shadow-lg flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40">
           <Heart className="w-8 h-8 text-white fill-white" />
         </button>
-        <button onClick={() => pile[0] && setOuvert(pile[0])} disabled={!pile.length} aria-label="Où le faire ?"
+        <button onClick={() => pile[0] && ouvrir(pile[0])} disabled={!pile.length} aria-label="Où le faire ?"
           className="w-11 h-11 rounded-full bg-white dark:bg-gray-800 shadow-md flex items-center justify-center disabled:opacity-30">
           <Info className="w-5 h-5 text-blue-500" />
         </button>
       </div>
 
-      <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} />
+      <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} ouvrirProposition={ouvrirProposition} />
       <JaiMonModeleModal open={monModele} onClose={() => setMonModele(false)} lienInitial={lienPartage} />
     </div>
   );

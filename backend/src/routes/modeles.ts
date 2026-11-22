@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import {
   Modele, ModeleSwipe, CATEGORIES_MODELE, Prestataire, Service, SubCategory, Category, TableauPinterest,
 } from '../models/index.js';
-import { tableauPinterestValide } from '../utils/liens.js';
+import { tableauPinterestValide, epinglePinterestValide } from '../utils/liens.js';
+import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre } from '../services/offres.js';
+import { OffreModele } from '../models/index.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
@@ -12,7 +14,7 @@ import { importerPhotos, PACK_LANCEMENT } from '../services/modeles-import.js';
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
 
-const CHAMPS_PUBLICS = 'titre categorie tags photo_url source credit_nom credit_url prestataire_id service_id prix ville nombre_likes';
+const CHAMPS_PUBLICS = 'titre categorie tags photo_url pin_url source credit_nom credit_url prestataire_id service_id prix ville nombre_likes';
 const estCategorie = (c: unknown): c is typeof CATEGORIES_MODELE[number] =>
   typeof c === 'string' && (CATEGORIES_MODELE as readonly string[]).includes(c);
 const idsValides = (v: unknown, max = 1000): number[] =>
@@ -44,12 +46,14 @@ router.post('/feed', async (req: Request, res: Response) => {
     // Vraies prestations en priorité, puis inspiration ; mélange aléatoire dans chaque groupe
     const modeles = await Modele.aggregate([
       { $match: match },
-      { $addFields: { _score: { $add: [{ $cond: [{ $eq: ['$source', 'prestataire'] }, 1, 0] }, { $multiply: [{ $rand: {} }, 0.9] }] } } },
+      // Réservables d'abord (offres de prestataires ou photo d'un vrai service), puis le reste ; hasard dans chaque groupe
+      { $lookup: { from: OffreModele.collection.name, localField: '_id', foreignField: 'modele_id', as: '_offres', pipeline: [{ $limit: 1 }] } },
+      { $addFields: { _score: { $add: [{ $cond: [{ $or: [{ $eq: ['$source', 'prestataire'] }, { $gt: [{ $size: '$_offres' }, 0] }] }, 1, 0] }, { $multiply: [{ $rand: {} }, 0.9] }] } } },
       { $sort: { _score: -1 } },
       { $limit: 20 },
-      { $project: { _score: 0, recherche: 0 } },
+      { $project: { _score: 0, recherche: 0, _offres: 0 } },
     ]);
-    res.json({ modeles: modeles.map(({ _id, ...m }) => ({ id: _id, ...m })) });
+    res.json({ modeles: await enrichirOffres(modeles.map(({ _id, ...m }) => ({ id: _id, ...m }))) });
   } catch (e) {
     serverError(res, e, 'modeles/feed');
   }
@@ -68,7 +72,7 @@ router.get('/recherche', async (req: Request, res: Response) => {
       Modele.find(match).select(CHAMPS_PUBLICS).sort({ source: -1, nombre_likes: -1, created_at: -1 }).skip((page - 1) * limit).limit(limit),
       Modele.countDocuments(match),
     ]);
-    res.json({ modeles, page, total, hasMore: page * limit < total });
+    res.json({ modeles: await enrichirOffres(modeles), page, total, hasMore: page * limit < total });
   } catch (e) {
     serverError(res, e, 'modeles/recherche');
   }
@@ -80,7 +84,7 @@ router.post('/par-ids', async (req: Request, res: Response) => {
     const ids = idsValides(req.body?.ids, 300);
     const modeles = await Modele.find({ _id: { $in: ids }, is_active: true }).select(CHAMPS_PUBLICS);
     const ordre = new Map(ids.map((id, i) => [id, i]));
-    res.json({ modeles: modeles.sort((a, b) => (ordre.get(a._id as number)! - ordre.get(b._id as number)!)) });
+    res.json({ modeles: await enrichirOffres(modeles.sort((a, b) => (ordre.get(a._id as number)! - ordre.get(b._id as number)!))) });
   } catch (e) {
     serverError(res, e, 'modeles/par-ids');
   }
@@ -144,7 +148,7 @@ router.get('/mes-likes', requireAuth, async (req: any, res: Response) => {
     const ids = swipes.map(s => s.modele_id);
     const modeles = await Modele.find({ _id: { $in: ids }, is_active: true }).select(CHAMPS_PUBLICS);
     const ordre = new Map(ids.map((id, i) => [id, i]));
-    res.json({ modeles: modeles.sort((a, b) => ordre.get(a._id as number)! - ordre.get(b._id as number)!) });
+    res.json({ modeles: await enrichirOffres(modeles.sort((a, b) => ordre.get(a._id as number)! - ordre.get(b._id as number)!)) });
   } catch (e) {
     serverError(res, e, 'modeles/mes-likes');
   }
@@ -183,7 +187,20 @@ router.get('/:id(\\d+)', async (req: Request, res: Response) => {
       if (!cur || sc > cur.score) meilleur.set(s.prestataire_id, { service: s, score: sc });
     }
 
-    let ou = [...meilleur.entries()].map(([pid, { service, score: sc }]) => {
+    // 1) Ceux qui se sont proposés pour CE modèle (+ le salon dont c'est la vraie photo)
+    const offres = await offresDuModele(modele._id as number);
+    if (modele.source === 'prestataire' && modele.service_id && modele.prestataire_id && !offres.some(o => o.prestataire.id === modele.prestataire_id)) {
+      const s: any = await Service.findOne({ _id: modele.service_id, is_active: true, deleted_at: null }).select('nom prix duree_minutes is_domicile');
+      const p: any = prestById.get(modele.prestataire_id) || await Prestataire.findOne({ _id: modele.prestataire_id, is_active: { $ne: false } });
+      if (s && p) offres.unshift({
+        prestataire: { id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis, is_verified: p.is_verified, photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null },
+        service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
+      });
+    }
+    const dejaListes = new Set(offres.map(o => o.prestataire.id));
+
+    // 2) Salons qui font des styles proches (même famille), en complément
+    let ou = [...meilleur.entries()].filter(([pid]) => !dejaListes.has(pid)).map(([pid, { service, score: sc }]) => {
       const p: any = prestById.get(pid);
       const photo = Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] : null;
       return {
@@ -193,10 +210,21 @@ router.get('/:id(\\d+)', async (req: Request, res: Response) => {
       };
     });
     ou.sort((a, b) => b._rang - a._rang);
-    ou = ou.slice(0, 8);
+    ou = ou.slice(0, 5);
+
+    // 3) Le visiteur est-il prestataire, et s'est-il déjà proposé ?
+    const userId = await getUserIdFromSession(req);
+    const moi = userId ? await Prestataire.findOne({ user_id: userId }).select('_id') : null;
+    const mienne = moi ? await OffreModele.findOne({ modele_id: modele._id, prestataire_id: moi._id }).select('service_id') : null;
 
     const { recherche: _r, ...publicModele } = modele.toJSON() as any;
-    res.json({ modele: publicModele, ou_le_faire: ou.map(({ _rang, ...o }) => o) });
+    res.json({
+      modele: publicModele,
+      offres,
+      similaires: ou.map(({ _rang, ...o }) => o),
+      est_prestataire: !!moi,
+      mon_offre: mienne ? { service_id: mienne.service_id } : null,
+    });
   } catch (e) {
     serverError(res, e, 'modeles/detail');
   }
@@ -213,6 +241,40 @@ router.get('/pinterest', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/modeles/:id/offre — « Je sais le faire » { prix, duree_minutes, nom?, is_domicile? } ou { service_id }
+router.post('/:id(\\d+)/offre', requireAuth, async (req: any, res: Response) => {
+  try {
+    res.json({ ok: true, ...(await creerOffre(req.userId, Number(req.params.id), req.body)) });
+  } catch (e) {
+    if (e instanceof ErreurOffre) return res.status(e.status).json({ error: e.message });
+    serverError(res, e, 'modeles/offre');
+  }
+});
+
+// DELETE /api/modeles/:id/offre — ne plus se proposer pour ce modèle
+router.delete('/:id(\\d+)/offre', requireAuth, async (req: any, res: Response) => {
+  try {
+    await retirerOffre(req.userId, Number(req.params.id));
+    res.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ErreurOffre) return res.status(e.status).json({ error: e.message });
+    serverError(res, e, 'modeles/offre-delete');
+  }
+});
+
+// GET /api/modeles/mes-offres — modèles pour lesquels je me suis proposé(e)
+router.get('/mes-offres', requireAuth, async (req: any, res: Response) => {
+  try {
+    const moi = await Prestataire.findOne({ user_id: req.userId }).select('_id');
+    if (!moi) return res.json({ modeles: [] });
+    const offres = await OffreModele.find({ prestataire_id: moi._id }).sort({ created_at: -1 });
+    const modeles = await Modele.find({ _id: { $in: offres.map(o => o.modele_id) }, is_active: true }).select(CHAMPS_PUBLICS);
+    res.json({ modeles: await enrichirOffres(modeles) });
+  } catch (e) {
+    serverError(res, e, 'modeles/mes-offres');
+  }
+});
+
 // ─── Admin ─────────────────────────────────────────────────────────────────
 
 // GET /api/modeles/admin?source=&categorie=&page=
@@ -221,7 +283,7 @@ router.get('/admin', requireAuth, requireRole('admin'), async (req: Request, res
     const page = Math.max(1, parseInt(String(req.query.page || '1')) || 1);
     const limit = 40;
     const filter: Record<string, any> = {};
-    if (req.query.source === 'prestataire' || req.query.source === 'curation') filter.source = req.query.source;
+    if (['prestataire', 'curation', 'pinterest'].includes(String(req.query.source))) filter.source = req.query.source;
     if (estCategorie(req.query.categorie)) filter.categorie = req.query.categorie;
     const [modeles, total, stats] = await Promise.all([
       Modele.find(filter).sort({ created_at: -1 }).skip((page - 1) * limit).limit(limit),
@@ -306,12 +368,47 @@ router.put('/admin/:id(\\d+)/toggle', requireAuth, requireRole('admin'), async (
 // DELETE /api/modeles/admin/:id — supprimer (curation uniquement)
 router.delete('/admin/:id(\\d+)', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const r = await Modele.deleteOne({ _id: Number(req.params.id), source: 'curation' });
+    const r = await Modele.deleteOne({ _id: Number(req.params.id), source: { $in: ['curation', 'pinterest'] } });
     if (!r.deletedCount) return res.status(400).json({ error: 'Seuls les modèles importés peuvent être supprimés (masquez les autres).' });
     await ModeleSwipe.deleteMany({ modele_id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (e) {
     serverError(res, e, 'modeles/admin-delete');
+  }
+});
+
+// POST /api/modeles/admin/epingles { urls: string[] | string, categorie, titre, tags? }
+// Ajoute des épingles Pinterest au fil (affichées par le widget officiel, rien n'est copié)
+router.post('/admin/epingles', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const { categorie, titre, tags } = req.body || {};
+    if (!estCategorie(categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
+    if (typeof titre !== 'string' || !titre.trim()) return res.status(400).json({ error: 'Titre requis (ex. Knotless braids)' });
+    const brutes: string[] = (Array.isArray(req.body?.urls) ? req.body.urls : String(req.body?.urls || '').split(/[\s,]+/))
+      .map((u: string) => String(u).trim()).filter(Boolean).slice(0, 100);
+    if (!brutes.length) return res.status(400).json({ error: 'Collez au moins un lien d\'épingle' });
+
+    let ajoutees = 0, doublons = 0;
+    const refusees: string[] = [];
+    const listeTags = [...new Set(normaliser(`${titre} ${tags || ''}`).split(' ').filter(w => w.length > 2))];
+    for (const brute of brutes) {
+      const pin = await epinglePinterestValide(brute);
+      if (!pin) { refusees.push(brute); continue; }
+      if (await Modele.exists({ source_externe_id: `pinterest:${pin.id}` })) { doublons++; continue; }
+      try {
+        await Modele.create({
+          titre: titre.trim(), categorie, tags: listeTags, photo_url: '', pin_url: pin.url, source: 'pinterest',
+          credit_nom: 'Pinterest', credit_url: pin.url, source_externe_id: `pinterest:${pin.id}`,
+          recherche: texteRecherche([titre, tags, categorie]),
+        });
+        ajoutees++;
+      } catch (e: any) {
+        if (e?.code === 11000) doublons++; else throw e;
+      }
+    }
+    res.json({ ok: true, ajoutees, doublons, refusees });
+  } catch (e) {
+    serverError(res, e, 'modeles/admin-epingles');
   }
 });
 

@@ -19,5 +19,5 @@ export { TicketSupport, MessageTicket } from './TicketSupport.js';
 export { Conversation, Message } from './Conversation.js';
 export { SlotLock } from './SlotLock.js';
 export { Demande } from './Demande.js';
-export { Modele, ModeleSwipe, CATEGORIES_MODELE } from './Modele.js';
+export { Modele, ModeleSwipe, OffreModele, CATEGORIES_MODELE } from './Modele.js';
 export { TableauPinterest } from './TableauPinterest.js';

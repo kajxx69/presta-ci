@@ -102,7 +102,8 @@ function PrestataireTabRenderer({ currentTab, setCurrentTab }: {
   setCurrentTab: (tab: string) => void;
 }) {
   switch (currentTab) {
-    case 'home': return <DashboardTab onNavigateToTab={setCurrentTab} />;
+    case 'home': return <DiscoverTab />; // le fil d'inspiration : « Je sais le faire » sur chaque modèle
+    case 'dashboard': return <DashboardTab onNavigateToTab={setCurrentTab} />;
     case 'reservations': return <ReservationsTabP />;
     case 'services': return <ServicesTab onNavigateToTab={setCurrentTab} />;
     case 'messages': return <MessagesTab />;

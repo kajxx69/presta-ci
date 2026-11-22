@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { Prestataire, UserSession, Reservation, StatutReservation } from '../models/index.js';
+import { Prestataire, UserSession, Reservation, StatutReservation, User } from '../models/index.js';
+import { generateToken } from '../utils/jwt.js';
 import { requireAuth } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
 import { materializePhotos, saveDataUri } from '../utils/uploads.js';
@@ -102,6 +103,40 @@ router.post('/me/verification', requireAuth, async (req: Request, res: Response)
     res.json({ ok: true, message: 'Votre demande de vérification a été envoyée. Elle sera examinée sous peu.' });
   } catch (error: any) {
     serverError(res, error);
+  }
+});
+
+// POST /api/prestataires/devenir — une cliente passe en compte Pro (« Je sais le faire »)
+// sans recréer de compte. Body : { nom_commercial, ville, adresse?, telephone_pro? }
+router.post('/devenir', requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+    if (user.role_id === 3) return res.status(400).json({ error: 'Un compte administrateur ne peut pas devenir prestataire' });
+
+    const nom_commercial = String(req.body?.nom_commercial || '').trim().slice(0, 80);
+    const ville = String(req.body?.ville || '').trim().slice(0, 80);
+    const adresse = String(req.body?.adresse || '').trim().slice(0, 200);
+    const telephone_pro = String(req.body?.telephone_pro || '').trim().slice(0, 30);
+    if (nom_commercial.length < 2) return res.status(400).json({ error: 'Indique le nom de ton salon (ou ton nom de coiffeuse)' });
+    if (ville.length < 2) return res.status(400).json({ error: 'Indique ton quartier ou ta ville' });
+
+    if (!(await Prestataire.exists({ user_id: user._id }))) {
+      await Prestataire.create({
+        user_id: user._id as number, nom_commercial, ville, adresse: adresse || ville,
+        telephone_pro: telephone_pro || user.telephone || undefined, pays: "Côte d'Ivoire",
+      });
+    }
+    if (user.role_id !== 2) await User.updateOne({ _id: user._id }, { role_id: 2, updated_at: new Date() });
+
+    const token = generateToken({ userId: user._id as number, email: user.email, role_id: 2 });
+    res.json({
+      ok: true,
+      token,
+      user: { id: user._id, email: user.email, role_id: 2, nom: user.nom, prenom: user.prenom, telephone: user.telephone, role_nom: 'prestataire' },
+    });
+  } catch (e: any) {
+    serverError(res, e);
   }
 });
 

@@ -4,9 +4,10 @@ export interface ApiPrestataire { id: number; nom_commercial: string; ville?: st
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; type_service?: 'prestation' | 'produit'; stock?: number | null; duree_minutes?: number | null; unite?: string | null; quantite_min?: number; quantite_max?: number | null; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
-export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; source: 'prestataire' | 'curation'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
+export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'curation' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; }
-export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number }; }
+export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
+export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
 const isLocalHost =
@@ -131,6 +132,8 @@ export const api = {
       http('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password }) }),
   },
   prestataires: {
+    devenirPro: (payload: { nom_commercial: string; ville: string; adresse?: string; telephone_pro?: string }): Promise<{ ok: boolean; token: string; user: any }> =>
+      http('/api/prestataires/devenir', { method: 'POST', body: JSON.stringify(payload) }),
     setup: (payload: {
       nom_commercial: string;
       ville?: string;
@@ -603,7 +606,11 @@ export const api = {
       if (params.page) q.append('page', String(params.page));
       return http(`/api/modeles/recherche?${q.toString()}`);
     },
-    detail: (id: number): Promise<{ modele: Modele; ou_le_faire: OuLeFaire[] }> => http(`/api/modeles/${id}`),
+    detail: (id: number): Promise<DetailModele> => http(`/api/modeles/${id}`),
+    proposer: (id: number, body: { prix?: number; duree_minutes?: number; is_domicile?: boolean; service_id?: number }): Promise<{ ok: boolean; service_id: number; mis_a_jour: boolean }> =>
+      http(`/api/modeles/${id}/offre`, { method: 'POST', body: JSON.stringify(body) }),
+    retirerOffre: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/${id}/offre`, { method: 'DELETE' }),
+    mesOffres: (): Promise<{ modeles: Modele[] }> => http('/api/modeles/mes-offres'),
     parIds: (ids: number[]): Promise<{ modeles: Modele[] }> =>
       http('/api/modeles/par-ids', { method: 'POST', body: JSON.stringify({ ids }) }),
     swipe: (id: number, action: 'like' | 'pass'): Promise<{ ok: boolean }> =>
@@ -627,6 +634,8 @@ export const api = {
       create: (body: { photo_url: string; titre: string; categorie: string; tags?: string; credit_nom?: string; credit_url?: string }): Promise<{ ok: boolean; id: number }> =>
         http('/api/modeles/admin', { method: 'POST', body: JSON.stringify(body) }),
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
+      importerEpingles: (body: { urls: string; categorie: string; titre: string; tags?: string }): Promise<{ ok: boolean; ajoutees: number; doublons: number; refusees: string[] }> =>
+        http('/api/modeles/admin/epingles', { method: 'POST', body: JSON.stringify(body) }),
       ajouterPinterest: (body: { url: string; titre: string; categorie: string }): Promise<{ ok: boolean; tableau: TableauPinterest }> =>
         http('/api/modeles/admin/pinterest', { method: 'POST', body: JSON.stringify(body) }),
       retirerPinterest: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/pinterest/${id}`, { method: 'DELETE' }),

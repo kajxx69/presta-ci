@@ -1,5 +1,6 @@
 import { Heart } from 'lucide-react';
 import { Modele } from '../../lib/api';
+import ModeleVisuel from './ModeleVisuel';
 
 /** Grille 2 colonnes de modèles (Recherche, Mes favoris). */
 export default function ModeleGrid({ modeles, onOuvrir, aimes, onToggleLike }: {
@@ -13,10 +14,12 @@ export default function ModeleGrid({ modeles, onOuvrir, aimes, onToggleLike }: {
       {modeles.map((m) => (
         <div key={m.id} className="relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-[3/4]">
           <button onClick={() => onOuvrir(m)} className="absolute inset-0 w-full h-full" aria-label={m.titre}>
-            <img src={m.photo_url} alt={m.titre} loading="lazy" className="w-full h-full object-cover" />
+            <ModeleVisuel modele={m} compact className="w-full h-full" />
             <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 to-transparent text-left">
               <p className="text-white text-xs font-semibold line-clamp-2 first-letter:uppercase">{m.titre}</p>
-              {m.prix ? <p className="text-white/85 text-[11px]">{m.prix.toLocaleString('fr-FR')} FCFA</p> : null}
+              {m.nb_offres ? (
+                <p className="text-white/90 text-[11px]">✂️ {m.nb_offres} · dès {(m.prix_min || 0).toLocaleString('fr-FR')} F</p>
+              ) : m.prix ? <p className="text-white/85 text-[11px]">{m.prix.toLocaleString('fr-FR')} FCFA</p> : null}
             </div>
           </button>
           {onToggleLike && (

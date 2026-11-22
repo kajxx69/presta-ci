@@ -3,6 +3,8 @@ import { Download, Eye, EyeOff, Trash2, Image as ImageIcon } from 'lucide-react'
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import AdminTableauxPinterest from './AdminTableauxPinterest';
+import AdminEpinglesPinterest from './AdminEpinglesPinterest';
+import ModeleVisuel from '../client/ModeleVisuel';
 import { SectionHeader, RefreshButton, FilterSelect, Pagination, LoadingSpinner, EmptyState } from './AdminShared';
 
 // Contenu du fil « Découvrir » : import de photos libres de droits (Pixabay, Unsplash ou Pexels)
@@ -130,10 +132,12 @@ export default function AdminModeles() {
         <p className="text-xs text-gray-500">Astuce : vérifiez ensuite les photos ci-dessous et masquez celles qui ne collent pas au style ivoirien.</p>
       </div>
 
+      <AdminEpinglesPinterest onAjout={load} />
+
       <AdminTableauxPinterest />
 
       <div className="flex flex-wrap gap-2">
-        <FilterSelect value={source} onChange={(v) => { setSource(v); setPage(1); }} options={[{ value: '', label: 'Toutes sources' }, { value: 'prestataire', label: 'Prestataires' }, { value: 'curation', label: 'Importées' }]} />
+        <FilterSelect value={source} onChange={(v) => { setSource(v); setPage(1); }} options={[{ value: '', label: 'Toutes sources' }, { value: 'prestataire', label: 'Prestataires' }, { value: 'curation', label: 'Importées' }, { value: 'pinterest', label: 'Pinterest' }]} />
         <FilterSelect value={filtreCat} onChange={(v) => { setFiltreCat(v); setPage(1); }} options={[{ value: '', label: 'Toutes catégories' }, ...CATEGORIES]} />
       </div>
 
@@ -144,17 +148,17 @@ export default function AdminModeles() {
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             {data.modeles.map((m: any) => (
               <div key={m.id} className={`relative rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 ${m.is_active ? '' : 'opacity-40'}`}>
-                <img src={m.photo_url} alt={m.titre} loading="lazy" className="w-full h-full object-cover" />
+                <ModeleVisuel modele={m} compact className="w-full h-full" />
                 <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
                   <p className="text-white text-[11px] line-clamp-2">{m.titre}</p>
-                  <p className="text-white/70 text-[10px]">{m.categorie} · {m.source === 'prestataire' ? 'prestataire' : 'importée'} · ♥ {m.nombre_likes}</p>
+                  <p className="text-white/70 text-[10px]">{m.categorie} · {m.source === 'prestataire' ? 'prestataire' : m.source === 'pinterest' ? 'Pinterest' : 'importée'} · ♥ {m.nombre_likes}</p>
                 </div>
                 <div className="absolute top-1.5 right-1.5 flex gap-1">
                   <button title={m.is_active ? 'Masquer' : 'Réafficher'} onClick={async () => { await api.modeles.admin.toggle(m.id); load(); }}
                     className="p-1.5 rounded-lg bg-white/90">
                     {m.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
-                  {m.source === 'curation' && (
+                  {m.source !== 'prestataire' && (
                     <button title="Supprimer" onClick={async () => { if (confirm('Supprimer cette photo ?')) { await api.modeles.admin.remove(m.id); load(); } }}
                       className="p-1.5 rounded-lg bg-white/90">
                       <Trash2 className="w-3.5 h-3.5 text-red-600" />

@@ -26,3 +26,16 @@ describe('tableauPinterestValide', () => {
     expect(tableauPinterestValide('https://www.pinterest.com/prestaci/')).toBeNull();
   });
 });
+
+import { idEpingle } from './liens.js';
+describe('idEpingle', () => {
+  it('extrait l\'identifiant des formes courantes', () => {
+    expect(idEpingle('https://www.pinterest.com/pin/123456789012/')).toBe('123456789012');
+    expect(idEpingle('https://fr.pinterest.com/pin/knotless-braids--987654321098/')).toBe('987654321098');
+  });
+  it('refuse tableaux, autres sites et http', () => {
+    expect(idEpingle('https://www.pinterest.com/prestaci/knotless/')).toBeNull();
+    expect(idEpingle('https://evil.com/pin/123456789/')).toBeNull();
+    expect(idEpingle('http://www.pinterest.com/pin/123456789/')).toBeNull();
+  });
+});

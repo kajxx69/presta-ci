@@ -10,7 +10,7 @@ declare global {
 }
 
 let chargement: Promise<void> | null = null;
-function chargerPinit(): Promise<void> {
+export function chargerPinit(): Promise<void> {
   if (window.PinUtils) return Promise.resolve();
   if (!chargement) {
     chargement = new Promise((ok, ko) => {

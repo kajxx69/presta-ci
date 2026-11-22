@@ -29,3 +29,42 @@ export function tableauPinterestValide(valeur: unknown): string | null {
     return null;
   }
 }
+
+/** Extrait l'identifiant d'une épingle d'une URL Pinterest complète (/pin/123/ ou /pin/titre--123/). */
+export function idEpingle(valeur: string): string | null {
+  try {
+    const u = new URL(valeur.trim());
+    if (u.protocol !== 'https:' || !/^([a-z0-9-]+\.)?pinterest\.[a-z.]{2,6}$/i.test(u.hostname)) return null;
+    const m = u.pathname.match(/^\/pin\/(?:[^/]*--)?(\d{5,25})\/?$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lien d'épingle Pinterest → { id, url canonique }, sinon null.
+ * Les liens courts pin.it (bouton « Partager ») sont résolus en suivant la redirection.
+ */
+export async function epinglePinterestValide(valeur: string): Promise<{ id: string; url: string } | null> {
+  let brut = String(valeur || '').trim();
+  if (!brut || brut.length > 500) return null;
+  try {
+    const u = new URL(brut);
+    if (u.protocol === 'https:' && u.hostname === 'pin.it') {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(brut, { redirect: 'follow', signal: controller.signal });
+        brut = res.url;
+        res.body?.cancel().catch(() => {});
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  } catch {
+    return null;
+  }
+  const id = idEpingle(brut);
+  return id ? { id, url: `https://www.pinterest.com/pin/${id}/` } : null;
+}
