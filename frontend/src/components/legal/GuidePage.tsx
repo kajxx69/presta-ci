@@ -47,8 +47,8 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
             <StepCard
               icon={<CreditCard className="w-5 h-5 text-green-600" />}
               step="3"
-              title="Payez via Wave"
-              desc="Réglez directement et en toute sécurité via Wave Money. Aucune donnée bancaire n'est stockée sur nos serveurs."
+              title="Paiement mobile money"
+              desc="Wave, Orange Money, MTN, Moov ou carte, via GeniusPay. Aucune donnée bancaire n'est stockée sur nos serveurs."
               color="green"
             />
             <StepCard
@@ -133,8 +133,8 @@ export default function GuidePage({ onBack }: { onBack: () => void }) {
             Paiements et sécurité financière
           </h3>
           <div className="space-y-2 text-gray-600 dark:text-gray-400 text-xs">
-            <p>Tous les paiements sont traités par <strong className="text-gray-800 dark:text-gray-200">Wave Mobile Money</strong>, service agréé par la BCEAO (Banque Centrale des États de l'Afrique de l'Ouest).</p>
-            <p>PrestaCI ne conserve aucun de vos identifiants Wave ou données financières. Vos fonds sont sécurisés et les transactions sont irréversibles une fois validées.</p>
+            <p>Les paiements en ligne sont traités par <strong className="text-gray-800 dark:text-gray-200">GeniusPay</strong> (Wave, Orange Money, MTN, Moov ou carte bancaire).</p>
+            <p>PrestaCI ne conserve aucun de vos identifiants de paiement ni données financières. Vos fonds sont sécurisés et les transactions sont irréversibles une fois validées.</p>
             <p>En cas de litige, contactez le support PrestaCI dans les <strong className="text-gray-800 dark:text-gray-200">30 jours</strong> suivant la transaction.</p>
           </div>
         </div>

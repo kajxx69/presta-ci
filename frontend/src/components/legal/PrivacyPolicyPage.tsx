@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
               <p className="font-semibold text-gray-900 dark:text-white mb-1">Données de transaction</p>
-              <p>Historique des réservations, montants des prestations, méthodes de paiement utilisées (identifiants Wave, non données bancaires).</p>
+              <p>Historique des réservations, montants des prestations, moyen de paiement utilisé et référence de la transaction (aucune donnée bancaire).</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
               <p className="font-semibold text-gray-900 dark:text-white mb-1">Données de géolocalisation</p>
@@ -92,7 +92,7 @@ export default function PrivacyPolicyPage({ onBack }: { onBack: () => void }) {
           <p>PrestaCI ne vend, ne loue ni ne cède vos données personnelles à des tiers à des fins commerciales. Vos données peuvent être partagées avec :</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li><strong>Les prestataires de services :</strong> votre nom, téléphone et adresse de prestation nécessaires à l'exécution de la réservation</li>
-            <li><strong>Wave Mobile Money CI SAS :</strong> pour le traitement des paiements, soumis à leurs propres conditions</li>
+            <li><strong>GeniusPay :</strong> pour le traitement des paiements en ligne (Wave, Orange Money, MTN, Moov, carte), soumis à ses propres conditions</li>
             <li><strong>Nos prestataires techniques :</strong> hébergement, maintenance, envoi de notifications (sous contrat de confidentialité)</li>
             <li><strong>Les autorités compétentes :</strong> sur réquisition judiciaire ou administrative légale</li>
           </ul>

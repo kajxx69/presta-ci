@@ -45,7 +45,7 @@ export default function CGUPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="4. Services proposés">
-          <p><strong>Pour les clients :</strong> Recherche et réservation de prestataires de services à domicile ou en déplacement (ménage, réparations, beauté, livraison, etc.), consultation des avis, gestion des réservations et paiements via Wave Money.</p>
+          <p><strong>Pour les clients :</strong> Recherche et réservation de prestataires de services à domicile ou en déplacement (ménage, réparations, beauté, livraison, etc.), consultation des avis, gestion des réservations.</p>
           <p className="mt-2"><strong>Pour les prestataires :</strong> Création d'un profil professionnel, publication d'offres de services, gestion des réservations, consultation des évaluations clients et accès aux statistiques d'activité.</p>
         </Section>
 
@@ -56,7 +56,7 @@ export default function CGUPage({ onBack }: { onBack: () => void }) {
         </Section>
 
         <Section title="6. Paiements">
-          <p>Les paiements sur PrestaCI sont effectués exclusivement via le service de paiement mobile Wave, opéré par Wave Mobile Money CI SAS, société agréée par la Banque Centrale des États de l'Afrique de l'Ouest (BCEAO). L'utilisation de Wave est soumise aux conditions générales propres à ce service.</p>
+          <p>Les paiements en ligne sur PrestaCI (notamment les abonnements des prestataires) sont traités par la plateforme de paiement GeniusPay, qui accepte Wave, Orange Money, MTN Mobile Money, Moov Money et la carte bancaire. L'utilisation de chaque moyen de paiement est soumise aux conditions générales propres à ce service.</p>
           <p className="mt-2">PrestaCI ne stocke aucune donnée bancaire ou de carte de paiement. Les transactions sont sécurisées et chiffrées conformément aux normes PCI-DSS applicables.</p>
           <p className="mt-2">En cas de litige sur un paiement, l'utilisateur doit contacter le support PrestaCI dans un délai de 30 jours suivant la transaction.</p>
         </Section>

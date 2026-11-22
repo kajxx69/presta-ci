@@ -24,7 +24,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 const faqItems = [
   {
     question: 'Comment réserver un service ?',
-    answer: 'Depuis l\'accueil, recherchez le service souhaité ou parcourez les catégories. Cliquez sur un prestataire, consultez ses avis et ses tarifs, puis cliquez sur "Réserver". Choisissez la date, l\'heure et validez. Le paiement s\'effectue via Wave Money.'
+    answer: 'Depuis l\'accueil, recherchez le service souhaité ou parcourez les catégories. Cliquez sur un prestataire, consultez ses avis et ses tarifs, puis cliquez sur "Réserver". Choisissez la date, l\'heure et validez.'
   },
   {
     question: 'Comment annuler une réservation ?',
@@ -44,7 +44,7 @@ const faqItems = [
   },
   {
     question: 'Les paiements sont-ils sécurisés ?',
-    answer: 'Oui. Tous les paiements sont traités exclusivement via Wave Mobile Money, service agréé par la BCEAO. PrestaCI ne stocke aucune donnée bancaire. Les transactions sont chiffrées et sécurisées selon les normes bancaires en vigueur en Zone UEMOA.'
+    answer: 'Oui. Les paiements en ligne passent par GeniusPay (Wave, Orange Money, MTN, Moov ou carte bancaire), une plateforme de paiement agréée. PrestaCI ne stocke aucune donnée bancaire et les transactions sont chiffrées.'
   },
   {
     question: 'Comment signaler un problème ?',

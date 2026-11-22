@@ -4,6 +4,7 @@ import { Check, Crown, Zap, Star, TrendingUp, Clock, AlertTriangle, Loader2 } fr
 import { api } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import WavePaymentModal from './WavePaymentModal';
+import { WAVE_MANUEL_ACTIF } from '../../lib/config';
 import PaiementEnLigneModal from './PaiementEnLigneModal';
 
 interface PlanInfo {
@@ -74,7 +75,7 @@ export default function PlansTab() {
         const [plansData, subData, transactionData, configData] = await Promise.all([
           api.subscription.getPlans(),
           api.subscription.getCurrent(),
-          api.waveTransactions.getStatus(),
+          WAVE_MANUEL_ACTIF ? api.waveTransactions.getStatus() : Promise.resolve(null),
           api.paiements.getConfig().catch(() => ({ enabled: false, durees: [30] }))
         ]);
         if (!mounted) return;
@@ -194,12 +195,13 @@ export default function PlansTab() {
 
   // Ancienne demande Wave manuelle en attente : ne bloque le choix d'un plan
   // que si le paiement en ligne GeniusPay n'est pas disponible
-  const waveEnAttente = !paiementConfig.enabled && !!transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente';
+  const waveEnAttente = WAVE_MANUEL_ACTIF && !paiementConfig.enabled && !!transactionStatus?.hasTransaction && transactionStatus.transaction.statut === 'en_attente';
 
   const handleSelectPlan = (plan: PlanInfo) => {
     setSelectedPlan(plan);
     if (paiementConfig.enabled) setShowOnlineModal(true);
-    else setShowPaymentModal(true);
+    else if (WAVE_MANUEL_ACTIF) setShowPaymentModal(true);
+    else showToast("Le paiement en ligne est momentanément indisponible. Réessaie dans quelques minutes.", 'error');
   };
 
   const handlePaymentSuccess = async () => {
@@ -677,13 +679,15 @@ export default function PlansTab() {
         durees={paiementConfig.durees}
       />
 
-      {/* Wave Payment Modal */}
-      <WavePaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        plan={selectedPlan}
-        onSuccess={handlePaymentSuccess}
-      />
+      {/* Ancien paiement Wave manuel (masqué : voir lib/config.ts) */}
+      {WAVE_MANUEL_ACTIF && (
+        <WavePaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          plan={selectedPlan}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

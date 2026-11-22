@@ -90,7 +90,7 @@ export default function AdminApercuBeaute({ onNavigate }: { onNavigate?: Navigue
     {
       ok: gp.configure && gp.mode === 'live', alerte: gp.mode === 'sandbox',
       titre: 'Paiement en ligne GeniusPay',
-      detail: !gp.configure ? 'Clés absentes sur le serveur : seul le paiement Wave manuel est proposé'
+      detail: !gp.configure ? '⚠️ Clés absentes sur le serveur : les pros ne peuvent pas encore payer leur abonnement'
         : gp.mode === 'sandbox' ? '⚠️ Clés de TEST : les abonnements seraient gratuits. Mets les clés live (pk_live_…) sur Render.'
         : 'Clés live actives',
     },

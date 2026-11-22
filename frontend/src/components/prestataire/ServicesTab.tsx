@@ -142,7 +142,7 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
   const planBenefitsMap: Record<string, string[]> = {
     starter: [
       '2 services mis en avant',
-      'Paiement Wave inclus',
+      'Paiement mobile money inclus',
       'Support standard'
     ],
     pro: [
@@ -166,7 +166,7 @@ export default function ServicesTab({ onNavigateToTab }: ServicesTabProps) {
     return planBenefitsMap[key] || [
       'Visibilité sur PrestaCI',
       'Réservations en ligne',
-      'Accès à Wave pour les paiements'
+      'Paiement Wave, Orange Money, MTN, Moov ou carte'
     ];
   }, [planName]);
 

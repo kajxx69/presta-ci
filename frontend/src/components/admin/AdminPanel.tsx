@@ -19,12 +19,14 @@ import AdminReservations from './AdminReservations';
 import AdminAvis from './AdminAvis';
 import AdminPayments from './AdminPayments';
 import AdminPaiementsEnLigne from './AdminPaiementsEnLigne';
+import { WAVE_MANUEL_ACTIF } from '../../lib/config';
 
-// Onglet Paiements : paiements en ligne (GeniusPay, automatiques) puis flux Wave manuel
+// Onglet Paiements : GeniusPay (automatique). L'ancien flux Wave manuel n'apparaît
+// que si WAVE_MANUEL_ACTIF (lib/config.ts).
 const AdminPaymentsPage = () => (
   <div className="space-y-10">
     <AdminPaiementsEnLigne />
-    <AdminPayments />
+    {WAVE_MANUEL_ACTIF && <AdminPayments />}
   </div>
 );
 import AdminNotifications from './AdminNotifications';

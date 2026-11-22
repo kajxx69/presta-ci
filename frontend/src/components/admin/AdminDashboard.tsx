@@ -3,6 +3,7 @@ import {
   Users, Package, Calendar, DollarSign, BarChart3, AlertTriangle, Clock, Bell, CreditCard, CheckCircle
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { WAVE_MANUEL_ACTIF } from '../../lib/config';
 import AdminApercuBeaute, { NaviguerAdmin } from './AdminApercuBeaute';
 import { useAppStore } from '../../store/appStore';
 import {
@@ -75,7 +76,7 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
         api.admin.getStats(),
         api.admin.statistics.getOverview(period),
         api.admin.reservations.getAll({ limit: 5 }),
-        api.admin.getWaveTransactions({ statut: 'en_attente', limit: 5 }),
+        WAVE_MANUEL_ACTIF ? api.admin.getWaveTransactions({ statut: 'en_attente', limit: 5 }) : Promise.resolve([]),
       ]);
       setStats(statsData);
       setOverview(overviewData);
@@ -254,7 +255,7 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
       )}
 
       {/* Bottom grid: Recent Reservations + Pending Wave */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${WAVE_MANUEL_ACTIF ? 'lg:grid-cols-2' : ''}`}>
         {/* Recent Reservations */}
         <Card>
           <CardHeader title="Réservations récentes" icon={Calendar} />
@@ -294,8 +295,8 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
           </div>
         </Card>
 
-        {/* Pending Wave Transactions */}
-        <Card>
+        {/* Pending Wave Transactions (masqué : voir lib/config.ts) */}
+        {WAVE_MANUEL_ACTIF && <Card>
           <CardHeader title="Transactions Wave en attente" icon={CreditCard} />
           <div className="px-6 pb-6">
             {pendingWave.length === 0 ? (
@@ -329,7 +330,7 @@ export default function AdminDashboard({ onNavigate }: { onNavigate?: NaviguerAd
               </div>
             )}
           </div>
-        </Card>
+        </Card>}
       </div>
     </div>
   );
