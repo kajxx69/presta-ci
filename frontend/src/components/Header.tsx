@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Moon, Sun } from 'lucide-react';
+import { Bell, Moon, Sun, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationCenter from './NotificationCenter';
 import { useAppStore } from '../store/appStore';
@@ -9,8 +9,8 @@ import { api } from '../lib/api';
 import Logo from './Logo';
 
 export default function Header() {
-  const { isDarkMode, toggleDarkMode, setCurrentTab } = useAppStore();
-  const { user, isAuthenticated } = useAuthStore();
+  const { isDarkMode, toggleDarkMode, setCurrentTab, adminDansApp, setAdminDansApp } = useAppStore();
+  const { user, role, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -67,6 +67,19 @@ export default function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
+          {/* Admin en visite dans l'app : retour au back office */}
+          {role?.nom === 'admin' && adminDansApp && (
+            <button
+              type="button"
+              onClick={() => { setAdminDansApp(false); navigate('/app'); }}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-[#7A1638] text-white text-xs font-semibold shadow-sm"
+              title="Retour au back office"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Back office
+            </button>
+          )}
+
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <motion.button

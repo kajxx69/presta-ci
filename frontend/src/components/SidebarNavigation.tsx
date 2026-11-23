@@ -49,7 +49,8 @@ export default function SidebarNavigation({ currentTab, setCurrentTab }: Sidebar
 
   // Clientes et pros ont la même navigation (l'espace pro est dans le Profil)
   let tabs = clientTabs;
-  if (role?.nom === 'admin') tabs = adminTabs;
+  // Admin en visite dans l'app : mêmes onglets que les utilisatrices
+  if (role?.nom === 'admin' && !useAppStore.getState().adminDansApp) tabs = adminTabs;
 
   return (
     <aside className="hidden lg:flex flex-col w-60 xl:w-64 flex-shrink-0 sticky top-0 h-screen border-r border-gray-200/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur-2xl">

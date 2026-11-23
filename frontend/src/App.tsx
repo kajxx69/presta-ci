@@ -84,7 +84,7 @@ const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-res
 /** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
 function AppShell() {
   const { isAuthenticated, role } = useAuthStore();
-  const { currentTab, setCurrentTab } = useAppStore();
+  const { currentTab, setCurrentTab, adminDansApp } = useAppStore();
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
@@ -122,7 +122,8 @@ function AppShell() {
       .catch(() => {});
   }, [isAuthenticated, role]);
 
-  if (isAuthenticated && role?.nom === 'admin') {
+  const estAdmin = isAuthenticated && role?.nom === 'admin';
+  if (estAdmin && !adminDansApp) {
     return (
       <div className={useAppStore.getState().isDarkMode ? 'dark' : ''}>
         <AdminPanel />

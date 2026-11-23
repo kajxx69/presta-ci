@@ -12,6 +12,9 @@ interface AppState {
   currentLocation: { lat: number; lng: number } | null;
   notifications: any[];
   toasts: Toast[];
+  /** Admin qui navigue dans l'app comme une utilisatrice (au lieu du back office) */
+  adminDansApp: boolean;
+  setAdminDansApp: (v: boolean) => void;
   toggleDarkMode: () => void;
   setCurrentTab: (tab: string) => void;
   setLocation: (location: { lat: number; lng: number }) => void;
@@ -28,6 +31,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentLocation: null,
   notifications: [],
   toasts: [],
+  adminDansApp: (() => { try { return sessionStorage.getItem('chicly-admin-dans-app') === '1'; } catch { return false; } })(),
+
+  setAdminDansApp: (v: boolean) => {
+    set({ adminDansApp: v });
+    try { if (v) sessionStorage.setItem('chicly-admin-dans-app', '1'); else sessionStorage.removeItem('chicly-admin-dans-app'); } catch {}
+  },
 
   setCurrentTab: (tab: string) => {
     set({ currentTab: tab });

@@ -59,7 +59,8 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
 
   // Clientes et pros ont la même navigation (l'espace pro est dans le Profil)
   let tabs = clientTabs;
-  if (role?.nom === 'admin') tabs = adminTabs;
+  // Admin en visite dans l'app : mêmes onglets que les utilisatrices
+  if (role?.nom === 'admin' && !useAppStore.getState().adminDansApp) tabs = adminTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-gray-200/50 dark:border-gray-700/50 safe-bottom lg:hidden">

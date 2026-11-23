@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, Crown, Settings,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun, ShieldAlert, MessageCircle, ShieldCheck, Sparkles
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, Smartphone, ShieldAlert, MessageCircle, ShieldCheck, Sparkles
 } from 'lucide-react';
 import AdminModeles from './AdminModeles';
 import { useNavigate } from 'react-router-dom';
@@ -116,7 +116,7 @@ export default function AdminPanel() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const { user, logout } = useAuthStore();
-  const { isDarkMode, toggleDarkMode } = useAppStore();
+  const { isDarkMode, toggleDarkMode, setAdminDansApp } = useAppStore();
   const navigate = useNavigate();
 
   const ActiveComponent = tabComponents[activeTab];
@@ -318,6 +318,15 @@ export default function AdminPanel() {
           </div>
 
           <div className="flex items-center gap-1">
+            {/* Aller dans l'app comme une utilisatrice */}
+            <button
+              onClick={() => { setAdminDansApp(true); navigate('/app/home'); }}
+              className="flex items-center gap-2 h-10 px-3 sm:px-4 rounded-xl bg-gradient-to-r from-pink-500 to-orange-400 text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
+              title="Ouvrir l'app comme une utilisatrice"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span className="hidden sm:inline">Voir l'app</span>
+            </button>
             {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
