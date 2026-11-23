@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Moon, Sun, LayoutDashboard } from 'lucide-react';
+import { Bell, LayoutDashboard, MessageCircle, Settings } from 'lucide-react';
+import MenuReglages from './common/MenuReglages';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationCenter from './NotificationCenter';
 import { useAppStore } from '../store/appStore';
@@ -9,7 +10,9 @@ import { api } from '../lib/api';
 import Logo from './Logo';
 
 export default function Header() {
-  const { isDarkMode, toggleDarkMode, setCurrentTab, adminDansApp, setAdminDansApp } = useAppStore();
+  const { setCurrentTab, adminDansApp, setAdminDansApp } = useAppStore();
+  const [reglages, setReglages] = useState(false);
+  const [messagesNonLus, setMessagesNonLus] = useState(0);
   const { user, role, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -39,6 +42,7 @@ export default function Header() {
       try {
         const { count } = await api.notifications.getUnreadCount();
         setUnreadCount(count);
+        api.conversations.getUnreadCount().then((r) => setMessagesNonLus(r.count)).catch(() => {});
       } catch {
         // Silencieux : échec réseau transitoire (ex: cold start backend) — le
         // prochain polling (30s) rattrapera le compteur, pas la peine d'alerter.
@@ -61,7 +65,7 @@ export default function Header() {
           className="flex items-center gap-2 active:scale-95 transition-transform lg:hidden"
         >
           <Logo className="h-9 w-9 rounded-full" />
-          <span className="text-xl font-extrabold tracking-tight text-[#7A1638] dark:text-pink-300">Chicly</span>
+          <span className={`text-xl font-extrabold tracking-tight text-[#7A1638] dark:text-pink-300 ${role?.nom === 'admin' && adminDansApp ? 'hidden sm:inline' : ''}`}>Chicly</span>
         </button>
         <div className="hidden lg:block" />
 
@@ -79,6 +83,21 @@ export default function Header() {
               Back office
             </button>
           )}
+
+          {/* Messages */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate('/app/messages')}
+            aria-label="Messages"
+            className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <MessageCircle className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            {messagesNonLus > 0 && (
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {messagesNonLus > 9 ? '9+' : messagesNonLus}
+              </span>
+            )}
+          </motion.button>
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
@@ -120,27 +139,14 @@ export default function Header() {
             </AnimatePresence>
           </div>
 
-          {/* Dark mode toggle */}
+          {/* Réglages : modifier le profil, mode sombre, déconnexion */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={toggleDarkMode}
+            onClick={() => setReglages(true)}
+            aria-label="Réglages et déconnexion"
             className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={isDarkMode ? 'dark' : 'light'}
-                initial={{ rotate: -90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 90, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-yellow-400" />
-                ) : (
-                  <Moon className="w-5 h-5 text-gray-600" />
-                )}
-              </motion.div>
-            </AnimatePresence>
+            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </motion.button>
 
           {/* Avatar */}
@@ -163,6 +169,7 @@ export default function Header() {
           </motion.button>
         </div>
       </div>
+      <MenuReglages ouvert={reglages} onFermer={() => setReglages(false)} />
     </header>
   );
 }

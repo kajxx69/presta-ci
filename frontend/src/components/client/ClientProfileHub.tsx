@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Heart, LayoutDashboard, Scissors, Crown, Settings, LogOut, Pencil, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, Heart, LayoutDashboard, Scissors, Crown } from 'lucide-react';
 import { api, Modele } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { useFavoris } from '../../lib/useFavoris';
@@ -62,11 +61,7 @@ function Grille({ modeles, onOuvrir }: { modeles: Modele[]; onOuvrir: (m: Modele
 
 export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: SousOngletProfil; onNavigateToTab?: (tab: string) => void }) {
   const navigate = useNavigate();
-  const { isAuthenticated, user, role, logout } = useAuthStore();
-  const [menu, setMenu] = useState(false);
-  const [confirmer, setConfirmer] = useState(false);
-  const fermerMenu = () => { setMenu(false); setConfirmer(false); };
-  const seDeconnecter = () => { fermerMenu(); logout(); navigate('/app/home'); };
+  const { isAuthenticated, user, role } = useAuthStore();
   const estPro = isAuthenticated && role?.nom === 'prestataire';
   const { favoris, aimes, chargement, basculer } = useFavoris();
   const placesOffre = useOffreLancement();
@@ -128,17 +123,7 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white shadow">PRO ✨</span>
               )}
             </div>
-            <div className="w-20 flex justify-end gap-0.5">
-              <button onClick={() => setMenu(true)} aria-label="Réglages et déconnexion" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                <Settings className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-              </button>
-              <button onClick={() => aller('messages')} aria-label="Messages" className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                <MessageCircle className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-                {nonLus > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{nonLus > 9 ? '9+' : nonLus}</span>
-                )}
-              </button>
-            </div>
+            <div className="w-20" />
           </div>
           <h1 className="mt-3 text-center text-xl font-bold text-gray-900 dark:text-white">{nom || 'Mon profil'}</h1>
           {pseudo && <p className="text-center text-sm text-gray-500 dark:text-gray-400">{pseudo}</p>}
@@ -233,42 +218,6 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
 
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} aime={ouvert ? aimes.has(ouvert.id) : false} onToggleLike={basculer} />
 
-      {/* Menu réglages : modifier le profil, se déconnecter (avec confirmation) */}
-      <AnimatePresence>
-        {menu && (
-          <motion.div className="fixed inset-0 z-[70] bg-black/50 flex items-end sm:items-center justify-center"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={fermerMenu}>
-            <motion.div className="w-full sm:max-w-sm bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
-              initial={{ y: 40 }} animate={{ y: 0 }} exit={{ y: 40 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-              onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-2 pb-2">
-                <p className="font-bold text-gray-900 dark:text-white">Réglages</p>
-                <button onClick={fermerMenu} aria-label="Fermer" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><X className="w-5 h-5 text-gray-500" /></button>
-              </div>
-              {!confirmer ? (
-                <div className="space-y-1">
-                  <button onClick={() => { fermerMenu(); aller('compte'); }}
-                    className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 text-left text-gray-800 dark:text-gray-100 font-medium">
-                    <Pencil className="w-5 h-5 text-gray-500" /> Modifier le profil
-                  </button>
-                  <button onClick={() => setConfirmer(true)}
-                    className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/20 text-left text-red-600 dark:text-red-400 font-semibold">
-                    <LogOut className="w-5 h-5" /> Se déconnecter
-                  </button>
-                </div>
-              ) : (
-                <div className="px-2 space-y-3">
-                  <p className="text-gray-700 dark:text-gray-200">Tu veux vraiment te déconnecter ? Tes modèles enregistrés restent sur ton compte.</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setConfirmer(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-semibold">Annuler</button>
-                    <button onClick={seDeconnecter} className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-semibold">Me déconnecter</button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
