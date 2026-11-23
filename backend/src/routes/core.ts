@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Category, SubCategory, Plan, Prestataire, Service, Configuration } from '../models/index.js';
 import { serverError } from '../utils/http.js';
 import { searchAll } from '../utils/search-engine.js';
+import { vuePubliquePrestataire } from '../services/confidentialite.js';
 import { categorieModelePour } from '../services/modeles-sync.js';
 
 // Chicly est recentrée sur la beauté femme : les autres catégories sont masquées
@@ -91,7 +92,7 @@ router.get('/prestataires', async (req: Request, res: Response) => {
     if (ville) filter.ville = ville;
     if (q && String(q).trim()) {
       const rx = new RegExp(escapeRegex(String(q).trim()), 'i');
-      filter.$or = [{ nom_commercial: rx }, { bio: rx }, { ville: rx }, { adresse: rx }];
+      filter.$or = [{ nom_commercial: rx }, { bio: rx }, { ville: rx }, { commune: rx }];
     }
 
     // Recherche géolocalisée : $geoNear sur l'index 2dsphere — distances exactes
@@ -121,11 +122,8 @@ router.get('/prestataires', async (req: Request, res: Response) => {
             },
           });
           res.setHeader('X-Total-Count', String(total));
-          return res.json(results.map((doc: any) => ({
-            ...doc,
-            id: doc._id,
+          return res.json(results.map((doc: any) => vuePubliquePrestataire(doc, {
             distance_km: Math.round((doc.distance_m / 1000) * 10) / 10,
-            distance_m: undefined,
           })));
         } catch {
           // Repli sans index géo : distance Haversine calculée en mémoire
@@ -136,8 +134,7 @@ router.get('/prestataires', async (req: Request, res: Response) => {
             .filter(x => x.distance <= radius)
             .sort((a, b) => a.distance - b.distance);
           res.setHeader('X-Total-Count', String(withDistance.length));
-          return res.json(withDistance.slice(skip, skip + limit).map(x => ({
-            ...x.doc.toJSON(),
+          return res.json(withDistance.slice(skip, skip + limit).map(x => vuePubliquePrestataire(x.doc, {
             distance_km: Math.round(x.distance * 10) / 10,
           })));
         }
@@ -149,7 +146,7 @@ router.get('/prestataires', async (req: Request, res: Response) => {
       Prestataire.countDocuments(filter),
     ]);
     res.setHeader('X-Total-Count', String(total));
-    res.json(rows);
+    res.json(rows.map(r => vuePubliquePrestataire(r)));
   } catch (e: any) {
     serverError(res, e);
   }

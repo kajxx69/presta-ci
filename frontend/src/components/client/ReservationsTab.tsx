@@ -325,10 +325,19 @@ export default function ReservationsTab() {
                         <span>{reservation.quantite} unité{reservation.quantite > 1 ? 's' : ''}</span>
                       </div>
                     )}
-                    {reservation.prestataire_adresse && !reservation.a_domicile && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="truncate">{reservation.prestataire_adresse}</span>
+                    {!reservation.a_domicile && (reservation.prestataire_adresse || reservation.prestataire_commune) && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span className="truncate">
+                          {reservation.prestataire_adresse || reservation.prestataire_commune}
+                          {reservation.adresse_apres_confirmation && <span className="text-gray-400"> · adresse exacte après confirmation</span>}
+                        </span>
+                        {reservation.itineraire_url && (
+                          <a href={reservation.itineraire_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                            className="ml-auto flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#7A1638] text-white text-xs font-bold">
+                            🧭 Itinéraire
+                          </a>
+                        )}
                       </div>
                     )}
                     {reservation.a_domicile && reservation.adresse_rdv && (
@@ -425,10 +434,17 @@ export default function ReservationsTab() {
                   <span>Quantité : {selectedReservation.quantite}</span>
                 </div>
               )}
-              {(selectedReservation.prestataire_adresse || selectedReservation.adresse_rdv) && (
+              {(selectedReservation.prestataire_adresse || selectedReservation.adresse_rdv || selectedReservation.prestataire_commune) && (
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-blue-500 mt-0.5" />
-                  <span>{selectedReservation.adresse_rdv || selectedReservation.prestataire_adresse}</span>
+                  <span>
+                    {selectedReservation.a_domicile
+                      ? `À domicile — ${selectedReservation.adresse_rdv}`
+                      : selectedReservation.prestataire_adresse || selectedReservation.prestataire_commune}
+                    {selectedReservation.adresse_apres_confirmation && (
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">🔒 L'adresse exacte du salon s'affiche dès que la pro confirme ton rendez-vous.</span>
+                    )}
+                  </span>
                 </div>
               )}
               {selectedReservation.notes_client && (
@@ -491,10 +507,12 @@ export default function ReservationsTab() {
                 variant="secondary"
                 fullWidth
                 onClick={() => {
-                  if (selectedReservation.prestataire_adresse) {
-                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedReservation.prestataire_adresse)}`);
+                  if (selectedReservation.itineraire_url) {
+                    window.open(selectedReservation.itineraire_url, '_blank', 'noopener');
+                  } else if (selectedReservation.a_domicile) {
+                    showToast('Rendez-vous à domicile : la pro vient chez toi 🏠', 'info');
                   } else {
-                    showToast('Adresse non disponible', 'error');
+                    showToast("L'itinéraire s'affiche dès que la pro confirme ton rendez-vous", 'info');
                   }
                 }}
                 icon={MapPin}

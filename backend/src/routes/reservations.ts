@@ -7,6 +7,7 @@ import { isValidDayString, isPastDay } from '../utils/validation.js';
 import { hasSlotConflict, getHorairesForDate } from '../utils/availability.js';
 import { EmailNotifications } from '../services/email-notifications.js';
 import { communeLaPlusProche, communeDepuisTexte, zonesEffectives } from '../services/communes.js';
+import { adresseVisible, lienItineraire } from '../services/confidentialite.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 
 const router = express.Router();
@@ -70,7 +71,13 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         devise: service?.devise || null,
         duree_minutes: service?.duree_minutes || null,
         prestataire_nom: prestataire?.nom_commercial || null,
-        prestataire_adresse: prestataire?.adresse || null,
+        // Adresse exacte du salon + itinéraire seulement une fois le rendez-vous confirmé ;
+        // avant : la commune uniquement (sécurité des pros qui reçoivent chez elles)
+        prestataire_commune: (prestataire as any)?.commune || prestataire?.ville || null,
+        prestataire_adresse: !rObj.a_domicile && adresseVisible(statut?.nom) ? prestataire?.adresse || null : null,
+        adresse_apres_confirmation: !rObj.a_domicile && !adresseVisible(statut?.nom) && !['annulee', 'refusee'].includes(statut?.nom || ''),
+        itineraire_url: !rObj.a_domicile && adresseVisible(statut?.nom) && statut?.nom !== 'terminee'
+          ? lienItineraire(prestataire?.latitude, prestataire?.longitude, prestataire?.adresse) : null,
         prestataire_telephone: prestataire?.telephone_pro || null,
         booking_type: rObj.booking_type || 'appointment',
         quantite: rObj.quantite || 1,

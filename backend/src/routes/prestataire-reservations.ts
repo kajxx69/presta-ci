@@ -4,7 +4,19 @@ import { requireAuth } from '../middleware/auth.js';
 import { ClientNotifications } from '../services/notifications.js';
 import { ClientInAppNotifications } from '../services/in-app-notifications.js';
 import { EmailNotifications } from '../services/email-notifications.js';
+import { adresseVisible, lienItineraire } from '../services/confidentialite.js';
+import { communeLaPlusProche, communeDepuisTexte } from '../services/communes.js';
 import { serverError } from '../utils/http.js';
+
+/** Commune de l'adresse de la cliente (GPS ou texte), sans révéler l'adresse. */
+function communeAdresse(r: any): string | null {
+  const lat = Number(r.adresse_rdv_lat), lng = Number(r.adresse_rdv_lng);
+  if (r.adresse_rdv_lat != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    const c = communeLaPlusProche(lat, lng);
+    if (c) return c.nom;
+  }
+  return communeDepuisTexte(r.adresse_rdv)?.nom ?? null;
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -68,9 +80,16 @@ router.get('/', async (req: Request, res: Response) => {
         quantite: (r as any).quantite || 1,
         prix_total: (r as any).prix_total ?? r.prix_final,
         a_domicile: r.a_domicile,
-        adresse_rdv: r.adresse_rdv,
-        adresse_rdv_lat: (r as any).adresse_rdv_lat ?? null,
-        adresse_rdv_lng: (r as any).adresse_rdv_lng ?? null,
+        // À domicile : avant confirmation la pro ne voit que la commune de la cliente ;
+        // l'adresse exacte et l'itinéraire arrivent quand elle accepte
+        adresse_rdv_commune: r.a_domicile ? communeAdresse(r) : null,
+        adresse_rdv: adresseVisible(statut?.nom) ? r.adresse_rdv : null,
+        adresse_rdv_lat: adresseVisible(statut?.nom) ? (r as any).adresse_rdv_lat ?? null : null,
+        adresse_rdv_lng: adresseVisible(statut?.nom) ? (r as any).adresse_rdv_lng ?? null : null,
+        adresse_apres_confirmation: !!r.a_domicile && !adresseVisible(statut?.nom) && !['annulee', 'refusee'].includes(statut?.nom || ''),
+        itineraire_url: r.a_domicile && adresseVisible(statut?.nom) && statut?.nom !== 'terminee'
+          ? lienItineraire((r as any).adresse_rdv_lat, (r as any).adresse_rdv_lng, r.adresse_rdv) : null,
+        frais_deplacement: (r as any).frais_deplacement || 0,
         client_id: r.client_id,
         client_nom: client?.nom || null,
         client_prenom: client?.prenom || null,

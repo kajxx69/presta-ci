@@ -2,6 +2,7 @@ import { Reservation, StatutReservation, Service, Prestataire, User } from '../m
 import { InAppNotificationService } from './in-app-notifications.js';
 import { sendMail } from '../utils/mailer.js';
 import { logger } from '../logger.js';
+import { lienItineraire } from './confidentialite.js';
 import { runSubscriptionReminderSweep } from './subscription-reminders.js';
 
 const SWEEP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -44,19 +45,23 @@ export async function runReminderSweep(): Promise<number> {
     try {
       const [service, prestataire, client] = await Promise.all([
         Service.findById(r.service_id).select('nom'),
-        Prestataire.findById(r.prestataire_id).select('nom_commercial adresse user_id'),
+        Prestataire.findById(r.prestataire_id).select('nom_commercial adresse latitude longitude user_id'),
         User.findById(r.client_id).select('email prenom nom'),
       ]);
 
       const quand = `${appt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}${r.heure_debut ? ` à ${r.heure_debut}` : ''}`;
       const serviceNom = service?.nom || 'votre prestation';
       const prestataireNom = prestataire?.nom_commercial || 'votre prestataire';
+      // Itinéraire en un clic : vers le salon pour la cliente, vers la cliente pour une pro à domicile
+      const itineraireSalon = !r.a_domicile ? lienItineraire(prestataire?.latitude, prestataire?.longitude, prestataire?.adresse) : null;
+      const itineraireDomicile = r.a_domicile ? lienItineraire((r as any).adresse_rdv_lat, (r as any).adresse_rdv_lng, r.adresse_rdv) : null;
+      const bouton = (url: string) => `<p><a href="${url}" style="display:inline-block;background:#7A1638;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:bold;">📍 Itinéraire</a></p>`;
 
       // Rappel au client
       await InAppNotificationService.createCustom(
         r.client_id,
         '⏰ Rappel de rendez-vous',
-        `${serviceNom} chez ${prestataireNom} — ${quand}${r.a_domicile ? ' (à domicile)' : prestataire?.adresse ? ` — ${prestataire.adresse}` : ''}`,
+        `${serviceNom} chez ${prestataireNom} — ${quand}${r.a_domicile ? ' (à domicile)' : prestataire?.adresse ? ` — ${prestataire.adresse}. Itinéraire dans « Mes réservations »` : ''}`,
         'info'
       );
       if (client?.email) {
@@ -68,6 +73,7 @@ export async function runReminderSweep(): Promise<number> {
             <p>Bonjour ${client.prenom || ''},</p>
             <p>Petit rappel : <strong>${serviceNom}</strong> chez <strong>${prestataireNom}</strong>, ${quand}.</p>
             ${r.a_domicile ? '<p>La prestation aura lieu à votre domicile.</p>' : prestataire?.adresse ? `<p>Adresse : ${prestataire.adresse}</p>` : ''}
+            ${itineraireSalon ? bouton(itineraireSalon) : ''}
             <p style="color:#6b7280;font-size:13px;">Un empêchement ? Annulez depuis l'application pour libérer le créneau.</p>
           </div>`
         );
@@ -79,7 +85,7 @@ export async function runReminderSweep(): Promise<number> {
         await InAppNotificationService.createCustom(
           prestataire.user_id,
           '⏰ Rendez-vous à venir',
-          `${serviceNom} avec ${clientNom} — ${quand}`,
+          `${serviceNom} avec ${clientNom} — ${quand}${r.a_domicile && r.adresse_rdv ? ` — à domicile : ${r.adresse_rdv}${itineraireDomicile ? '. Itinéraire dans tes demandes' : ''}` : ''}`,
           'info'
         );
       }

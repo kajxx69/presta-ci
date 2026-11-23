@@ -41,6 +41,10 @@ interface Reservation {
   montant_total?: number;
   devise?: string;
   adresse_rdv?: string;
+  a_domicile?: boolean;
+  adresse_rdv_commune?: string | null;
+  adresse_apres_confirmation?: boolean;
+  itineraire_url?: string | null;
   notes_client?: string;
 }
 
@@ -918,6 +922,18 @@ export default function ReservationsTab() {
                   {selectedReservation.heure_debut} - {selectedReservation.heure_fin}
                 </p>
               </div>
+              {selectedReservation.a_domicile && !selectedReservation.adresse_rdv && (
+                <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-800">
+                  <p className="text-xs text-gray-500">À domicile</p>
+                  <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-emerald-500" />
+                    <span>{(selectedReservation as any).adresse_rdv_commune ? `Chez la cliente, à ${(selectedReservation as any).adresse_rdv_commune}` : 'Chez la cliente'}</span>
+                  </p>
+                  {(selectedReservation as any).adresse_apres_confirmation && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">🔒 L'adresse exacte et l'itinéraire s'affichent quand tu acceptes la demande.</p>
+                  )}
+                </div>
+              )}
               {selectedReservation.adresse_rdv && (
                 <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-800">
                   <p className="text-xs text-gray-500">Adresse RDV</p>
@@ -925,14 +941,14 @@ export default function ReservationsTab() {
                     <MapPin className="w-4 h-4 text-blue-500" />
                     <span>{selectedReservation.adresse_rdv}</span>
                   </p>
-                  {(selectedReservation as any).adresse_rdv_lat && (selectedReservation as any).adresse_rdv_lng && (
+                  {(selectedReservation as any).itineraire_url && (
                     <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${(selectedReservation as any).adresse_rdv_lat},${(selectedReservation as any).adresse_rdv_lng}`}
+                      href={(selectedReservation as any).itineraire_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                     >
-                      🧭 Itinéraire GPS précis
+                      🧭 Itinéraire
                     </a>
                   )}
                 </div>

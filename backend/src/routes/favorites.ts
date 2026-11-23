@@ -19,7 +19,7 @@ router.get('/providers', requireAuth, async (req: Request, res: Response) => {
         nom_commercial: p.nom_commercial,
         ville: p.ville,
         bio: p.bio,
-        adresse: p.adresse,
+        commune: (p as any).commune || null,
         photos_etablissement: Array.isArray(p.photos_etablissement) ? p.photos_etablissement : [],
         is_verified: p.is_verified,
         note_moyenne: p.note_moyenne,

@@ -364,8 +364,8 @@ export default function PrestataireDetailPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <InfoBadge icon={Compass} label="Adresse" value={prestataire.adresse || 'Non renseignée'} />
-              <InfoBadge icon={MapPin} label="Localisation" value={prestataire.ville || 'Côte d\'Ivoire'} />
+              <InfoBadge icon={MapPin} label="Commune" value={prestataire.commune || prestataire.ville || 'Côte d\'Ivoire'} />
+              <InfoBadge icon={Compass} label="Adresse exacte" value="Après confirmation 🔒" />
             </div>
 
             <Button

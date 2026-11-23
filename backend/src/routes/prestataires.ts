@@ -7,6 +7,7 @@ import { materializePhotos, saveDataUri } from '../utils/uploads.js';
 import { computeBadges } from '../utils/badges.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 import { communeParNom, communeDepuisTexte, communesValides } from '../services/communes.js';
+import { vuePubliquePrestataire } from '../services/confidentialite.js';
 import { offrirMoisProLancement } from '../services/plans.js';
 
 const router = Router();
@@ -251,8 +252,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       ? await Reservation.countDocuments({ prestataire_id: id, statut_id: statutTerminee._id })
       : 0;
 
-    res.json({
-      ...prestataire.toJSON(),
+    res.json(vuePubliquePrestataire(prestataire, {
       badges: computeBadges({
         is_verified: prestataire.is_verified,
         note_moyenne: prestataire.note_moyenne,
@@ -261,7 +261,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         prestations_terminees: prestationsTerminees,
       }),
       prestations_terminees: prestationsTerminees,
-    });
+    }));
   } catch (e: any) {
     serverError(res, e);
   }
