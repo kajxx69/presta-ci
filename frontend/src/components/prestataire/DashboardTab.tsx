@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '../ui/Skeleton';
 import { api } from '../../lib/api';
+import DemandeZone from './DemandeZone';
 import OpportunitesSection from './OpportunitesSection';
 
 interface DashboardTabProps {
@@ -249,6 +250,8 @@ export default function DashboardTab({ onNavigateToTab }: DashboardTabProps) {
       <div className="px-4 space-y-6 max-w-6xl mx-auto">
 
       {/* Opportunités Demande Express — en premier : c'est du business qui attend */}
+      <DemandeZone onNavigateToTab={onNavigateToTab} />
+
       <OpportunitesSection onNavigateToTab={onNavigateToTab} hasActiveServices={stats.services_actifs > 0} />
 
       {/* Analyse d'activité */}

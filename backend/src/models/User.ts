@@ -42,6 +42,8 @@ userSchema.pre('save', async function () {
   this.updated_at = new Date();
 });
 
+userSchema.index({ commune: 1 });
+
 export const User = mongoose.model('User', userSchema);
 
 // --- UserSession ---

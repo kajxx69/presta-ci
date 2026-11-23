@@ -14,6 +14,7 @@ import { User, PaiementEnLigne } from '../models/index.js';
 import { etatGeniusPay } from '../utils/geniuspay.js';
 import { placesOffreRestantes, PLACES_OFFRE_LANCEMENT } from '../services/plans.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
+import { demandeDansMaZone } from '../services/demande.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
@@ -312,6 +313,17 @@ router.delete('/:id(\\d+)/offre', requireAuth, async (req: any, res: Response) =
   } catch (e) {
     if (e instanceof ErreurOffre) return res.status(e.status).json({ error: e.message });
     serverError(res, e, 'modeles/offre-delete');
+  }
+});
+
+// GET /api/modeles/demande-zone — pro : ce que les clientes de sa zone ont aimé cette semaine
+router.get('/demande-zone', requireAuth, async (req: any, res: Response) => {
+  try {
+    const d = await demandeDansMaZone(req.userId);
+    if (!d) return res.status(404).json({ error: 'Compte pro introuvable' });
+    res.json(d);
+  } catch (e) {
+    serverError(res, e, 'modeles/demande-zone');
   }
 });
 

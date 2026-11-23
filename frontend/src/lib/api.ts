@@ -7,6 +7,13 @@ export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 's
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; proche?: { distance_km: number; distance_approx: boolean; commune: string | null } }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean; zones_deplacement?: string[]; frais_deplacement?: number; vient_chez_moi?: boolean | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
+export interface DemandeZone {
+  zones: string[]; commune: string | null; periode_jours: number; est_pro: boolean;
+  clientes: number; clientes_semaine_precedente: number; likes: number;
+  par_categorie: { categorie: CategorieModele; likes: number }[];
+  top_modeles: { modele: Modele; clientes: number; je_le_propose: boolean }[];
+  top_masques: number;
+}
 export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; nb_offres_total?: number; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
@@ -596,6 +603,8 @@ export const api = {
       http(`/api/modeles/${id}/offre`, { method: 'POST', body: JSON.stringify(body) }),
     retirerOffre: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/${id}/offre`, { method: 'DELETE' }),
     mesOffres: (): Promise<{ modeles: Modele[] }> => http('/api/modeles/mes-offres'),
+    /** Pro : ce que les clientes de sa zone ont aimé cette semaine */
+    demandeZone: (): Promise<DemandeZone> => http('/api/modeles/demande-zone'),
     parIds: (ids: number[]): Promise<{ modeles: Modele[] }> =>
       http('/api/modeles/par-ids', { method: 'POST', body: JSON.stringify({ ids }) }),
     swipe: (id: number, action: 'like' | 'pass'): Promise<{ ok: boolean }> =>
