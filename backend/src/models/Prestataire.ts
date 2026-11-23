@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { getNextId } from './Counter.js';
+import { communeDepuisTexte } from '../services/communes.js';
 
 const prestataireSchema = new mongoose.Schema({
   _id: { type: Number },
@@ -8,6 +9,8 @@ const prestataireSchema = new mongoose.Schema({
   bio: String,
   adresse: String,
   ville: String,
+  // Commune normalisée (liste services/communes.ts) — filtres et distance approximative
+  commune: { type: String, default: null },
   pays: { type: String, default: "Côte d'Ivoire" },
   latitude: Number,
   longitude: Number,
@@ -61,6 +64,7 @@ prestataireSchema.pre('save', async function () {
     this._id = await getNextId('prestataires');
   }
   syncLocation(this);
+  if (!this.commune) this.commune = communeDepuisTexte(this.ville)?.nom || communeDepuisTexte(this.adresse)?.nom || null;
   this.updated_at = new Date();
 });
 
@@ -72,10 +76,15 @@ prestataireSchema.pre('updateOne', function () {
   if (typeof target.latitude === 'number' && typeof target.longitude === 'number') {
     target.location = { type: 'Point', coordinates: [target.longitude, target.latitude] };
   }
+  // Ville modifiée sans commune explicite : on la déduit du texte
+  if (typeof target.ville === 'string' && target.commune === undefined) {
+    target.commune = communeDepuisTexte(target.ville)?.nom || communeDepuisTexte(target.adresse)?.nom || null;
+  }
 });
 
 prestataireSchema.index({ latitude: 1, longitude: 1 });
 prestataireSchema.index({ ville: 1, is_verified: 1 });
+prestataireSchema.index({ commune: 1 });
 prestataireSchema.index({ location: '2dsphere' });
 
 export const Prestataire = mongoose.model('Prestataire', prestataireSchema);

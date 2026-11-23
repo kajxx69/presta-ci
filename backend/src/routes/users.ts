@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { User } from '../models/index.js';
 import { getUserIdFromSession } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
+import { communeParNom, communeDepuisTexte } from '../services/communes.js';
 import { materializePhotos } from '../utils/uploads.js';
 
 const router = express.Router();
@@ -12,7 +13,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const userId = await getUserIdFromSession(req);
     if (!userId) return res.json({ user: null, authenticated: false });
 
-    const user = await User.findById(userId).select('email nom prenom telephone ville photo_profil role_id');
+    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id');
     if (!user) return res.json({ user: null, authenticated: false });
 
     res.json({ user: user.toJSON(), authenticated: true });
@@ -52,12 +53,15 @@ router.put('/me', async (req: Request, res: Response) => {
     const userId = await getUserIdFromSession(req);
     if (!userId) return res.status(401).json({ error: 'Non authentifié' });
 
-    const { nom, prenom, telephone, ville, photo_profil } = req.body || {};
+    const { nom, prenom, telephone, ville, commune, photo_profil } = req.body || {};
     const update: any = { updated_at: new Date() };
     if (nom !== undefined) update.nom = nom;
     if (prenom !== undefined) update.prenom = prenom;
     if (telephone !== undefined) update.telephone = telephone;
     if (ville !== undefined) update.ville = ville;
+    // « Ma commune » : nom exact de la liste, sinon déduite de la ville saisie
+    if (commune !== undefined) update.commune = commune ? (communeParNom(commune)?.nom ?? null) : null;
+    else if (ville !== undefined) update.commune = communeDepuisTexte(ville)?.nom ?? null;
     if (photo_profil !== undefined) {
       try {
         update.photo_profil = photo_profil ? await materializePhotos(photo_profil) : photo_profil;
@@ -67,7 +71,7 @@ router.put('/me', async (req: Request, res: Response) => {
     }
 
     await User.updateOne({ _id: userId }, update);
-    const user = await User.findById(userId).select('email nom prenom telephone ville photo_profil role_id');
+    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id');
     res.json({ user: user?.toJSON() });
   } catch (e: any) {
     serverError(res, e);

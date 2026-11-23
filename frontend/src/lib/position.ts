@@ -1,0 +1,72 @@
+import { create } from 'zustand';
+import { api } from './api';
+import { useAuthStore } from '../store/authStore';
+
+// Où se trouve la cliente, pour classer les pros « les plus proches d'abord ».
+// Soit la position GPS (demandée seulement quand elle appuie sur « Ma position »),
+// soit la commune choisie dans la liste. Mémorisé sur ce téléphone uniquement.
+
+const CLE = 'chicly-position';
+
+interface EtatPosition {
+  commune: string | null;
+  gps: { lat: number; lng: number } | null;
+  enCours: boolean;
+  choisirCommune: (c: string | null) => void;
+  utiliserGPS: () => Promise<boolean>;
+  oublierGPS: () => void;
+}
+
+function lire(): { commune: string | null; gps: { lat: number; lng: number } | null } {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLE) || 'null');
+    if (v && typeof v === 'object') return { commune: typeof v.commune === 'string' ? v.commune : null, gps: v.gps && Number.isFinite(v.gps.lat) && Number.isFinite(v.gps.lng) ? v.gps : null };
+  } catch { /* stockage indisponible */ }
+  return { commune: null, gps: null };
+}
+function ecrire(commune: string | null, gps: { lat: number; lng: number } | null) {
+  try { localStorage.setItem(CLE, JSON.stringify({ commune, gps })); } catch { /* stockage indisponible */ }
+}
+
+export const usePosition = create<EtatPosition>((set, get) => ({
+  ...lire(),
+  enCours: false,
+  choisirCommune: (commune) => {
+    // Choisir une commune remplace la position GPS
+    set({ commune, gps: null });
+    ecrire(commune, null);
+    const auth = useAuthStore.getState();
+    if (auth.isAuthenticated && auth.user) {
+      useAuthStore.setState({ user: { ...auth.user, commune } as any });
+      api.users.updateMe({ commune: commune || '' }).catch(() => {});
+    }
+  },
+  utiliserGPS: () => new Promise<boolean>((resolve) => {
+    if (!('geolocation' in navigator)) { resolve(false); return; }
+    set({ enCours: true });
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const gps = { lat: Math.round(p.coords.latitude * 1e4) / 1e4, lng: Math.round(p.coords.longitude * 1e4) / 1e4 };
+        set({ gps, enCours: false });
+        ecrire(get().commune, gps);
+        resolve(true);
+      },
+      () => { set({ enCours: false }); resolve(false); },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
+    );
+  }),
+  oublierGPS: () => { set({ gps: null }); ecrire(get().commune, null); },
+}));
+
+/** Commune du compte, si rien n'est encore choisi sur ce téléphone. */
+export function communeParDefaut(): string | null {
+  const u: any = useAuthStore.getState().user;
+  return u?.commune || null;
+}
+
+/** Paramètres à envoyer à l'API (GPS prioritaire, sinon commune). */
+export function paramsPosition(etat: { commune: string | null; gps: { lat: number; lng: number } | null }): { lat?: number; lng?: number; commune?: string } {
+  if (etat.gps) return { lat: etat.gps.lat, lng: etat.gps.lng };
+  const commune = etat.commune || communeParDefaut();
+  return commune ? { commune } : {};
+}

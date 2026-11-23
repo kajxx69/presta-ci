@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { migrerPlansGratuitPro } from './services/plans.js';
+import { remplirCommunes } from './services/communes-migration.js';
 
 dotenv.config();
 
@@ -77,6 +78,7 @@ export async function connectDB() {
   await mongoose.connect(MONGODB_URI);
   await bootstrapSubCategories();
   await migrerPlansGratuitPro();
+  await remplirCommunes();
 }
 
 export async function ping() {

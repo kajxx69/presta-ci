@@ -10,6 +10,7 @@ export interface User {
   date_naissance?: string;
   genre?: 'M' | 'F' | 'Autre';
   ville?: string;
+  commune?: string | null;
   pays: string;
   langue_preferee: string;
   is_active: boolean;

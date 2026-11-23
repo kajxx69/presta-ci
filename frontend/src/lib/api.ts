@@ -6,7 +6,7 @@ export interface ApiService { id: number; prestataire_id: number; sous_categorie
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
-export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
+export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
 export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
@@ -132,7 +132,7 @@ export const api = {
       http('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password }) }),
   },
   prestataires: {
-    devenirPro: (payload: { nom_commercial: string; ville: string; adresse?: string; telephone_pro?: string }): Promise<{ ok: boolean; token: string; user: any }> =>
+    devenirPro: (payload: { nom_commercial: string; ville: string; commune?: string; quartier?: string; adresse?: string; telephone_pro?: string }): Promise<{ ok: boolean; token: string; user: any }> =>
       http('/api/prestataires/devenir', { method: 'POST', body: JSON.stringify(payload) }),
     setup: (payload: {
       nom_commercial: string;
@@ -195,7 +195,7 @@ export const api = {
   users: {
     getMe: (): Promise<{ user: any }> => http('/api/users/me'),
     getParrainage: (): Promise<{ code: string; filleuls: number }> => http('/api/users/me/parrainage'),
-    updateMe: (payload: { nom?: string; prenom?: string; telephone?: string; ville?: string; photo_profil?: string }): Promise<{ user: any }> =>
+    updateMe: (payload: { nom?: string; prenom?: string; telephone?: string; ville?: string; commune?: string; photo_profil?: string }): Promise<{ user: any }> =>
       http('/api/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   },
   dashboard: {
@@ -571,14 +571,22 @@ export const api = {
   modeles: {
     feed: (body: { categorie?: string; q?: string; exclude?: number[] }): Promise<{ modeles: Modele[] }> =>
       http('/api/modeles/feed', { method: 'POST', body: JSON.stringify(body) }),
-    recherche: (params: { q?: string; categorie?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
+    recherche: (params: { q?: string; categorie?: string; commune?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
       const q = new URLSearchParams();
       if (params.q) q.append('q', params.q);
       if (params.categorie) q.append('categorie', params.categorie);
+      if (params.commune) q.append('commune', params.commune);
       if (params.page) q.append('page', String(params.page));
       return http(`/api/modeles/recherche?${q.toString()}`);
     },
-    detail: (id: number): Promise<DetailModele> => http(`/api/modeles/${id}`),
+    /** Détail + pros qui le font ; avec une position, les plus proches d'abord */
+    detail: (id: number, pos?: { lat?: number; lng?: number; commune?: string }): Promise<DetailModele> => {
+      const q = new URLSearchParams();
+      if (pos?.lat != null && pos?.lng != null) { q.append('lat', String(pos.lat)); q.append('lng', String(pos.lng)); }
+      else if (pos?.commune) q.append('commune', pos.commune);
+      const qs = q.toString();
+      return http(`/api/modeles/${id}${qs ? `?${qs}` : ''}`);
+    },
     proposer: (id: number, body: { prix?: number; duree_minutes?: number; is_domicile?: boolean; service_id?: number }): Promise<{ ok: boolean; service_id: number; mis_a_jour: boolean }> =>
       http(`/api/modeles/${id}/offre`, { method: 'POST', body: JSON.stringify(body) }),
     retirerOffre: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/${id}/offre`, { method: 'DELETE' }),

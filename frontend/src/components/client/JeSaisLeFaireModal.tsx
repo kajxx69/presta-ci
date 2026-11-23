@@ -7,6 +7,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import ModeleVisuel from './ModeleVisuel';
 import { useOffreLancement } from '../../lib/offreLancement';
+import ChoixCommune from '../common/ChoixCommune';
+import { usePosition } from '../../lib/position';
 
 interface Props {
   modele: Modele | null;
@@ -40,6 +42,8 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
   const [domicile, setDomicile] = useState(false);
   const [salon, setSalon] = useState('');
   const [quartier, setQuartier] = useState('');
+  const communeMemo = usePosition((e) => e.commune);
+  const [commune, setCommune] = useState<string | null>(null);
   const [tel, setTel] = useState('');
   const [envoi, setEnvoi] = useState(false);
 
@@ -49,7 +53,8 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
     setDuree(offreActuelle?.duree_minutes || (modele.categorie === 'coiffure' ? 240 : 60));
     setDomicile(!!offreActuelle?.is_domicile);
     setTel((t) => t || (user as any)?.telephone || '');
-  }, [modele, offreActuelle, user]);
+    setCommune((c) => c || (user as any)?.commune || communeMemo || null);
+  }, [modele, offreActuelle, user, communeMemo]);
 
   const valider = async () => {
     if (!modele) return;
@@ -59,8 +64,9 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
     try {
       let nouvelleSession: { token: string; user: any } | null = null;
       if (!estPro) {
-        if (salon.trim().length < 2 || quartier.trim().length < 2) { showToast('Indique le nom de ton salon et ton quartier', 'error'); setEnvoi(false); return; }
-        const r = await api.prestataires.devenirPro({ nom_commercial: salon.trim(), ville: quartier.trim(), telephone_pro: tel.trim() || undefined });
+        if (salon.trim().length < 2) { showToast('Indique le nom de ton salon', 'error'); setEnvoi(false); return; }
+        if (!commune) { showToast('Choisis ta commune : les clientes proches te verront en premier 📍', 'error'); setEnvoi(false); return; }
+        const r = await api.prestataires.devenirPro({ nom_commercial: salon.trim(), commune, ville: commune, quartier: quartier.trim() || undefined, telephone_pro: tel.trim() || undefined });
         nouvelleSession = { token: r.token, user: r.user };
         // Le jeton est lu dans le stockage par chaque requête : on l'écrit tout de suite
         localStorage.setItem('prestaci-auth', JSON.stringify({ user: r.user, role: { id: 2, nom: 'prestataire', description: '', created_at: '' }, token: r.token }));
@@ -120,11 +126,13 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
                       <input value={salon} onChange={(e) => setSalon(e.target.value)} placeholder="Nom de ton salon (ou « Coiffure par Awa »)"
                         className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none" />
                       <div className="grid grid-cols-2 gap-2">
-                        <input value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder="Quartier (ex. Yopougon)"
-                          className="px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none" />
-                        <input value={tel} onChange={(e) => setTel(e.target.value)} placeholder="Téléphone" inputMode="tel"
+                        <ChoixCommune valeur={commune} onChange={setCommune} vide="Ta commune" />
+                        <input value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder="Quartier (ex. Angré)"
                           className="px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none" />
                       </div>
+                      <input value={tel} onChange={(e) => setTel(e.target.value)} placeholder="Téléphone" inputMode="tel"
+                        className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none" />
+                      <p className="text-xs text-amber-800/80 dark:text-amber-200/70">📍 Les clientes de ta commune te verront en premier.</p>
                     </div>
                   )}
 

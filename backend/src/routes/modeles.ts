@@ -3,7 +3,8 @@ import {
   Modele, ModeleSwipe, CATEGORIES_MODELE, Prestataire, Service, SubCategory, Category, TableauPinterest,
 } from '../models/index.js';
 import { tableauPinterestValide, epinglePinterestValide } from '../utils/liens.js';
-import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre } from '../services/offres.js';
+import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre, infoDistance, comparerProximite, cleOffre } from '../services/offres.js';
+import { positionDepuisRequete, communeParNom } from '../services/communes.js';
 import { OffreModele } from '../models/index.js';
 import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
@@ -62,7 +63,16 @@ router.post('/feed', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/modeles/recherche?q=&categorie=&page= — grille de résultats
+/** Modèles réservables dans une commune : vraies photos de ses pros + modèles qu'elles proposent. */
+async function filtreCommune(nom: unknown): Promise<Record<string, any> | null> {
+  const c = communeParNom(nom);
+  if (!c) return null;
+  const pros = (await Prestataire.find({ commune: c.nom, is_active: { $ne: false } }).select('_id')).map(p => p._id as number);
+  const viaOffres = pros.length ? await OffreModele.distinct('modele_id', { prestataire_id: { $in: pros } }) : [];
+  return { $or: [{ source: 'prestataire', prestataire_id: { $in: pros } }, { _id: { $in: viaOffres } }] };
+}
+
+// GET /api/modeles/recherche?q=&categorie=&commune=&page= — grille de résultats
 router.get('/recherche', async (req: Request, res: Response) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page || '1')) || 1);
@@ -70,6 +80,8 @@ router.get('/recherche', async (req: Request, res: Response) => {
     const match: Record<string, any> = { is_active: true };
     if (estCategorie(req.query.categorie)) match.categorie = req.query.categorie;
     if (typeof req.query.q === 'string' && req.query.q.trim()) Object.assign(match, filtreRecherche(req.query.q));
+    const parCommune = await filtreCommune(req.query.commune);
+    if (parCommune) match.$and = [...(match.$and || []), parCommune];
 
     const [modeles, total] = await Promise.all([
       Modele.find(match).select(CHAMPS_PUBLICS).sort({ source: -1, nombre_likes: -1, created_at: -1 }).skip((page - 1) * limit).limit(limit),
@@ -157,11 +169,12 @@ router.get('/mes-likes', requireAuth, async (req: any, res: Response) => {
   }
 });
 
-// GET /api/modeles/:id — détail + « Où le faire ? »
+// GET /api/modeles/:id?lat=&lng=|commune= — détail + « Où le faire ? » (les plus proches d'abord si position)
 router.get('/:id(\\d+)', async (req: Request, res: Response) => {
   try {
     const modele = await Modele.findOne({ _id: Number(req.params.id) }).select(`${CHAMPS_PUBLICS} recherche is_active`);
     if (!modele) return res.status(404).json({ error: 'Modèle introuvable' });
+    const pos = positionDepuisRequete(req.query as Record<string, unknown>);
 
     // Sous-catégories de la même famille (coiffure, ongles…)
     const [cats, sous] = await Promise.all([Category.find({ is_active: { $ne: false } }).select('nom'), SubCategory.find({ is_active: { $ne: false } }).select('nom categorie_id')]);
@@ -176,7 +189,7 @@ router.get('/:id(\\d+)', async (req: Request, res: Response) => {
 
     const prestIds = [...new Set(services.map(s => s.prestataire_id))];
     const prestataires = await Prestataire.find({ _id: { $in: prestIds }, is_active: { $ne: false } })
-      .select('nom_commercial ville note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at');
+      .select('nom_commercial ville commune adresse latitude longitude note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at');
     const prestById = new Map(prestataires.map(p => [p._id as number, p]));
     const now = Date.now();
     const premium = (p: any) => p.plan_actuel_id && p.plan_actuel_id !== 1 && p.abonnement_expires_at && new Date(p.abonnement_expires_at).getTime() > now;
@@ -191,28 +204,36 @@ router.get('/:id(\\d+)', async (req: Request, res: Response) => {
     }
 
     // 1) Ceux qui se sont proposés pour CE modèle (+ le salon dont c'est la vraie photo)
-    const offres = await offresDuModele(modele._id as number);
+    const offres = await offresDuModele(modele._id as number, pos);
     if (modele.source === 'prestataire' && modele.service_id && modele.prestataire_id && !offres.some(o => o.prestataire.id === modele.prestataire_id)) {
       const s: any = await Service.findOne({ _id: modele.service_id, is_active: true, deleted_at: null }).select('nom prix duree_minutes is_domicile');
       const p: any = prestById.get(modele.prestataire_id) || await Prestataire.findOne({ _id: modele.prestataire_id, is_active: { $ne: false } });
       if (s && p) offres.unshift({
-        prestataire: { id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis, is_verified: p.is_verified, photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null },
+        prestataire: { id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis, is_verified: p.is_verified, is_pro: premium(p), photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null, ...infoDistance(p, pos) },
         service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
       });
     }
+    if (pos) offres.sort((a, b) => comparerProximite(cleOffre(a), cleOffre(b)));
     const dejaListes = new Set(offres.map(o => o.prestataire.id));
 
     // 2) Salons qui font des styles proches (même famille), en complément
     let ou = [...meilleur.entries()].filter(([pid]) => !dejaListes.has(pid)).map(([pid, { service, score: sc }]) => {
       const p: any = prestById.get(pid);
       const photo = Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] : null;
+      const info = infoDistance(p, pos);
       return {
-        prestataire: { id: pid, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis, is_verified: p.is_verified, photo },
+        prestataire: { id: pid, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis, is_verified: p.is_verified, photo, ...info },
         service: { id: service._id, nom: service.nom, prix: service.prix },
         _rang: (pid === modele.prestataire_id ? 100 : 0) + sc * 10 + (premium(p) ? 5 : 0) + (p.note_moyenne || 0),
       };
     });
     ou.sort((a, b) => b._rang - a._rang);
+    if (pos) {
+      // Position connue : les 5 plus proches parmi les 15 plus pertinentes
+      ou = ou.slice(0, 15).sort((a, b) => comparerProximite(
+        { ...cleOffre(a), pro: premium(prestById.get(a.prestataire.id)) },
+        { ...cleOffre(b), pro: premium(prestById.get(b.prestataire.id)) }));
+    }
     ou = ou.slice(0, 5);
 
     // 3) Le visiteur est-il prestataire, et s'est-il déjà proposé ?

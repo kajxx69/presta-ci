@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   prenom: { type: String, required: true },
   telephone: String,
   ville: String,
+  // Commune choisie (« Ma commune ») — liste services/communes.ts
+  commune: { type: String, default: null },
   photo_profil: String,
   is_active: { type: Boolean, default: true },
   // Suppression douce par l'admin : le compte disparaît des listes et son email

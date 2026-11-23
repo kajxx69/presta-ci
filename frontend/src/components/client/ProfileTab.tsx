@@ -35,6 +35,8 @@ import HelpSupportTab from './HelpSupportTab';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import ChoixCommune from '../common/ChoixCommune';
+import { COMMUNES } from '../../lib/communes';
 import { Skeleton } from '../ui/Skeleton';
 
 interface ProfileFormData {
@@ -425,7 +427,7 @@ export default function ProfileTab() {
           <p className="text-white/80 text-sm font-medium">Membre Chicly</p>
           <div className="flex items-center justify-center mt-1.5 gap-1.5 text-white/70 text-sm">
             <MapPin className="w-3.5 h-3.5" />
-            <span>{user?.ville || 'Ville non renseignée'}</span>
+            <span>{user?.commune || user?.ville || 'Commune non renseignée'}</span>
           </div>
         </motion.div>
       </div>
@@ -548,17 +550,12 @@ export default function ProfileTab() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Ville</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={editData.ville}
-                      onChange={e => setEditData(d => ({ ...d, ville: e.target.value }))}
-                      placeholder="Abidjan, Bouaké, San-Pédro..."
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
-                    />
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Ma commune</label>
+                  <ChoixCommune
+                    valeur={COMMUNES.includes(editData.ville) ? editData.ville : (user?.commune || null)}
+                    onChange={c => setEditData(d => ({ ...d, ville: c || '' }))}
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Pour voir en premier les pros près de chez toi.</p>
                 </div>
 
                 <div className="flex gap-3 pt-1">
@@ -600,7 +597,7 @@ export default function ProfileTab() {
                   { icon: <span className="text-base">👤</span>, label: 'Nom complet', value: `${user?.prenom || ''} ${user?.nom || ''}`.trim() || undefined },
                   { icon: <Mail className="w-4 h-4 text-gray-400" />, label: 'Email', value: user?.email },
                   { icon: <Phone className="w-4 h-4 text-gray-400" />, label: 'Téléphone', value: user?.telephone },
-                  { icon: <MapPin className="w-4 h-4 text-gray-400" />, label: 'Ville', value: user?.ville },
+                  { icon: <MapPin className="w-4 h-4 text-gray-400" />, label: 'Commune', value: user?.commune || user?.ville },
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">

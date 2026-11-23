@@ -1,6 +1,7 @@
 import { Modele, OffreModele, Service, Prestataire, SubCategory, Category } from '../models/index.js';
 import { categorieModelePour, normaliser } from './modeles-sync.js';
 import { planEffectif, estPro } from './plans.js';
+import { positionPrestataire, distanceKm, Point } from './communes.js';
 
 // « Je sais le faire » : un prestataire se propose pour un modèle du fil.
 // L'offre relie le modèle à un service réservable (prix, durée) du prestataire.
@@ -87,7 +88,10 @@ export async function retirerOffre(userId: number, modeleId: number) {
 }
 
 interface OffreAffichee {
-  prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null };
+  prestataire: {
+    id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null;
+    commune?: string | null; distance_km?: number | null; distance_approx?: boolean;
+  };
   service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean };
 }
 
@@ -98,7 +102,7 @@ async function offresValides(modeleIds: number[]) {
   const [services, prestataires] = await Promise.all([
     Service.find({ _id: { $in: offres.map(o => o.service_id) }, is_active: true, deleted_at: null }).select('nom prix duree_minutes is_domicile prestataire_id'),
     Prestataire.find({ _id: { $in: [...new Set(offres.map(o => o.prestataire_id))] }, is_active: { $ne: false } })
-      .select('nom_commercial ville note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at'),
+      .select('nom_commercial ville commune adresse latitude longitude note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at'),
   ]);
   const sMap = new Map(services.map(s => [s._id as number, s]));
   const pMap = new Map(prestataires.map(p => [p._id as number, p]));
@@ -121,16 +125,40 @@ export async function enrichirOffres(modeles: any[]): Promise<any[]> {
   });
 }
 
-/** Prestataires qui se sont proposés pour ce modèle (abonnés et mieux notés d'abord). */
-export async function offresDuModele(modeleId: number): Promise<OffreAffichee[]> {
+/** Commune et distance d'une pro par rapport à la cliente (distance null si l'une des deux positions manque). */
+export function infoDistance(p: any, pos: Point | null): { commune: string | null; distance_km: number | null; distance_approx: boolean } {
+  const pp = positionPrestataire(p);
+  const commune = p.commune || null;
+  if (!pos || !pp) return { commune, distance_km: null, distance_approx: false };
+  const d = distanceKm(pos.lat, pos.lng, pp.lat, pp.lng);
+  return { commune, distance_km: Math.round(d * 10) / 10, distance_approx: pos.approx || pp.approx };
+}
+
+/** Tri « les plus proches d'abord » : par km entier, puis Pro, puis note. Sans position : Pro puis note. */
+export interface CleProximite { pro: boolean; note: number; d: number | null }
+export function comparerProximite(a: CleProximite, b: CleProximite): number {
+  const da = a.d ?? Infinity, db = b.d ?? Infinity;
+  const ka = Number.isFinite(da) ? Math.floor(da) : Infinity, kb = Number.isFinite(db) ? Math.floor(db) : Infinity;
+  if (ka !== kb) return ka < kb ? -1 : 1;
+  return (Number(b.pro) - Number(a.pro)) || (b.note - a.note) || (Number.isFinite(da) && Number.isFinite(db) ? da - db : 0);
+}
+/** Clé de tri d'une offre affichée. */
+export const cleOffre = (o: { prestataire: { is_pro?: boolean; note_moyenne?: number; distance_km?: number | null } }): CleProximite =>
+  ({ pro: !!o.prestataire.is_pro, note: o.prestataire.note_moyenne || 0, d: o.prestataire.distance_km ?? null });
+
+/** Prestataires qui se sont proposés pour ce modèle — les plus proches d'abord si la position de la cliente est connue. */
+export async function offresDuModele(modeleId: number, pos: Point | null = null): Promise<OffreAffichee[]> {
   const { offres, services, prestataires } = await offresValides([modeleId]);
   return offres
-    .map(o => ({ o, p: prestataires.get(o.prestataire_id), s: services.get(o.service_id) }))
-    .sort((a, b) => (Number(estPro(b.p)) - Number(estPro(a.p))) || ((b.p.note_moyenne || 0) - (a.p.note_moyenne || 0)))
-    .map(({ p, s }) => ({
+    .map(o => { const p = prestataires.get(o.prestataire_id); const info = infoDistance(p, pos); return { p, s: services.get(o.service_id), info }; })
+    .sort((a, b) => comparerProximite(
+      { pro: estPro(a.p), note: a.p.note_moyenne || 0, d: a.info.distance_km },
+      { pro: estPro(b.p), note: b.p.note_moyenne || 0, d: b.info.distance_km }))
+    .map(({ p, s, info }) => ({
       prestataire: {
         id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis,
         is_verified: p.is_verified, is_pro: estPro(p), photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null,
+        ...info,
       },
       service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
     }));

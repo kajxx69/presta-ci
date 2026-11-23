@@ -6,6 +6,7 @@ import { useFavoris } from '../../lib/useFavoris';
 import { CATEGORIES } from './DiscoverTab';
 import ModeleGrid from './ModeleGrid';
 import ModeleDetailSheet from './ModeleDetailSheet';
+import ChoixCommune from '../common/ChoixCommune';
 
 const SUGGESTIONS = ['Knotless', 'Nattes collées', 'Locks', 'Tissage', 'Perruque', 'Box braids', 'Twists', 'Nail art', 'French', 'Gel', 'Maquillage mariée', 'Faux cils'];
 
@@ -14,6 +15,8 @@ export default function SearchTab() {
   const [saisie, setSaisie] = useState(params.get('q') || '');
   const [q, setQ] = useState(params.get('q') || '');
   const [categorie, setCategorie] = useState<CategorieModele | ''>('');
+  // « Ma commune » : seulement les modèles réservables chez une pro de cette commune
+  const [commune, setCommune] = useState<string | null>(null);
   const [resultats, setResultats] = useState<Modele[]>([]);
   const [page, setPage] = useState(1);
   const [plus, setPlus] = useState(false);
@@ -33,16 +36,16 @@ export default function SearchTab() {
   useEffect(() => {
     let annule = false;
     setChargement(true);
-    api.modeles.recherche({ q: q || undefined, categorie: categorie || undefined, page: 1 })
+    api.modeles.recherche({ q: q || undefined, categorie: categorie || undefined, commune: commune || undefined, page: 1 })
       .then((r) => { if (!annule) { setResultats(r.modeles); setTotal(r.total); setPlus(r.hasMore); setPage(1); } })
       .catch(() => {})
       .finally(() => { if (!annule) setChargement(false); });
     if (q) setParams({ q }, { replace: true }); else if (params.get('q')) setParams({}, { replace: true });
     return () => { annule = true; };
-  }, [q, categorie]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, categorie, commune]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const suite = async () => {
-    const r = await api.modeles.recherche({ q: q || undefined, categorie: categorie || undefined, page: page + 1 });
+    const r = await api.modeles.recherche({ q: q || undefined, categorie: categorie || undefined, commune: commune || undefined, page: page + 1 });
     setResultats((x) => [...x, ...r.modeles]);
     setPlus(r.hasMore);
     setPage(page + 1);
@@ -66,6 +69,10 @@ export default function SearchTab() {
         )}
       </div>
 
+      <div className="flex items-center gap-2">
+        <ChoixCommune compact valeur={commune} onChange={setCommune} vide="📍 Partout" className="w-44" />
+      </div>
+
       <div className="flex gap-2 overflow-x-auto -mx-4 px-4 scrollbar-hide">
         {CATEGORIES.map((c) => (
           <button key={c.id || 'tout'} onClick={() => setCategorie(c.id)}
@@ -87,8 +94,8 @@ export default function SearchTab() {
         </div>
       )}
 
-      {q && !chargement && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{total} modèle{total > 1 ? 's' : ''} pour « {q} »</p>
+      {(q || commune) && !chargement && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">{total} modèle{total > 1 ? 's' : ''}{q ? ` pour « ${q} »` : ''}{commune ? ` à ${commune}` : ''}</p>
       )}
 
       {chargement && resultats.length === 0 ? (
@@ -98,7 +105,8 @@ export default function SearchTab() {
       ) : resultats.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <p className="text-4xl mb-2">🔍</p>
-          <p>Aucun modèle trouvé. Essaie un autre mot.</p>
+          <p>{commune ? `Aucun modèle réservable à ${commune} pour l'instant.` : 'Aucun modèle trouvé. Essaie un autre mot.'}</p>
+          {commune && <button onClick={() => setCommune(null)} className="mt-3 text-sm font-semibold text-pink-600">Voir partout</button>}
         </div>
       ) : (
         <>

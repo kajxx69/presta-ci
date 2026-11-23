@@ -6,6 +6,7 @@ import { serverError } from '../utils/http.js';
 import { materializePhotos, saveDataUri } from '../utils/uploads.js';
 import { computeBadges } from '../utils/badges.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
+import { communeParNom, communeDepuisTexte } from '../services/communes.js';
 import { offrirMoisProLancement } from '../services/plans.js';
 
 const router = Router();
@@ -36,7 +37,7 @@ router.get('/profile', requireAuth, async (req: Request, res: Response) => {
 router.put('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { nom_commercial, bio, adresse, ville, pays, latitude, longitude, telephone_pro, horaires_ouverture, photos_etablissement } = req.body;
+    const { nom_commercial, bio, adresse, ville, commune, pays, latitude, longitude, telephone_pro, horaires_ouverture, photos_etablissement } = req.body;
 
     if (!nom_commercial) return res.status(400).json({ error: 'Le nom commercial est requis.' });
 
@@ -54,6 +55,7 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
 
     await Prestataire.updateOne({ user_id: userId }, {
       nom_commercial, bio, adresse, ville, pays,
+      ...(commune !== undefined ? { commune: communeParNom(commune)?.nom ?? null } : {}),
       latitude, longitude, telephone_pro,
       horaires_ouverture: horaires_ouverture || existing.horaires_ouverture,
       photos_etablissement: parsedPhotos,
@@ -116,7 +118,10 @@ router.post('/devenir', requireAuth, async (req: any, res: Response) => {
     if (user.role_id === 3) return res.status(400).json({ error: 'Un compte administrateur ne peut pas devenir prestataire' });
 
     const nom_commercial = String(req.body?.nom_commercial || '').trim().slice(0, 80);
-    const ville = String(req.body?.ville || '').trim().slice(0, 80);
+    // Commune choisie dans la liste ; « ville » reste le texte libre (quartier) pour l'affichage
+    const commune = communeParNom(req.body?.commune) || communeDepuisTexte(req.body?.ville);
+    const quartier = String(req.body?.quartier || '').trim().slice(0, 80);
+    const ville = String(req.body?.ville || commune?.nom || '').trim().slice(0, 80);
     const adresse = String(req.body?.adresse || '').trim().slice(0, 200);
     const telephone_pro = String(req.body?.telephone_pro || '').trim().slice(0, 30);
     if (nom_commercial.length < 2) return res.status(400).json({ error: 'Indique le nom de ton salon (ou ton nom de coiffeuse)' });
@@ -124,7 +129,8 @@ router.post('/devenir', requireAuth, async (req: any, res: Response) => {
 
     if (!(await Prestataire.exists({ user_id: user._id }))) {
       const nouvellePro = await Prestataire.create({
-        user_id: user._id as number, nom_commercial, ville, adresse: adresse || ville,
+        user_id: user._id as number, nom_commercial, ville, commune: commune?.nom ?? null,
+        adresse: adresse || [quartier, ville].filter(Boolean).join(', '),
         telephone_pro: telephone_pro || user.telephone || undefined, pays: "Côte d'Ivoire",
       });
       await offrirMoisProLancement(nouvellePro._id as number, user._id as number);

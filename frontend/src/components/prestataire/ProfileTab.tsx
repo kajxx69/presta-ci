@@ -28,6 +28,7 @@ import PrivacyTab from '../client/PrivacyTab';
 import NotificationsSettingsTab from '../client/NotificationsSettingsTab';
 import HelpSupportTab from '../client/HelpSupportTab';
 import HorairesOuvertureEditor from './HorairesOuvertureEditor';
+import ChoixCommune from '../common/ChoixCommune';
 import PhotosEtablissementEditor from './PhotosEtablissementEditor';
 
 interface PrestataireProfile {
@@ -37,6 +38,7 @@ interface PrestataireProfile {
   bio: string | null;
   adresse: string | null;
   ville: string | null;
+  commune?: string | null;
   pays: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -56,7 +58,7 @@ const REQUIRED_FIELDS: Array<{ key: keyof PrestataireProfile; label: string; isA
   { key: 'bio', label: 'Description' },
   { key: 'telephone_pro', label: 'Téléphone professionnel' },
   { key: 'adresse', label: 'Adresse' },
-  { key: 'ville', label: 'Ville' },
+  { key: 'commune', label: 'Commune' },
   { key: 'horaires_ouverture', label: 'Horaires' },
   { key: 'photos_etablissement', label: 'Photos', isArray: true }
 ];
@@ -442,16 +444,15 @@ export default function ProfileTab() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 uppercase">Ville</label>
+                    <label className="text-xs text-gray-500 uppercase">Commune</label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        value={editData.ville || ''}
-                        onChange={(e) => setEditData({ ...editData, ville: e.target.value })}
-                        className="w-full mt-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5"
+                      <ChoixCommune
+                        className="mt-1"
+                        valeur={editData.commune || null}
+                        onChange={(c) => setEditData({ ...editData, commune: c, ville: c || editData.ville })}
                       />
                     ) : (
-                      <p className="mt-1 text-gray-800 dark:text-gray-200">{renderValue(profile?.ville)}</p>
+                      <p className="mt-1 text-gray-800 dark:text-gray-200">{renderValue(profile?.commune || profile?.ville)}</p>
                     )}
                   </div>
                   <div>

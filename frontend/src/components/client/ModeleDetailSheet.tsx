@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Heart, MapPin, Star, BadgeCheck, ChevronRight, Scissors, Home, ExternalLink } from 'lucide-react';
+import { X, Heart, MapPin, Star, BadgeCheck, ChevronRight, Scissors, Home, ExternalLink, LocateFixed, Loader2 } from 'lucide-react';
 import { api, Modele, DetailModele, OuLeFaire } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import ModeleVisuel from './ModeleVisuel';
 import JeSaisLeFaireModal from './JeSaisLeFaireModal';
+import ChoixCommune from '../common/ChoixCommune';
+import { usePosition, paramsPosition, communeParDefaut } from '../../lib/position';
+import { formatDistance } from '../../lib/communes';
 
 interface Props {
   modele: Modele | null;
@@ -19,8 +22,17 @@ interface Props {
 const fcfa = (n: number) => `${n.toLocaleString('fr-FR')} FCFA`;
 const duree = (min?: number | null) => (!min ? '' : min < 60 ? `${min} min` : `${Math.round(min / 60 * 10) / 10} h`.replace('.', ','));
 
+/** « 1,2 km · Cocody », « Dans ta commune », ou la ville saisie par la pro. */
+function lieu(p: OuLeFaire['prestataire']): string | null {
+  const lieuTexte = p.commune || p.ville || null;
+  if (p.distance_approx && p.distance_km != null && p.distance_km < 0.5) return p.commune ? `Dans ta commune · ${p.commune}` : 'Dans ta commune';
+  const d = formatDistance(p.distance_km, p.distance_approx);
+  return d ? [d, lieuTexte].filter(Boolean).join(' · ') : lieuTexte;
+}
+
 function LignePrestataire({ o, onReserver }: { o: OuLeFaire; onReserver: () => void }) {
   const { prestataire: p, service: s } = o;
+  const ou = lieu(p);
   return (
     <button onClick={onReserver}
       className="w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
@@ -28,18 +40,18 @@ function LignePrestataire({ o, onReserver }: { o: OuLeFaire; onReserver: () => v
         {p.photo ? <img src={p.photo} alt="" className="w-full h-full object-cover" /> : (p.nom_commercial || '?')[0]}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1">
-          {p.nom_commercial}{p.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+        <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-1 min-w-0">
+          <span className="truncate">{p.nom_commercial}</span>{p.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />}
           {p.is_pro && <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white">PRO ✨</span>}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-2">
-          {p.ville && <span className="inline-flex items-center gap-0.5"><MapPin className="w-3 h-3" />{p.ville}</span>}
+        {ou && <p className={`text-xs flex items-center gap-0.5 min-w-0 ${p.distance_km != null ? 'text-pink-700 dark:text-pink-300 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}><MapPin className="w-3 h-3 flex-shrink-0" /><span className="truncate">{ou}</span></p>}
+        <p className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2">
           {!!p.nombre_avis && <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{(p.note_moyenne || 0).toFixed(1)}</span>}
           {s.is_domicile && <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile</span>}
         </p>
         <p className="text-sm text-gray-800 dark:text-gray-200"><strong>{fcfa(s.prix)}</strong>{s.duree_minutes ? ` · ${duree(s.duree_minutes)}` : ''}</p>
       </div>
-      <span className="flex items-center text-sm font-semibold text-pink-600">Réserver<ChevronRight className="w-4 h-4" /></span>
+      <span className="flex-shrink-0 flex items-center text-sm font-semibold text-pink-600">Réserver<ChevronRight className="w-4 h-4" /></span>
     </button>
   );
 }
@@ -50,20 +62,30 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
   const { showToast } = useAppStore();
   const [detail, setDetail] = useState<DetailModele | null>(null);
   const [proposer, setProposer] = useState(false);
+  const { commune, gps, enCours, choisirCommune, utiliserGPS, oublierGPS } = usePosition();
+  const communeAffichee = commune || communeParDefaut();
 
   const charger = useCallback(() => {
     if (!modele) return;
-    api.modeles.detail(modele.id).then(setDetail).catch(() => setDetail(null));
-  }, [modele]);
+    api.modeles.detail(modele.id, paramsPosition({ commune, gps })).then(setDetail).catch(() => setDetail(null));
+  }, [modele, commune, gps]);
+
+  const maPosition = async () => {
+    if (!(await utiliserGPS())) showToast('Position indisponible. Choisis plutôt ta commune 📍', 'info');
+  };
 
   useEffect(() => {
     setDetail(null);
     setProposer(!!(modele && ouvrirProposition));
-    charger();
-  }, [modele, ouvrirProposition, charger]);
+  }, [modele, ouvrirProposition]);
+
+  // (Re)charger à l'ouverture et quand la position change
+  useEffect(() => { charger(); }, [charger]);
 
   const reserver = (serviceId: number) => { onClose(); navigate(`/services/${serviceId}`); };
   const monOffre = detail?.mon_offre ? detail.offres.find((o) => o.service.id === detail.mon_offre!.service_id) : null;
+  const autres = detail ? detail.offres.filter((o) => o !== monOffre) : [];
+  const plusProche = autres.find((o) => o.prestataire.distance_km != null);
 
   const retirer = async () => {
     if (!modele || !confirm('Ne plus proposer ce modèle ?')) return;
@@ -104,6 +126,12 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                       {detail.offres.length} prestataire{detail.offres.length > 1 ? 's' : ''} · dès {fcfa(Math.min(...detail.offres.map((o) => o.service.prix)))}
                     </p>
                   )}
+                  {plusProche && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-pink-600" />
+                      La plus proche : <strong className="text-gray-900 dark:text-white">{lieu(plusProche.prestataire)}</strong>
+                    </p>
+                  )}
                 </div>
 
                 {/* Je sais le faire / mon offre */}
@@ -126,18 +154,35 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                   </button>
                 )}
 
-                {/* Réserver chez… */}
+                {/* Réserver chez… (les plus proches d'abord) */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Réserver ce modèle chez</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Près de</span>
+                    {gps ? (
+                      <span className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 rounded-full bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 text-sm font-medium">
+                        <LocateFixed className="w-3.5 h-3.5" /> Ma position
+                        <button onClick={oublierGPS} aria-label="Ne plus utiliser ma position" className="p-1 rounded-full hover:bg-pink-100 dark:hover:bg-pink-900/40"><X className="w-3.5 h-3.5" /></button>
+                      </span>
+                    ) : (
+                      <>
+                        <ChoixCommune compact valeur={communeAffichee} onChange={choisirCommune} vide="Ma commune ?" className="min-w-0 flex-1 max-w-[11rem]" />
+                        <button onClick={maPosition} disabled={enCours}
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-60">
+                          {enCours ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />} Ma position
+                        </button>
+                      </>
+                    )}
+                  </div>
                   {detail === null ? (
                     <div className="space-y-2">{[0, 1].map((i) => <div key={i} className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}</div>
-                  ) : detail.offres.filter((o) => o !== monOffre).length === 0 ? (
+                  ) : autres.length === 0 ? (
                     <p className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300">
                       Personne ne propose encore ce modèle. Ajoute-le à tes favoris : tu seras parmi les premières à le voir dès qu'une coiffeuse se propose.
                     </p>
                   ) : (
                     <ul className="space-y-2">
-                      {detail.offres.filter((o) => o !== monOffre).map((o) => (
+                      {autres.map((o) => (
                         <li key={o.prestataire.id}><LignePrestataire o={o} onReserver={() => reserver(o.service.id)} /></li>
                       ))}
                     </ul>
