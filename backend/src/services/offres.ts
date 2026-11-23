@@ -1,7 +1,7 @@
 import { Modele, OffreModele, Service, Prestataire, SubCategory, Category } from '../models/index.js';
 import { categorieModelePour, normaliser } from './modeles-sync.js';
 import { planEffectif, estPro } from './plans.js';
-import { positionPrestataire, distanceKm, Point } from './communes.js';
+import { positionPrestataire, distanceKm, Point, zonesEffectives } from './communes.js';
 
 // « Je sais le faire » : un prestataire se propose pour un modèle du fil.
 // L'offre relie le modèle à un service réservable (prix, durée) du prestataire.
@@ -91,6 +91,7 @@ interface OffreAffichee {
   prestataire: {
     id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null;
     commune?: string | null; distance_km?: number | null; distance_approx?: boolean;
+    zones_deplacement?: string[]; frais_deplacement?: number; vient_chez_moi?: boolean | null;
   };
   service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean };
 }
@@ -102,7 +103,7 @@ async function offresValides(modeleIds: number[]) {
   const [services, prestataires] = await Promise.all([
     Service.find({ _id: { $in: offres.map(o => o.service_id) }, is_active: true, deleted_at: null }).select('nom prix duree_minutes is_domicile prestataire_id'),
     Prestataire.find({ _id: { $in: [...new Set(offres.map(o => o.prestataire_id))] }, is_active: { $ne: false } })
-      .select('nom_commercial ville commune adresse latitude longitude note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at'),
+      .select('nom_commercial ville commune adresse latitude longitude zones_deplacement frais_deplacement note_moyenne nombre_avis is_verified photos_etablissement plan_actuel_id abonnement_expires_at'),
   ]);
   const sMap = new Map(services.map(s => [s._id as number, s]));
   const pMap = new Map(prestataires.map(p => [p._id as number, p]));
@@ -134,6 +135,20 @@ export function infoDistance(p: any, pos: Point | null): { commune: string | nul
   return { commune, distance_km: Math.round(d * 10) / 10, distance_approx: pos.approx || pp.approx };
 }
 
+/**
+ * À domicile : communes desservies, frais, et « vient chez moi » pour la commune de la cliente
+ * (null si on ne connaît pas sa commune ; false si le service ne se fait pas à domicile).
+ */
+export function infoDomicile(p: any, service: { is_domicile?: boolean } | null | undefined, pos: Point | null) {
+  if (!service?.is_domicile) return { vient_chez_moi: false as boolean | null };
+  const zones = zonesEffectives(p);
+  return {
+    zones_deplacement: zones,
+    frais_deplacement: Math.max(0, Number(p.frais_deplacement) || 0),
+    vient_chez_moi: pos?.commune ? zones.includes(pos.commune) : null,
+  };
+}
+
 /** Tri « les plus proches d'abord » : par km entier, puis Pro, puis note. Sans position : Pro puis note. */
 export interface CleProximite { pro: boolean; note: number; d: number | null }
 export function comparerProximite(a: CleProximite, b: CleProximite): number {
@@ -159,6 +174,7 @@ export async function offresDuModele(modeleId: number, pos: Point | null = null)
         id: p._id, nom_commercial: p.nom_commercial, ville: p.ville, note_moyenne: p.note_moyenne, nombre_avis: p.nombre_avis,
         is_verified: p.is_verified, is_pro: estPro(p), photo: Array.isArray(p.photos_etablissement) ? p.photos_etablissement[0] || null : null,
         ...info,
+        ...infoDomicile(p, s, pos),
       },
       service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
     }));

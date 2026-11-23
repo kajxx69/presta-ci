@@ -11,6 +11,9 @@ const prestataireSchema = new mongoose.Schema({
   ville: String,
   // Commune normalisée (liste services/communes.ts) — filtres et distance approximative
   commune: { type: String, default: null },
+  // À domicile : communes où la pro se déplace (vide = sa commune seulement) et supplément en FCFA
+  zones_deplacement: { type: [String], default: [] },
+  frais_deplacement: { type: Number, default: 0 },
   pays: { type: String, default: "Côte d'Ivoire" },
   latitude: Number,
   longitude: Number,

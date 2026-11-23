@@ -57,7 +57,29 @@ export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: numbe
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-export interface Point { lat: number; lng: number; approx: boolean }
+export interface Point { lat: number; lng: number; approx: boolean; /** commune de la cliente (choisie, ou la plus proche de son GPS) */ commune?: string | null }
+
+/** Commune dont le centre est le plus proche (null si à plus de maxKm : hors des zones connues). */
+export function communeLaPlusProche(lat: number, lng: number, maxKm = 12): Commune | null {
+  let meilleure: Commune | null = null, dMin = Infinity;
+  for (const c of COMMUNES) {
+    const d = distanceKm(lat, lng, c.lat, c.lng);
+    if (d < dMin) { dMin = d; meilleure = c; }
+  }
+  return dMin <= maxKm ? meilleure : null;
+}
+
+/** Communes où une pro se déplace : sa liste, sinon sa propre commune. */
+export function zonesEffectives(p: { zones_deplacement?: string[] | null; commune?: string | null }): string[] {
+  const zones = (p.zones_deplacement || []).filter(Boolean);
+  return zones.length ? zones : p.commune ? [p.commune] : [];
+}
+
+/** Liste de communes valides (noms exacts, sans doublon). */
+export function communesValides(v: unknown, max = 30): string[] {
+  if (!Array.isArray(v)) return [];
+  return [...new Set(v.map(communeParNom).filter((c): c is Commune => !!c).map(c => c.nom))].slice(0, max);
+}
 
 const coordValide = (lat: unknown, lng: unknown) =>
   typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
@@ -72,7 +94,7 @@ export function positionPrestataire(p: { latitude?: number | null; longitude?: n
 /** Position de la cliente depuis la requête : ?lat=&lng= (GPS) ou ?commune=. */
 export function positionDepuisRequete(q: Record<string, unknown>): Point | null {
   const lat = Number(q.lat), lng = Number(q.lng);
-  if (q.lat !== undefined && q.lng !== undefined && coordValide(lat, lng)) return { lat, lng, approx: false };
+  if (q.lat !== undefined && q.lng !== undefined && coordValide(lat, lng)) return { lat, lng, approx: false, commune: communeLaPlusProche(lat, lng)?.nom ?? null };
   const c = communeParNom(q.commune);
-  return c ? { lat: c.lat, lng: c.lng, approx: true } : null;
+  return c ? { lat: c.lat, lng: c.lng, approx: true, commune: c.nom } : null;
 }

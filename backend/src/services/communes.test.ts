@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { communeDepuisTexte, communeParNom, positionPrestataire, positionDepuisRequete, distanceKm } from './communes.js';
-import { comparerProximite, bonusProximite } from './offres.js';
+import { communeDepuisTexte, communeParNom, positionPrestataire, positionDepuisRequete, distanceKm, communeLaPlusProche, zonesEffectives, communesValides } from './communes.js';
+import { comparerProximite, bonusProximite, infoDomicile } from './offres.js';
 
 describe('communes', () => {
   it('reconnaît les communes dans un texte libre', () => {
@@ -54,5 +54,20 @@ describe('communes', () => {
     expect(bonusProximite(14)).toBe(0.5);
     // Un modèle réservable tout près (1 + 1,5) bat toujours un modèle réservable loin (1 + hasard ≤ 0,9)
     expect(1 + bonusProximite(2)).toBeGreaterThan(1 + 0.9);
+  });
+
+  it('à domicile : zones, commune GPS, vient chez moi', () => {
+    expect(communeLaPlusProche(5.29, -3.98)?.nom).toBe('Marcory');
+    expect(communeLaPlusProche(48.85, 2.35)).toBeNull();
+    expect(positionDepuisRequete({ lat: '5.345', lng: '-4.075' })?.commune).toBe('Yopougon');
+    expect(zonesEffectives({ zones_deplacement: [], commune: 'Cocody' })).toEqual(['Cocody']);
+    expect(zonesEffectives({ zones_deplacement: ['Bingerville', 'Cocody'], commune: 'Cocody' })).toEqual(['Bingerville', 'Cocody']);
+    expect(communesValides(['cocody', 'Cocody', 'Paris', 'yopougon', 3])).toEqual(['Cocody', 'Yopougon']);
+    const pro = { commune: 'Cocody', zones_deplacement: ['Cocody', 'Bingerville'], frais_deplacement: 1000 };
+    const pos = (commune: string) => ({ lat: 0, lng: 0, approx: true, commune });
+    expect(infoDomicile(pro, { is_domicile: true }, pos('Bingerville'))).toMatchObject({ vient_chez_moi: true, frais_deplacement: 1000 });
+    expect(infoDomicile(pro, { is_domicile: true }, pos('Yopougon')).vient_chez_moi).toBe(false);
+    expect(infoDomicile(pro, { is_domicile: true }, null).vient_chez_moi).toBeNull();
+    expect(infoDomicile(pro, { is_domicile: false }, pos('Cocody')).vient_chez_moi).toBe(false);
   });
 });

@@ -45,6 +45,8 @@ const reservationSchema = new mongoose.Schema({
   adresse_rdv: String,
   adresse_rdv_lat: { type: Number, default: null },
   adresse_rdv_lng: { type: Number, default: null },
+  // Supplément de déplacement (à domicile), inclus dans prix_total
+  frais_deplacement: { type: Number, default: 0 },
   rappel_envoye: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

@@ -6,6 +6,7 @@ import { serverError } from '../utils/http.js';
 import { isValidDayString, isPastDay } from '../utils/validation.js';
 import { hasSlotConflict, getHorairesForDate } from '../utils/availability.js';
 import { EmailNotifications } from '../services/email-notifications.js';
+import { communeLaPlusProche, communeDepuisTexte, zonesEffectives } from '../services/communes.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
 
 const router = express.Router();
@@ -217,6 +218,22 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
 
     const qty = Math.max(1, Number(quantite) || 1);
 
+    // À domicile : le service doit le proposer, la commune de la cliente doit être desservie,
+    // et le supplément de déplacement s'ajoute au total
+    let fraisDeplacement = 0;
+    if (a_domicile) {
+      if (!service.is_domicile) return res.status(400).json({ error: "Ce service ne se fait pas à domicile" });
+      const proDomicile = await Prestataire.findById(service.prestataire_id).select('nom_commercial commune zones_deplacement frais_deplacement');
+      const lat = Number(adresse_rdv_lat), lng = Number(adresse_rdv_lng);
+      const communeClient = (adresse_rdv_lat != null && adresse_rdv_lng != null && Number.isFinite(lat) && Number.isFinite(lng) ? communeLaPlusProche(lat, lng) : null)
+        || communeDepuisTexte(adresse_rdv);
+      const zones = proDomicile ? zonesEffectives(proDomicile as any) : [];
+      if (communeClient && zones.length && !zones.includes(communeClient.nom)) {
+        return res.status(400).json({ error: `${proDomicile?.nom_commercial || 'Cette pro'} ne se déplace pas à ${communeClient.nom}. Elle se déplace à : ${zones.join(', ')}.` });
+      }
+      fraisDeplacement = Math.max(0, Number(proDomicile?.frais_deplacement) || 0);
+    }
+
     // Article en stock suivi : décrémenter atomiquement pour éviter la survente en cas de commandes concurrentes
     const isProduitAvecStock = service.type_service === 'produit' && service.stock !== null && service.stock !== undefined;
     if (isProduitAvecStock) {
@@ -303,7 +320,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       heure_debut: heure_debut || undefined,
       heure_fin: heure_fin || undefined,
       prix_final: service.prix,
-      prix_total: service.prix * qty,
+      prix_total: service.prix * qty + fraisDeplacement,
+      frais_deplacement: fraisDeplacement,
       quantite: qty,
       notes_client: notes_client || undefined,
       specifications: specifications || undefined,
@@ -371,7 +389,8 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
           heure_debut,
           heure_fin,
           prix_final: service.prix,
-          prix_total: service.prix * qty,
+          prix_total: service.prix * qty + fraisDeplacement,
+      frais_deplacement: fraisDeplacement,
           quantite: qty,
           notes_client: notes_client ? `${notes_client} (récurrence hebdo)` : 'Réservation récurrente hebdomadaire',
           a_domicile: !!a_domicile,

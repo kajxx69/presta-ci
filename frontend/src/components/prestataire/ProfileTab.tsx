@@ -29,6 +29,7 @@ import NotificationsSettingsTab from '../client/NotificationsSettingsTab';
 import HelpSupportTab from '../client/HelpSupportTab';
 import HorairesOuvertureEditor from './HorairesOuvertureEditor';
 import ChoixCommune from '../common/ChoixCommune';
+import ZoneDeplacement from './ZoneDeplacement';
 import PhotosEtablissementEditor from './PhotosEtablissementEditor';
 
 interface PrestataireProfile {
@@ -39,6 +40,8 @@ interface PrestataireProfile {
   adresse: string | null;
   ville: string | null;
   commune?: string | null;
+  zones_deplacement?: string[] | null;
+  frais_deplacement?: number | null;
   pays: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -477,6 +480,13 @@ export default function ProfileTab() {
                 )}
               </div>
             </div>
+
+            <ZoneDeplacement
+              commune={profile?.commune}
+              zones={profile?.zones_deplacement}
+              frais={profile?.frais_deplacement}
+              onEnregistre={(v) => setProfile((p) => (p ? { ...p, ...v } : p))}
+            />
 
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
               <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">

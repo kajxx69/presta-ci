@@ -6,8 +6,8 @@ export interface ApiService { id: number; prestataire_id: number; sous_categorie
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; proche?: { distance_km: number; distance_approx: boolean; commune: string | null } }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
-export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
-export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
+export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean; zones_deplacement?: string[]; frais_deplacement?: number; vient_chez_moi?: boolean | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
+export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; nb_offres_total?: number; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
 const isLocalHost =
@@ -150,6 +150,9 @@ export const api = {
     updateProfile: (payload: any): Promise<{ message: string, prestataire: any }> =>
       http('/api/prestataires/profile', { method: 'PUT', body: JSON.stringify(payload) }),
     getById: (id: number): Promise<any> => http(`/api/prestataires/${id}`),
+    /** À domicile : communes desservies + frais de déplacement (FCFA) */
+    majDeplacement: (body: { zones_deplacement: string[]; frais_deplacement: number }): Promise<{ ok: boolean; zones_deplacement: string[]; frais_deplacement: number }> =>
+      http('/api/prestataires/me/deplacement', { method: 'PUT', body: JSON.stringify(body) }),
     submitVerification: (document: string): Promise<{ ok: boolean; message: string }> =>
       http('/api/prestataires/me/verification', { method: 'POST', body: JSON.stringify({ document }) }),
   },
@@ -571,17 +574,19 @@ export const api = {
   modeles: {
     feed: (body: { categorie?: string; q?: string; exclude?: number[]; lat?: number; lng?: number; commune?: string }): Promise<{ modeles: Modele[] }> =>
       http('/api/modeles/feed', { method: 'POST', body: JSON.stringify(body) }),
-    recherche: (params: { q?: string; categorie?: string; commune?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
+    recherche: (params: { q?: string; categorie?: string; commune?: string; domicile?: boolean; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
       const q = new URLSearchParams();
       if (params.q) q.append('q', params.q);
       if (params.categorie) q.append('categorie', params.categorie);
       if (params.commune) q.append('commune', params.commune);
+      if (params.commune && params.domicile) q.append('domicile', '1');
       if (params.page) q.append('page', String(params.page));
       return http(`/api/modeles/recherche?${q.toString()}`);
     },
     /** Détail + pros qui le font ; avec une position, les plus proches d'abord */
-    detail: (id: number, pos?: { lat?: number; lng?: number; commune?: string }): Promise<DetailModele> => {
+    detail: (id: number, pos?: { lat?: number; lng?: number; commune?: string }, domicile = false): Promise<DetailModele> => {
       const q = new URLSearchParams();
+      if (domicile) q.append('domicile', '1');
       if (pos?.lat != null && pos?.lng != null) { q.append('lat', String(pos.lat)); q.append('lng', String(pos.lng)); }
       else if (pos?.commune) q.append('commune', pos.commune);
       const qs = q.toString();

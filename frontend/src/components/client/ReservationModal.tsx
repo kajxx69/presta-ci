@@ -26,7 +26,7 @@ function toLocalDateString(date: Date): string {
 
 interface Slot { heure_debut: string; heure_fin: string; disponible: boolean }
 
-export default function ReservationModal({ service, onClose, onReservationSuccess, publicationId }: any) {
+export default function ReservationModal({ service, prestataire, onClose, onReservationSuccess, publicationId }: any) {
   // Determine booking type from subcategory (passed via service.booking_type or fetched)
   const [bookingType, setBookingType] = useState<'appointment' | 'order'>('appointment');
   const [typeLoaded, setTypeLoaded] = useState(false);
@@ -114,7 +114,10 @@ export default function ReservationModal({ service, onClose, onReservationSucces
   // — Order-specific —
   const [specifications, setSpecifications] = useState('');
 
-  const prixTotal = (service.prix || 0) * quantite;
+  // À domicile : communes desservies et supplément de déplacement de la pro
+  const zonesPro: string[] = prestataire?.zones_deplacement?.length ? prestataire.zones_deplacement : prestataire?.commune ? [prestataire.commune] : [];
+  const fraisDeplacement = isDomicile ? Math.max(0, Number(prestataire?.frais_deplacement) || 0) : 0;
+  const prixTotal = (service.prix || 0) * quantite + fraisDeplacement;
   const quantiteMax = service.quantite_max || 99;
 
   const handleSubmit = async () => {
@@ -216,6 +219,9 @@ export default function ReservationModal({ service, onClose, onReservationSucces
                 <span className="text-lg font-bold text-gradient">
                   {prixTotal.toLocaleString()} {service.devise || 'XOF'}
                 </span>
+                {fraisDeplacement > 0 && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">dont +{fraisDeplacement.toLocaleString('fr-FR')} F déplacement</p>
+                )}
                 {quantite > 1 && (
                   <p className="text-xs text-gray-400">
                     {service.prix?.toLocaleString()} × {quantite}{service.unite ? ` ${service.unite}` : ''}
@@ -434,6 +440,12 @@ export default function ReservationModal({ service, onClose, onReservationSucces
                         {bookingType === 'order' ? 'Livrer à mon adresse' : 'Le prestataire vient à mon adresse'}
                       </span>
                     </label>
+                    {(zonesPro.length > 0 || prestataire?.frais_deplacement > 0) && bookingType === 'appointment' && (
+                      <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                        {zonesPro.length > 0 && <>Se déplace à : <strong className="text-gray-800 dark:text-gray-200">{zonesPro.join(', ')}</strong></>}
+                        {prestataire?.frais_deplacement > 0 && <>{zonesPro.length > 0 ? ' · ' : ''}Frais de déplacement : <strong className="text-gray-800 dark:text-gray-200">+{Number(prestataire.frais_deplacement).toLocaleString('fr-FR')} F</strong></>}
+                      </p>
+                    )}
                     {isDomicile && (
                       <>
                         <div className="mt-2 flex gap-2">

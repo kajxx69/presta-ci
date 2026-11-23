@@ -162,6 +162,11 @@ export default function JeSaisLeFaireModal({ modele, onClose, offreActuelle, onF
                     <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">Je me déplace à domicile</span>
                     <input type="checkbox" checked={domicile} onChange={(e) => setDomicile(e.target.checked)} className="w-5 h-5 accent-pink-500" />
                   </label>
+                  {domicile && (
+                    <p className="-mt-2 px-1 text-xs text-gray-500 dark:text-gray-400">
+                      🏠 Par défaut tu te déplaces dans ta commune. Ajoute d'autres communes et tes frais de déplacement dans ton profil pro.
+                    </p>
+                  )}
 
                   <button onClick={valider} disabled={envoi}
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg disabled:opacity-60 flex items-center justify-center gap-2">

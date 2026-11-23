@@ -6,7 +6,7 @@ import { serverError } from '../utils/http.js';
 import { materializePhotos, saveDataUri } from '../utils/uploads.js';
 import { computeBadges } from '../utils/badges.js';
 import { InAppNotificationService } from '../services/in-app-notifications.js';
-import { communeParNom, communeDepuisTexte } from '../services/communes.js';
+import { communeParNom, communeDepuisTexte, communesValides } from '../services/communes.js';
 import { offrirMoisProLancement } from '../services/plans.js';
 
 const router = Router();
@@ -37,7 +37,7 @@ router.get('/profile', requireAuth, async (req: Request, res: Response) => {
 router.put('/profile', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { nom_commercial, bio, adresse, ville, commune, pays, latitude, longitude, telephone_pro, horaires_ouverture, photos_etablissement } = req.body;
+    const { nom_commercial, bio, adresse, ville, commune, pays, latitude, longitude, telephone_pro, horaires_ouverture, photos_etablissement, zones_deplacement, frais_deplacement } = req.body;
 
     if (!nom_commercial) return res.status(400).json({ error: 'Le nom commercial est requis.' });
 
@@ -56,6 +56,8 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
     await Prestataire.updateOne({ user_id: userId }, {
       nom_commercial, bio, adresse, ville, pays,
       ...(commune !== undefined ? { commune: communeParNom(commune)?.nom ?? null } : {}),
+      ...(zones_deplacement !== undefined ? { zones_deplacement: communesValides(zones_deplacement) } : {}),
+      ...(frais_deplacement !== undefined ? { frais_deplacement: Math.min(50000, Math.max(0, Math.round(Number(frais_deplacement) || 0))) } : {}),
       latitude, longitude, telephone_pro,
       horaires_ouverture: horaires_ouverture || existing.horaires_ouverture,
       photos_etablissement: parsedPhotos,
@@ -66,6 +68,19 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
     res.json({ message: 'Profil mis à jour avec succès.', prestataire: updated });
   } catch (error: any) {
     res.status(500).json({ error: 'Erreur interne du serveur.' });
+  }
+});
+
+// PUT /api/prestataires/me/deplacement — à domicile : communes desservies + frais de déplacement
+router.put('/me/deplacement', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const zones = communesValides(req.body?.zones_deplacement);
+    const frais = Math.min(50000, Math.max(0, Math.round(Number(req.body?.frais_deplacement) || 0)));
+    const r = await Prestataire.updateOne({ user_id: req.userId! }, { $set: { zones_deplacement: zones, frais_deplacement: frais, updated_at: new Date() } });
+    if (!r.matchedCount) return res.status(404).json({ error: 'Profil prestataire non trouvé.' });
+    res.json({ ok: true, zones_deplacement: zones, frais_deplacement: frais });
+  } catch (e: any) {
+    serverError(res, e);
   }
 });
 

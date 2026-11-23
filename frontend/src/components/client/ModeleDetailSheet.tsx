@@ -39,7 +39,15 @@ function LignePrestataire({ o, onReserver, maCommune }: { o: OuLeFaire; onReserv
         {ou && <p className={`text-xs flex items-center gap-0.5 min-w-0 ${p.distance_km != null ? 'text-pink-700 dark:text-pink-300 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}><MapPin className="w-3 h-3 flex-shrink-0" /><span className="truncate">{ou}</span></p>}
         <p className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2">
           {!!p.nombre_avis && <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{(p.note_moyenne || 0).toFixed(1)}</span>}
-          {s.is_domicile && <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile</span>}
+          {s.is_domicile && (p.vient_chez_moi === true ? (
+            <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+              <Home className="w-3 h-3" />Vient chez toi{p.frais_deplacement ? ` · +${p.frais_deplacement.toLocaleString('fr-FR')} F` : ''}
+            </span>
+          ) : p.vient_chez_moi === false && maCommune ? (
+            <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile, pas à {maCommune}</span>
+          ) : (
+            <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile</span>
+          ))}
         </p>
         <p className="text-sm text-gray-800 dark:text-gray-200"><strong>{fcfa(s.prix)}</strong>{s.duree_minutes ? ` · ${duree(s.duree_minutes)}` : ''}</p>
       </div>
@@ -54,14 +62,16 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
   const { showToast } = useAppStore();
   const [detail, setDetail] = useState<DetailModele | null>(null);
   const [proposer, setProposer] = useState(false);
+  // « Elle vient chez moi » : seulement les pros qui se déplacent dans ma commune
+  const [chezMoi, setChezMoi] = useState(false);
   const { commune, gps, choisi, enCours, choisirCommune, utiliserGPS, oublierGPS } = usePosition();
   const communeAffichee = commune || (choisi ? null : communeParDefaut());
   const maCommune = gps ? null : communeAffichee;
 
   const charger = useCallback(() => {
     if (!modele) return;
-    api.modeles.detail(modele.id, paramsPosition({ commune, gps, choisi })).then(setDetail).catch(() => setDetail(null));
-  }, [modele, commune, gps, choisi]);
+    api.modeles.detail(modele.id, paramsPosition({ commune, gps, choisi }), chezMoi).then(setDetail).catch(() => setDetail(null));
+  }, [modele, commune, gps, choisi, chezMoi]);
 
   const maPosition = async () => {
     if (!(await utiliserGPS())) showToast('Position indisponible. Choisis plutôt ta commune 📍', 'info');
@@ -167,12 +177,25 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                       </>
                     )}
                   </div>
+                  <button onClick={() => setChezMoi((v) => !v)} aria-pressed={chezMoi}
+                    className={`mb-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                      chezMoi ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'
+                    }`}>
+                    <Home className="w-4 h-4" /> Elle vient chez moi{chezMoi && maCommune ? ` · ${maCommune}` : ''}
+                  </button>
                   {detail === null ? (
                     <div className="space-y-2">{[0, 1].map((i) => <div key={i} className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}</div>
                   ) : autres.length === 0 ? (
+                    chezMoi ? (
+                      <div className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300">
+                        Aucune pro ne se déplace {maCommune ? `à ${maCommune}` : 'à domicile'} pour ce modèle pour l'instant.
+                        {!!detail.nb_offres_total && <button onClick={() => setChezMoi(false)} className="block mt-2 font-semibold text-pink-600">Voir les {detail.nb_offres_total} pro{detail.nb_offres_total > 1 ? 's' : ''} en salon</button>}
+                      </div>
+                    ) : (
                     <p className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300">
                       Personne ne propose encore ce modèle. Ajoute-le à tes favoris : tu seras parmi les premières à le voir dès qu'une coiffeuse se propose.
                     </p>
+                    )
                   ) : (
                     <ul className="space-y-2">
                       {autres.map((o) => (
