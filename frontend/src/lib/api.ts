@@ -4,7 +4,7 @@ export interface ApiPrestataire { id: number; nom_commercial: string; ville?: st
 export interface ApiService { id: number; prestataire_id: number; sous_categorie_id: number; nom: string; description?: string; prix: number; devise?: string; type_service?: 'prestation' | 'produit'; stock?: number | null; duree_minutes?: number | null; unite?: string | null; quantite_min?: number; quantite_max?: number | null; photos?: any; is_domicile?: number; is_active?: number; note_moyenne?: number; nombre_avis?: number; }
 
 export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 'soins';
-export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; }
+export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; proche?: { distance_km: number; distance_approx: boolean; commune: string | null } }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
 export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
@@ -569,7 +569,7 @@ export const api = {
   },
   // Modèles d'inspiration beauté (fil « Découvrir » à swiper)
   modeles: {
-    feed: (body: { categorie?: string; q?: string; exclude?: number[] }): Promise<{ modeles: Modele[] }> =>
+    feed: (body: { categorie?: string; q?: string; exclude?: number[]; lat?: number; lng?: number; commune?: string }): Promise<{ modeles: Modele[] }> =>
       http('/api/modeles/feed', { method: 'POST', body: JSON.stringify(body) }),
     recherche: (params: { q?: string; categorie?: string; commune?: string; page?: number }): Promise<{ modeles: Modele[]; total: number; hasMore: boolean }> => {
       const q = new URLSearchParams();

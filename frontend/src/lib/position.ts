@@ -10,6 +10,8 @@ const CLE = 'chicly-position';
 
 interface EtatPosition {
   commune: string | null;
+  /** A déjà fait un choix sur ce téléphone (y compris « Partout ») */
+  choisi: boolean;
   gps: { lat: number; lng: number } | null;
   enCours: boolean;
   choisirCommune: (c: string | null) => void;
@@ -17,15 +19,20 @@ interface EtatPosition {
   oublierGPS: () => void;
 }
 
-function lire(): { commune: string | null; gps: { lat: number; lng: number } | null } {
+type Gps = { lat: number; lng: number } | null;
+function lire(): { commune: string | null; gps: Gps; choisi: boolean } {
   try {
     const v = JSON.parse(localStorage.getItem(CLE) || 'null');
-    if (v && typeof v === 'object') return { commune: typeof v.commune === 'string' ? v.commune : null, gps: v.gps && Number.isFinite(v.gps.lat) && Number.isFinite(v.gps.lng) ? v.gps : null };
+    if (v && typeof v === 'object') return {
+      commune: typeof v.commune === 'string' ? v.commune : null,
+      gps: v.gps && Number.isFinite(v.gps.lat) && Number.isFinite(v.gps.lng) ? v.gps : null,
+      choisi: v.choisi !== false,
+    };
   } catch { /* stockage indisponible */ }
-  return { commune: null, gps: null };
+  return { commune: null, gps: null, choisi: false };
 }
-function ecrire(commune: string | null, gps: { lat: number; lng: number } | null) {
-  try { localStorage.setItem(CLE, JSON.stringify({ commune, gps })); } catch { /* stockage indisponible */ }
+function ecrire(commune: string | null, gps: Gps) {
+  try { localStorage.setItem(CLE, JSON.stringify({ commune, gps, choisi: true })); } catch { /* stockage indisponible */ }
 }
 
 export const usePosition = create<EtatPosition>((set, get) => ({
@@ -33,12 +40,13 @@ export const usePosition = create<EtatPosition>((set, get) => ({
   enCours: false,
   choisirCommune: (commune) => {
     // Choisir une commune remplace la position GPS
-    set({ commune, gps: null });
+    set({ commune, gps: null, choisi: true });
     ecrire(commune, null);
     const auth = useAuthStore.getState();
-    if (auth.isAuthenticated && auth.user) {
+    // « Partout » ne touche pas à la commune du compte
+    if (commune && auth.isAuthenticated && auth.user) {
       useAuthStore.setState({ user: { ...auth.user, commune } as any });
-      api.users.updateMe({ commune: commune || '' }).catch(() => {});
+      api.users.updateMe({ commune }).catch(() => {});
     }
   },
   utiliserGPS: () => new Promise<boolean>((resolve) => {
@@ -47,7 +55,7 @@ export const usePosition = create<EtatPosition>((set, get) => ({
     navigator.geolocation.getCurrentPosition(
       (p) => {
         const gps = { lat: Math.round(p.coords.latitude * 1e4) / 1e4, lng: Math.round(p.coords.longitude * 1e4) / 1e4 };
-        set({ gps, enCours: false });
+        set({ gps, enCours: false, choisi: true });
         ecrire(get().commune, gps);
         resolve(true);
       },
@@ -64,9 +72,15 @@ export function communeParDefaut(): string | null {
   return u?.commune || null;
 }
 
-/** Paramètres à envoyer à l'API (GPS prioritaire, sinon commune). */
-export function paramsPosition(etat: { commune: string | null; gps: { lat: number; lng: number } | null }): { lat?: number; lng?: number; commune?: string } {
+/** Paramètres à envoyer à l'API (GPS prioritaire, sinon commune ; rien si « Partout »). */
+export function paramsPosition(etat: { commune: string | null; gps: Gps; choisi?: boolean }): { lat?: number; lng?: number; commune?: string } {
   if (etat.gps) return { lat: etat.gps.lat, lng: etat.gps.lng };
-  const commune = etat.commune || communeParDefaut();
+  const commune = etat.commune || (etat.choisi ? null : communeParDefaut());
   return commune ? { commune } : {};
+}
+
+/** Libellé court de la position actuelle (« Ma position », « Cocody », null = partout). */
+export function libellePosition(etat: { commune: string | null; gps: Gps; choisi?: boolean }): string | null {
+  if (etat.gps) return 'Ma position';
+  return etat.commune || (etat.choisi ? null : communeParDefaut());
 }

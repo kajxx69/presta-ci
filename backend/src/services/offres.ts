@@ -163,3 +163,39 @@ export async function offresDuModele(modeleId: number, pos: Point | null = null)
       service: { id: s._id, nom: s.nom, prix: s.prix, duree_minutes: s.duree_minutes, is_domicile: s.is_domicile },
     }));
 }
+
+export interface Proximite { distance_km: number; distance_approx: boolean; commune: string | null }
+
+/**
+ * Modèles réservables près d'une position : vraies photos des pros proches + modèles
+ * qu'elles proposent. Renvoie la distance de la pro la plus proche pour chaque modèle.
+ */
+export async function modelesProches(pos: Point, rayonKm = 15): Promise<Map<number, Proximite>> {
+  const pros = await Prestataire.find({ is_active: { $ne: false }, $or: [{ latitude: { $ne: null } }, { commune: { $ne: null } }, { ville: { $ne: null } }] })
+    .select('commune ville adresse latitude longitude').limit(5000);
+  const proches = new Map<number, Proximite>();
+  for (const p of pros) {
+    const info = infoDistance(p, pos);
+    if (info.distance_km != null && info.distance_km <= rayonKm) {
+      proches.set(p._id as number, { distance_km: info.distance_km, distance_approx: info.distance_approx, commune: info.commune });
+    }
+  }
+  const res = new Map<number, Proximite>();
+  if (!proches.size) return res;
+  const ids = [...proches.keys()];
+  const garder = (modeleId: number, proId: number) => {
+    const d = proches.get(proId);
+    const cur = res.get(modeleId);
+    if (d && (!cur || d.distance_km < cur.distance_km)) res.set(modeleId, d);
+  };
+  const [offres, photos] = await Promise.all([
+    OffreModele.find({ prestataire_id: { $in: ids } }).select('modele_id prestataire_id').limit(5000),
+    Modele.find({ source: 'prestataire', prestataire_id: { $in: ids }, is_active: true }).select('_id prestataire_id').limit(5000),
+  ]);
+  for (const o of offres) garder(o.modele_id, o.prestataire_id);
+  for (const m of photos) garder(m._id as number, m.prestataire_id as number);
+  return res;
+}
+
+/** Bonus de classement dans le fil selon la distance (0 si loin ou inconnu). */
+export const bonusProximite = (d: number) => (d <= 3 ? 1.5 : d <= 8 ? 1 : 0.5);

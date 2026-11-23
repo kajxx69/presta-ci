@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { communeDepuisTexte, communeParNom, positionPrestataire, positionDepuisRequete, distanceKm } from './communes.js';
-import { comparerProximite } from './offres.js';
+import { comparerProximite, bonusProximite } from './offres.js';
 
 describe('communes', () => {
   it('reconnaît les communes dans un texte libre', () => {
@@ -46,5 +46,13 @@ describe('communes', () => {
       { id: 'procheProA', pro: true, note: 4, d: 1.8 },
     ].sort(comparerProximite).map(x => x.id);
     expect(l).toEqual(['procheProA', 'proche', 'loin', 'sans']);
+  });
+
+  it('fil : plus la pro est proche, plus le bonus est fort', () => {
+    expect(bonusProximite(0.8)).toBe(1.5);
+    expect(bonusProximite(6)).toBe(1);
+    expect(bonusProximite(14)).toBe(0.5);
+    // Un modèle réservable tout près (1 + 1,5) bat toujours un modèle réservable loin (1 + hasard ≤ 0,9)
+    expect(1 + bonusProximite(2)).toBeGreaterThan(1 + 0.9);
   });
 });

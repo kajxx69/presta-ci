@@ -3,7 +3,7 @@ import {
   Modele, ModeleSwipe, CATEGORIES_MODELE, Prestataire, Service, SubCategory, Category, TableauPinterest,
 } from '../models/index.js';
 import { tableauPinterestValide, epinglePinterestValide } from '../utils/liens.js';
-import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre, infoDistance, comparerProximite, cleOffre } from '../services/offres.js';
+import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre, infoDistance, comparerProximite, cleOffre, modelesProches, bonusProximite } from '../services/offres.js';
 import { positionDepuisRequete, communeParNom } from '../services/communes.js';
 import { OffreModele } from '../models/index.js';
 import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
@@ -32,7 +32,8 @@ function filtreRecherche(q: string): Record<string, any> {
 }
 
 // POST /api/modeles/feed — prochaine pile de cartes
-// body: { categorie?, q?, exclude?: number[] (swipes locaux des visiteuses non connectées) }
+// body: { categorie?, q?, exclude?: number[] (swipes locaux des visiteuses non connectées), lat?, lng?, commune? }
+// Avec une position : les modèles réservables chez une pro proche remontent (« près de moi »)
 router.post('/feed', async (req: Request, res: Response) => {
   try {
     const userId = await getUserIdFromSession(req);
@@ -47,17 +48,24 @@ router.post('/feed', async (req: Request, res: Response) => {
     if (estCategorie(categorie)) match.categorie = categorie;
     if (typeof q === 'string' && q.trim()) Object.assign(match, filtreRecherche(q));
 
+    // Près de moi : bonus selon la distance de la pro la plus proche qui fait le modèle
+    const pos = positionDepuisRequete(req.body || {});
+    const proches = pos ? await modelesProches(pos) : new Map();
+    const paliers = [1.5, 1, 0.5].map(b => [...proches.entries()].filter(([, p]) => bonusProximite(p.distance_km) === b).map(([id]) => id));
+    const bonus = { $switch: { branches: paliers.map((ids, i) => ({ case: { $in: ['$_id', ids] }, then: [1.5, 1, 0.5][i] })), default: 0 } };
+
     // Vraies prestations en priorité, puis inspiration ; mélange aléatoire dans chaque groupe
     const modeles = await Modele.aggregate([
       { $match: match },
       // Réservables d'abord (offres de prestataires ou photo d'un vrai service), puis le reste ; hasard dans chaque groupe
       { $lookup: { from: OffreModele.collection.name, localField: '_id', foreignField: 'modele_id', as: '_offres', pipeline: [{ $limit: 1 }] } },
-      { $addFields: { _score: { $add: [{ $cond: [{ $or: [{ $eq: ['$source', 'prestataire'] }, { $gt: [{ $size: '$_offres' }, 0] }] }, 1, 0] }, { $multiply: [{ $rand: {} }, 0.9] }] } } },
+      { $addFields: { _score: { $add: [{ $cond: [{ $or: [{ $eq: ['$source', 'prestataire'] }, { $gt: [{ $size: '$_offres' }, 0] }] }, 1, 0] }, bonus, { $multiply: [{ $rand: {} }, 0.9] }] } } },
       { $sort: { _score: -1 } },
       { $limit: 20 },
       { $project: { _score: 0, recherche: 0, _offres: 0 } },
     ]);
-    res.json({ modeles: await enrichirOffres(modeles.map(({ _id, ...m }) => ({ id: _id, ...m }))) });
+    const enrichis = await enrichirOffres(modeles.map(({ _id, ...m }) => ({ id: _id, ...m })));
+    res.json({ modeles: enrichis.map(m => (proches.has(m.id) ? { ...m, proche: proches.get(m.id) } : m)) });
   } catch (e) {
     serverError(res, e, 'modeles/feed');
   }

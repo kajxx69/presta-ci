@@ -8,7 +8,7 @@ import ModeleVisuel from './ModeleVisuel';
 import JeSaisLeFaireModal from './JeSaisLeFaireModal';
 import ChoixCommune from '../common/ChoixCommune';
 import { usePosition, paramsPosition, communeParDefaut } from '../../lib/position';
-import { formatDistance } from '../../lib/communes';
+import { libelleLieu } from '../../lib/communes';
 
 interface Props {
   modele: Modele | null;
@@ -22,17 +22,9 @@ interface Props {
 const fcfa = (n: number) => `${n.toLocaleString('fr-FR')} FCFA`;
 const duree = (min?: number | null) => (!min ? '' : min < 60 ? `${min} min` : `${Math.round(min / 60 * 10) / 10} h`.replace('.', ','));
 
-/** « 1,2 km · Cocody », « Dans ta commune », ou la ville saisie par la pro. */
-function lieu(p: OuLeFaire['prestataire']): string | null {
-  const lieuTexte = p.commune || p.ville || null;
-  if (p.distance_approx && p.distance_km != null && p.distance_km < 0.5) return p.commune ? `Dans ta commune · ${p.commune}` : 'Dans ta commune';
-  const d = formatDistance(p.distance_km, p.distance_approx);
-  return d ? [d, lieuTexte].filter(Boolean).join(' · ') : lieuTexte;
-}
-
-function LignePrestataire({ o, onReserver }: { o: OuLeFaire; onReserver: () => void }) {
+function LignePrestataire({ o, onReserver, maCommune }: { o: OuLeFaire; onReserver: () => void; maCommune?: string | null }) {
   const { prestataire: p, service: s } = o;
-  const ou = lieu(p);
+  const ou = libelleLieu(p, maCommune);
   return (
     <button onClick={onReserver}
       className="w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
@@ -62,13 +54,14 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
   const { showToast } = useAppStore();
   const [detail, setDetail] = useState<DetailModele | null>(null);
   const [proposer, setProposer] = useState(false);
-  const { commune, gps, enCours, choisirCommune, utiliserGPS, oublierGPS } = usePosition();
-  const communeAffichee = commune || communeParDefaut();
+  const { commune, gps, choisi, enCours, choisirCommune, utiliserGPS, oublierGPS } = usePosition();
+  const communeAffichee = commune || (choisi ? null : communeParDefaut());
+  const maCommune = gps ? null : communeAffichee;
 
   const charger = useCallback(() => {
     if (!modele) return;
-    api.modeles.detail(modele.id, paramsPosition({ commune, gps })).then(setDetail).catch(() => setDetail(null));
-  }, [modele, commune, gps]);
+    api.modeles.detail(modele.id, paramsPosition({ commune, gps, choisi })).then(setDetail).catch(() => setDetail(null));
+  }, [modele, commune, gps, choisi]);
 
   const maPosition = async () => {
     if (!(await utiliserGPS())) showToast('Position indisponible. Choisis plutôt ta commune 📍', 'info');
@@ -129,7 +122,7 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                   {plusProche && (
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-pink-600" />
-                      La plus proche : <strong className="text-gray-900 dark:text-white">{lieu(plusProche.prestataire)}</strong>
+                      La plus proche : <strong className="text-gray-900 dark:text-white">{libelleLieu(plusProche.prestataire, maCommune)}</strong>
                     </p>
                   )}
                 </div>
@@ -183,7 +176,7 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                   ) : (
                     <ul className="space-y-2">
                       {autres.map((o) => (
-                        <li key={o.prestataire.id}><LignePrestataire o={o} onReserver={() => reserver(o.service.id)} /></li>
+                        <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
                       ))}
                     </ul>
                   )}
@@ -194,7 +187,7 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Ils font des styles proches</h3>
                     <ul className="space-y-2">
                       {detail.similaires.map((o) => (
-                        <li key={o.prestataire.id}><LignePrestataire o={o} onReserver={() => reserver(o.service.id)} /></li>
+                        <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
                       ))}
                     </ul>
                   </div>

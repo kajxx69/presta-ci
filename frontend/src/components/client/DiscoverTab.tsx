@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
-import { X, Heart, Info, Sparkles, MapPin, RotateCcw } from 'lucide-react';
+import { X, Heart, Info, Sparkles, MapPin, RotateCcw, ChevronDown } from 'lucide-react';
 import { api, Modele, CategorieModele } from '../../lib/api';
 import { swipesLocaux } from '../../lib/swipesLocaux';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
 import ModeleDetailSheet from './ModeleDetailSheet';
 import ModeleVisuel from './ModeleVisuel';
+import ChoixPosition from '../common/ChoixPosition';
+import { usePosition, paramsPosition, libellePosition } from '../../lib/position';
+import { libelleLieu } from '../../lib/communes';
 
 export const CATEGORIES: { id: CategorieModele | ''; label: string; emoji: string }[] = [
   { id: '', label: 'Tout', emoji: '✨' },
@@ -21,8 +24,8 @@ export const CATEGORIES: { id: CategorieModele | ''; label: string; emoji: strin
 type Direction = 1 | -1;
 const SEUIL_PX = 110;
 
-function Carte({ modele, dessus, onSwipe, onOuvrir }: {
-  modele: Modele; dessus: boolean; onSwipe: (d: Direction) => void; onOuvrir: () => void;
+function Carte({ modele, dessus, onSwipe, onOuvrir, maCommune }: {
+  modele: Modele; dessus: boolean; onSwipe: (d: Direction) => void; onOuvrir: () => void; maCommune?: string | null;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-14, 14]);
@@ -71,7 +74,11 @@ function Carte({ modele, dessus, onSwipe, onOuvrir }: {
               <span className="px-2 py-0.5 rounded-full bg-pink-500/90 text-xs font-semibold">Réservable</span>
             </>
           ) : null}
-          {modele.ville && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{modele.ville}</span>}
+          {modele.proche ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 text-[#7A1638] text-xs font-bold">
+              <MapPin className="w-3.5 h-3.5" />{libelleLieu(modele.proche, maCommune)}
+            </span>
+          ) : modele.ville && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{modele.ville}</span>}
         </div>
       </div>
     </motion.div>
@@ -102,6 +109,14 @@ export default function DiscoverTab() {
   // Génération de requête : un changement de catégorie invalide la requête en cours
   const generation = useRef(0);
   const nbLikes = useRef(0);
+  // Près de moi : la position fait remonter les modèles réservables chez une pro proche
+  const { commune, gps, choisi } = usePosition();
+  const [choixPosition, setChoixPosition] = useState(false);
+  const position = paramsPosition({ commune, gps, choisi });
+  const clePosition = JSON.stringify(position);
+  const positionRef = useRef(position);
+  positionRef.current = position;
+  const lieuActuel = libellePosition({ commune, gps, choisi });
 
   const charger = useCallback(async (cat: CategorieModele | '', reset = false) => {
     if (enCours.current && !reset) return; // complément de pile déjà en cours
@@ -110,7 +125,7 @@ export default function DiscoverTab() {
     setChargement(true);
     try {
       const exclude = [...vusSession.current, ...(isAuthenticated ? [] : swipesLocaux.tousLesVus())];
-      const requete = () => api.modeles.feed({ categorie: cat || undefined, exclude: exclude.slice(-1000) });
+      const requete = () => api.modeles.feed({ categorie: cat || undefined, exclude: exclude.slice(-1000), ...positionRef.current });
       let modeles: Modele[] = [];
       for (let essai = 0; ; essai++) {
         try { ({ modeles } = await requete()); break; } catch (e) {
@@ -143,7 +158,10 @@ export default function DiscoverTab() {
     }
   }, [isAuthenticated, showToast]);
 
-  useEffect(() => { setPile([]); setEpuise(false); charger(categorie, true); }, [categorie]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nouvelle pile (catégorie ou position changée) : on remonte la pile sans animer la sortie
+  // des anciennes cartes — sinon une carte présente dans les deux piles reste bloquée en plein vol
+  const [lot, setLot] = useState(0);
+  useEffect(() => { setLot((l) => l + 1); setPile([]); setEpuise(false); charger(categorie, true); }, [categorie, clePosition]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recharger avant d'arriver au bout de la pile
   useEffect(() => {
@@ -193,6 +211,17 @@ export default function DiscoverTab() {
       ? 'h-[calc(100dvh-8.5rem)] lg:h-[calc(100dvh-5rem)]'
       : 'h-[calc(100dvh-5rem)] lg:h-[calc(100dvh-1.5rem)]'}`}>
       <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
+        <button
+          onClick={() => setChoixPosition(true)}
+          aria-label="Choisir où je suis"
+          className={`flex-shrink-0 inline-flex items-center gap-1 pl-2.5 pr-2 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+            lieuActuel
+              ? 'border-[#7A1638]/30 bg-[#7A1638]/10 text-[#7A1638] dark:border-pink-300/40 dark:bg-pink-300/10 dark:text-pink-200'
+              : 'border-dashed border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <MapPin className="w-4 h-4" />{lieuActuel || 'Près de moi'}<ChevronDown className="w-3.5 h-3.5 opacity-70" />
+        </button>
         {CATEGORIES.map((c) => (
           <button
             key={c.id || 'tout'}
@@ -209,7 +238,7 @@ export default function DiscoverTab() {
       </div>
 
       <div className="relative flex-1 min-h-0">
-        <AnimatePresence custom={direction}>
+        <AnimatePresence key={lot} custom={direction}>
           {visibles.slice().reverse().map((m) => (
             <Carte
               key={m.id}
@@ -217,6 +246,7 @@ export default function DiscoverTab() {
               dessus={m.id === visibles[0].id}
               onSwipe={swiper}
               onOuvrir={() => ouvrir(m)}
+              maCommune={position.commune}
             />
           ))}
         </AnimatePresence>
@@ -292,6 +322,7 @@ export default function DiscoverTab() {
       </div>
 
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} ouvrirProposition={ouvrirProposition} />
+      <ChoixPosition ouvert={choixPosition} onFermer={() => setChoixPosition(false)} />
     </div>
   );
 }
