@@ -104,19 +104,14 @@ function ClickHandler({ onMapClick }: { onMapClick?: (coords: { lat: number; lng
   return null;
 }
 
+// Le fond CARTO « Voyager » exige maintenant une clé (tuiles « API KEY REQUIRED ») : OpenStreetMap par défaut
 const baseLayers = [
   {
-    name: 'Voyager',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    checked: true
-  },
-  {
     name: 'Standard',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    checked: true
   },
   {
     name: 'Satellite',

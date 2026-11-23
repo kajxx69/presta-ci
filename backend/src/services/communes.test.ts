@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { communeDepuisTexte, communeParNom, positionPrestataire, positionDepuisRequete, distanceKm, communeLaPlusProche, zonesEffectives, communesValides } from './communes.js';
 import { comparerProximite, bonusProximite, infoDomicile } from './offres.js';
+import { statutCommune } from './carte-communes.js';
 
 describe('communes', () => {
   it('reconnaît les communes dans un texte libre', () => {
@@ -69,5 +70,14 @@ describe('communes', () => {
     expect(infoDomicile(pro, { is_domicile: true }, pos('Yopougon')).vient_chez_moi).toBe(false);
     expect(infoDomicile(pro, { is_domicile: true }, null).vient_chez_moi).toBeNull();
     expect(infoDomicile(pro, { is_domicile: false }, pos('Cocody')).vient_chez_moi).toBe(false);
+  });
+
+  it('carte : statut de chaque commune', () => {
+    expect(statutCommune(0, 0)).toBe('a_lancer');
+    expect(statutCommune(5, 0)).toBe('manque_pros');
+    expect(statutCommune(40, 3)).toBe('manque_pros');
+    expect(statutCommune(2, 3)).toBe('manque_clientes');
+    expect(statutCommune(0, 1)).toBe('manque_clientes');
+    expect(statutCommune(12, 3)).toBe('equilibre');
   });
 });

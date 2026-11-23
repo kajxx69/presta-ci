@@ -15,6 +15,7 @@ import { etatGeniusPay } from '../utils/geniuspay.js';
 import { placesOffreRestantes, PLACES_OFFRE_LANCEMENT } from '../services/plans.js';
 import { normaliser, texteRecherche, categorieModelePour } from '../services/modeles-sync.js';
 import { demandeDansMaZone } from '../services/demande.js';
+import { carteDesCommunes } from '../services/carte-communes.js';
 
 // Fil d'inspiration beauté « à swiper » + recherche + « Où le faire ? ».
 const router = express.Router();
@@ -341,6 +342,15 @@ router.get('/mes-offres', requireAuth, async (req: any, res: Response) => {
 });
 
 // ─── Admin ─────────────────────────────────────────────────────────────────
+
+// GET /api/modeles/admin/carte-communes — demande face aux pros, commune par commune
+router.get('/admin/carte-communes', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+  try {
+    res.json(await carteDesCommunes());
+  } catch (e) {
+    serverError(res, e, 'modeles/admin/carte-communes');
+  }
+});
 
 // GET /api/modeles/admin/apercu — tableau de bord « beauté » du back office
 router.get('/admin/apercu', requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {

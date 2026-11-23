@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3, Users, Package, Grid3X3, Calendar, Star,
   CreditCard, Bell, Crown, Settings,
-  Menu, X, ChevronLeft, LogOut, Moon, Sun, Smartphone, ShieldAlert, MessageCircle, ShieldCheck, Sparkles
+  Menu, X, ChevronLeft, LogOut, Moon, Sun, Smartphone, ShieldAlert, MessageCircle, ShieldCheck, Sparkles, MapPinned
 } from 'lucide-react';
 import AdminModeles from './AdminModeles';
+import AdminCarteCommunes from './AdminCarteCommunes';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
@@ -38,7 +39,7 @@ import AdminTickets from './AdminTickets';
 import AdminVerifications from './AdminVerifications';
 
 type AdminTab =
-  | 'dashboard' | 'users' | 'services' | 'categories' | 'modeles'
+  | 'dashboard' | 'users' | 'services' | 'categories' | 'modeles' | 'carte'
   | 'reservations' | 'avis' | 'signalements' | 'tickets' | 'verifications' | 'payments' | 'notifications'
   | 'plans' | 'settings' | 'profile';
 
@@ -58,6 +59,7 @@ const navGroups: NavGroup[] = [
     title: 'Principal',
     items: [
       { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
+      { id: 'carte', label: 'Carte des communes', icon: MapPinned },
       { id: 'modeles', label: 'Fil Découvrir & Pinterest', icon: Sparkles },
       { id: 'payments', label: 'Paiements', icon: CreditCard },
     ],
@@ -96,6 +98,7 @@ const tabComponents: Record<AdminTab, React.ComponentType<{ onNavigate?: (id: an
   services: AdminServices,
   categories: AdminCategories,
   modeles: AdminModeles,
+  carte: AdminCarteCommunes,
   reservations: AdminReservations,
   avis: AdminAvis,
   signalements: AdminSignalements,

@@ -7,6 +7,14 @@ export type CategorieModele = 'coiffure' | 'ongles' | 'maquillage' | 'cils' | 's
 export interface Modele { id: number; titre: string; categorie: CategorieModele; tags: string[]; photo_url: string; pin_url?: string | null; nb_offres?: number; prix_min?: number | null; source: 'prestataire' | 'pinterest'; credit_nom?: string | null; credit_url?: string | null; prestataire_id?: number | null; service_id?: number | null; prix?: number | null; ville?: string | null; nombre_likes: number; proche?: { distance_km: number; distance_approx: boolean; commune: string | null } }
 export interface TableauPinterest { id: number; titre: string; categorie: CategorieModele; url: string; ordre: number; is_active: boolean; derniere_synchro?: string | null; nb_importees?: number; derniere_erreur?: string | null; }
 export interface OuLeFaire { prestataire: { id: number; nom_commercial: string; ville?: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; is_pro?: boolean; photo?: string | null; commune?: string | null; distance_km?: number | null; distance_approx?: boolean; zones_deplacement?: string[]; frais_deplacement?: number; vient_chez_moi?: boolean | null }; service: { id: number; nom: string; prix: number; duree_minutes?: number | null; is_domicile?: boolean }; }
+export type StatutCommune = 'manque_pros' | 'manque_clientes' | 'equilibre' | 'a_lancer';
+export interface LigneCommune {
+  commune: string; zone: string; lat: number; lng: number;
+  clientes: number; clientes_actives: number; likes: number;
+  pros: number; pros_actives: number; pros_domicile: number;
+  reservations: number; top_categorie: string | null; statut: StatutCommune; conseil: string;
+}
+export interface CarteCommunes { periode_jours: number; communes: LigneCommune[]; sans_commune: { comptes: number; pros: number } }
 export interface DemandeZone {
   zones: string[]; commune: string | null; periode_jours: number; est_pro: boolean;
   clientes: number; clientes_semaine_precedente: number; likes: number;
@@ -632,6 +640,7 @@ export const api = {
       retirerPinterest: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/pinterest/${id}`, { method: 'DELETE' }),
       remove: (id: number): Promise<{ ok: boolean }> => http(`/api/modeles/admin/${id}`, { method: 'DELETE' }),
       apercu: (): Promise<ApercuAdmin> => http('/api/modeles/admin/apercu'),
+      carteCommunes: (): Promise<CarteCommunes> => http('/api/modeles/admin/carte-communes'),
     },
   },
   // Paiement en ligne des abonnements (GeniusPay : Wave, Orange Money, MTN, Moov, carte)
