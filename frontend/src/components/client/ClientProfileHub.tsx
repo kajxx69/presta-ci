@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useFavoris } from '../../lib/useFavoris';
 import ModeleVisuel from './ModeleVisuel';
 import ModeleDetailSheet from './ModeleDetailSheet';
+import { useVraiTap } from '../../lib/vraiTap';
 
 const ReservationsTab = lazy(() => import('./ReservationsTab'));
 const MessagesTab = lazy(() => import('../common/MessagesTab'));
@@ -48,18 +49,24 @@ function SousPage({ titre, children }: { titre: string; children: React.ReactNod
   );
 }
 
+function Case({ m, onOuvrir }: { m: Modele; onOuvrir: (m: Modele) => void }) {
+  // S'ouvre sur un vrai tap, pas à la fin d'un défilement
+  const tap = useVraiTap(() => onOuvrir(m));
+  return (
+    <button {...tap} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOuvrir(m)} aria-label={m.titre}
+      className="relative aspect-[3/4] overflow-hidden bg-sable dark:bg-gray-800 touch-manipulation">
+      <ModeleVisuel modele={m} compact className="w-full h-full" />
+      {!!m.nb_offres && (
+        <span className="absolute bottom-1.5 left-1.5 text-[10px] font-semibold text-encre bg-white/90 rounded-full px-2 py-0.5">{m.nb_offres} pro{m.nb_offres > 1 ? 's' : ''}</span>
+      )}
+    </button>
+  );
+}
+
 function Grille({ modeles, onOuvrir }: { modeles: Modele[]; onOuvrir: (m: Modele) => void }) {
   return (
     <div className="grid grid-cols-3 gap-[3px]">
-      {modeles.map((m) => (
-        <button key={m.id} onClick={() => onOuvrir(m)} aria-label={m.titre}
-          className="relative aspect-[3/4] overflow-hidden bg-sable dark:bg-gray-800">
-          <ModeleVisuel modele={m} compact className="w-full h-full" />
-          {!!m.nb_offres && (
-            <span className="absolute bottom-1.5 left-1.5 text-[10px] font-semibold text-encre bg-white/90 rounded-full px-2 py-0.5">{m.nb_offres} pro{m.nb_offres > 1 ? 's' : ''}</span>
-          )}
-        </button>
-      ))}
+      {modeles.map((m) => <Case key={m.id} m={m} onOuvrir={onOuvrir} />)}
     </div>
   );
 }

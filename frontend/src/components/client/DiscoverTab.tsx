@@ -12,6 +12,7 @@ import ChoixPosition from '../common/ChoixPosition';
 import { usePosition, paramsPosition, libellePosition } from '../../lib/position';
 import { libelleLieu } from '../../lib/communes';
 import VisiteGuidee from '../common/VisiteGuidee';
+import { useVraiTap } from '../../lib/vraiTap';
 
 export const CATEGORIES: { id: CategorieModele | ''; label: string; emoji: string }[] = [
   { id: '', label: 'Tout', emoji: '' },
@@ -29,6 +30,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir, maCommune }: {
   modele: Modele; dessus: boolean; onSwipe: (d: Direction) => void; onOuvrir: () => void; maCommune?: string | null;
 }) {
   const x = useMotionValue(0);
+  const tap = useVraiTap(() => dessus && onOuvrir());
   const rotate = useTransform(x, [-300, 300], [-14, 14]);
 
   const finDrag = (_: unknown, info: PanInfo) => {
@@ -48,7 +50,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir, maCommune }: {
       animate={{ scale: dessus ? 1 : 0.95, y: dessus ? 0 : 10, opacity: 1 }}
       variants={{ sortie: (d: Direction) => ({ x: d * 650, rotate: d * 25, opacity: 0, transition: { duration: 0.3 } }) }}
       exit="sortie"
-      onTap={() => dessus && onOuvrir()}
+      {...tap}
     >
       <ModeleVisuel modele={modele} className="w-full h-full" />
       <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#2a1f1b]/90 via-[#2a1f1b]/40 to-transparent pointer-events-none" />
@@ -63,7 +65,7 @@ function Carte({ modele, dessus, onSwipe, onOuvrir, maCommune }: {
           ].filter(Boolean).join(' · ')}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur text-sm font-medium">Voir la fiche ↑</span>
+          <span className="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur text-sm font-medium">Voir la fiche</span>
           {modele.proche ? (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white text-encre text-sm font-medium">
               <MapPin className="w-3.5 h-3.5 text-vin-600" />{libelleLieu(modele.proche, maCommune)}

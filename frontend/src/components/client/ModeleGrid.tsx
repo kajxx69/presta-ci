@@ -1,9 +1,21 @@
 import { Heart } from 'lucide-react';
 import { Modele } from '../../lib/api';
 import ModeleVisuel from './ModeleVisuel';
+import { useVraiTap } from '../../lib/vraiTap';
 
 // Mosaïque à hauteurs variées (maquette « Rechercher ») : rythme régulier, pas aléatoire
 const FORMATS = ['aspect-[4/5]', 'aspect-[3/4]', 'aspect-[2/3]', 'aspect-[4/5]', 'aspect-[3/4]', 'aspect-[5/6]'];
+
+/** Carte cliquable : s'ouvre sur un vrai tap (ou au clavier), jamais à la fin d'un défilement. */
+function BoutonCarte({ onOuvrir, titre, children }: { onOuvrir: () => void; titre: string; children: React.ReactNode }) {
+  const tap = useVraiTap(onOuvrir);
+  return (
+    <button {...tap} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOuvrir()}
+      className="absolute inset-0 w-full h-full text-left touch-manipulation" aria-label={titre}>
+      {children}
+    </button>
+  );
+}
 
 /** Mosaïque 2 colonnes de modèles (Recherche). */
 export default function ModeleGrid({ modeles, onOuvrir, aimes, onToggleLike }: {
@@ -16,7 +28,7 @@ export default function ModeleGrid({ modeles, onOuvrir, aimes, onToggleLike }: {
     <div className="columns-2 sm:columns-3 gap-4 [column-fill:_balance]">
       {modeles.map((m, i) => (
         <div key={m.id} className={`relative mb-4 break-inside-avoid rounded-[22px] overflow-hidden bg-sable dark:bg-gray-800 ${FORMATS[i % FORMATS.length]}`}>
-          <button onClick={() => onOuvrir(m)} className="absolute inset-0 w-full h-full text-left" aria-label={m.titre}>
+          <BoutonCarte onOuvrir={() => onOuvrir(m)} titre={m.titre}>
             <ModeleVisuel modele={m} compact className="w-full h-full" />
             <span className="absolute left-3 bottom-3 right-3 flex flex-col items-start gap-1">
               {!!m.nb_offres && (
@@ -24,7 +36,7 @@ export default function ModeleGrid({ modeles, onOuvrir, aimes, onToggleLike }: {
               )}
               <span className="max-w-full px-3 py-1.5 rounded-xl bg-creme/95 text-encre text-sm font-medium truncate first-letter:uppercase">{m.titre}</span>
             </span>
-          </button>
+          </BoutonCarte>
           {onToggleLike && (
             <button
               onClick={() => onToggleLike(m)}
