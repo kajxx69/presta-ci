@@ -522,6 +522,14 @@ router.post('/modele', async (req: Request, res: Response) => {
     }
     const message = String(req.body?.message || '').trim().slice(0, 500);
 
+    // « Proposer mon prix » à une prestataire précise
+    let cible: any = null;
+    if (req.body?.prestataire_id != null && req.body.prestataire_id !== '') {
+      cible = await Prestataire.findOne({ _id: Number(req.body.prestataire_id), is_active: { $ne: false } }).select('user_id nom_commercial');
+      if (!cible) return res.status(404).json({ error: 'Prestataire introuvable' });
+      if (cible.user_id === userId) return res.status(400).json({ error: 'Tu ne peux pas t\'envoyer une demande' });
+    }
+
     if (await Demande.exists({ client_id: userId, modele_id: modele._id, statut: 'ouverte', expires_at: { $gt: new Date() } })) {
       return res.status(400).json({ error: 'Tu as déjà une demande en cours pour ce modèle' });
     }
@@ -540,6 +548,7 @@ router.post('/modele', async (req: Request, res: Response) => {
       description: message || `Demande pour le modèle « ${modele.titre} »`,
       modele_id: modele._id,
       modele_categorie: modele.categorie,
+      prestataire_cible_id: cible?._id ?? null,
       prix_propose: prix,
       prix_reference: prixReferenceDe(modele),
       meches_comprises: meches,
@@ -550,6 +559,14 @@ router.post('/modele', async (req: Request, res: Response) => {
       photo: modele.photo_url || null,
       expires_at,
     });
+
+    // Demande à une seule prestataire : elle seule est prévenue
+    if (cible) {
+      await notifier(cible.user_id, '💌 Une cliente te propose son prix',
+        `« ${modele.titre} » à ${commune.nom} pour ${fcfa(prix)}. Accepte, refuse ou discute le prix.`,
+        { kind: 'demande_modele', demande_id: demande._id });
+      return res.status(201).json({ id: demande._id, prestataires_notifies: 1 });
+    }
 
     // Prévenir les pros concernées : celles qui font ce modèle, puis celles de la même famille, les plus proches d'abord
     let notifies = 0;
@@ -595,6 +612,8 @@ router.put('/:id/montant', async (req: Request, res: Response) => {
     // Les pros qui n'ont pas refusé sont prévenues
     const exclues = new Set((demande.negociations || []).filter((n: any) => n.statut === 'refusee').map((n: any) => n.prestataire_id));
     const enDiscussion = (demande.negociations || []).filter((n: any) => !exclues.has(n.prestataire_id)).map((n: any) => n.prestataire_id);
+    // Demande adressée à une seule pro : elle est prévenue même sans discussion en cours
+    if (demande.prestataire_cible_id && !exclues.has(demande.prestataire_cible_id) && !enDiscussion.includes(demande.prestataire_cible_id)) enDiscussion.push(demande.prestataire_cible_id);
     const pros = await Prestataire.find({ _id: { $in: enDiscussion } }).select('user_id');
     await Promise.allSettled(pros.map(p => notifier(p.user_id, '📈 La cliente a augmenté son prix', `« ${demande.titre} » : ${fcfa(prix)}.`, { kind: 'demande_modele', demande_id: demande._id })));
     res.json({ ok: true, prix_propose: prix });
@@ -617,8 +636,9 @@ router.post('/:id/pro', async (req: Request, res: Response) => {
     const nego = negoDe(demande, pid);
     if (nego?.statut === 'refusee') return res.status(400).json({ error: 'Cette discussion est terminée' });
 
+    if (demande.prestataire_cible_id && demande.prestataire_cible_id !== pid) return res.status(403).json({ error: 'Cette demande est adressée à une autre prestataire' });
     // Accès anticipé des abonnées (comme les demandes libres) : 5 premières minutes
-    if (Date.now() < demande.created_at.getTime() + PRIORITE_MINUTES * 60000 && !hasActivePaidPlan(prestataire)) {
+    if (!demande.prestataire_cible_id && Date.now() < demande.created_at.getTime() + PRIORITE_MINUTES * 60000 && !hasActivePaidPlan(prestataire)) {
       return res.status(403).json({ error: `Les abonnées Pro ont la priorité pendant ${PRIORITE_MINUTES} minutes. Réessaie dans un instant ou passe Pro.` });
     }
 
@@ -705,7 +725,7 @@ router.get('/modele/mes', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const demandes: any[] = await Demande.find({ client_id: userId, modele_id: { $ne: null } }).sort({ created_at: -1 }).limit(40);
-    const proIds = [...new Set(demandes.flatMap(d => [...(d.negociations || []).map((n: any) => n.prestataire_id), d.accord?.prestataire_id].filter(Boolean)))];
+    const proIds = [...new Set(demandes.flatMap(d => [...(d.negociations || []).map((n: any) => n.prestataire_id), d.accord?.prestataire_id, d.prestataire_cible_id].filter(Boolean)))];
     const modeleIds = [...new Set(demandes.map(d => d.modele_id))];
     const [pros, modeles] = await Promise.all([
       Prestataire.find({ _id: { $in: proIds } }).select('nom_commercial note_moyenne nombre_avis is_verified commune photos_etablissement'),
@@ -723,6 +743,7 @@ router.get('/modele/mes', async (req: Request, res: Response) => {
         id: d._id,
         modele: { id: d.modele_id, titre: m?.titre || d.titre, photo_url: m?.photo_url || d.photo || null, categorie: m?.categorie || d.modele_categorie },
         prix_propose: d.prix_propose,
+        cible: d.prestataire_cible_id ? vuePro(d.prestataire_cible_id) : null,
         prix_reference: d.prix_reference,
         meches_comprises: d.meches_comprises,
         date_souhaitee: d.date_souhaitee,
@@ -762,12 +783,16 @@ router.get('/modele/pro', async (req: Request, res: Response) => {
       OffreModele.find({ prestataire_id: pid }).select('modele_id'),
     ]);
     const now = new Date();
+    const base = { statut: 'ouverte', expires_at: { $gt: now }, modele_id: { $ne: null }, client_id: { $ne: userId } };
+    // Demandes ouvertes à toutes les pros de la famille (null couvre aussi les anciennes demandes sans le champ)
     const ouvertesFiltre: any = {
-      statut: 'ouverte', expires_at: { $gt: now }, modele_id: { $ne: null }, client_id: { $ne: userId },
+      ...base, prestataire_cible_id: null,
       $or: [{ modele_categorie: { $in: [...cats] } }, { modele_id: { $in: offres.map(o => o.modele_id) } }],
     };
     if (!prioritaire) ouvertesFiltre.created_at = { $lte: new Date(Date.now() - PRIORITE_MINUTES * 60000) };
-    const demandes: any[] = await Demande.find({ $or: [ouvertesFiltre, { 'accord.prestataire_id': pid }] })
+    // Demandes adressées à elle seule : toujours visibles, sans fenêtre de priorité
+    const pourElle = { ...base, prestataire_cible_id: pid };
+    const demandes: any[] = await Demande.find({ $or: [ouvertesFiltre, pourElle, { 'accord.prestataire_id': pid }] })
       .sort({ created_at: -1 }).limit(100);
 
     const clients = await User.find({ _id: { $in: [...new Set(demandes.map(d => d.client_id))] } }).select('prenom nom');
@@ -788,6 +813,7 @@ router.get('/modele/pro', async (req: Request, res: Response) => {
         cliente: nomCourt(clientById.get(d.client_id)),
         modele: { id: d.modele_id, titre: m?.titre || d.titre, photo_url: m?.photo_url || d.photo || null, categorie: m?.categorie || d.modele_categorie },
         prix_cliente: prixCliente(d, n),
+        pour_toi: d.prestataire_cible_id === pid,
         prix_reference: d.prix_reference,
         meches_comprises: d.meches_comprises,
         date_souhaitee: d.date_souhaitee,

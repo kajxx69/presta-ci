@@ -10,7 +10,8 @@ import ChoixCommune from '../common/ChoixCommune';
 import { usePosition, paramsPosition, communeParDefaut } from '../../lib/position';
 import { libelleLieu } from '../../lib/communes';
 import { useAuthStore } from '../../store/authStore';
-import DemandeModeleForm from '../demandes/DemandeModeleForm';
+import DemandeModeleForm, { CibleDemande } from '../demandes/DemandeModeleForm';
+import ChoixReservation from '../demandes/ChoixReservation';
 
 interface Props {
   modele: Modele | null;
@@ -62,6 +63,8 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
   const [detail, setDetail] = useState<DetailModele | null>(null);
   const [proposer, setProposer] = useState(false);
   const [demander, setDemander] = useState(false);
+  const [cible, setCible] = useState<CibleDemande | null>(null);
+  const [choix, setChoix] = useState(false);
   const { isAuthenticated } = useAuthStore();
   // « Elle vient chez moi » : seulement les pros qui se déplacent dans ma commune
   const [chezMoi, setChezMoi] = useState(false);
@@ -82,6 +85,7 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
     setDetail(null);
     setProposer(!!(modele && ouvrirProposition));
     setDemander(false);
+    setChoix(false);
   }, [modele, ouvrirProposition]);
 
   // (Re)charger à l'ouverture et quand la position change
@@ -103,11 +107,15 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
   const reference = fiche?.prix_reference ?? null;
   const couleurs = fiche?.couleurs || [];
   const conseils = fiche?.conseils_entretien || [];
-  const ouvrirDemande = () => {
+  // « Proposer mon prix » : à toutes les pros proches (cible null) ou à une seule
+  const ouvrirDemande = (c: CibleDemande | null = null) => {
     if (!isAuthenticated) { onClose(); navigate('/register'); showToast('Crée ton compte pour envoyer ta demande', 'info'); return; }
-    if (detail?.ma_demande_id) { onClose(); navigate(`/app/mes-demandes?demande=${detail.ma_demande_id}`); return; }
+    if (!c && detail?.ma_demande_id) { voirMaDemande(); return; }
+    setChoix(false);
+    setCible(c);
     setDemander(true);
   };
+  const voirMaDemande = () => { onClose(); navigate(`/app/mes-demandes?demande=${detail?.ma_demande_id}`); };
   const enTete = (t: string) => <h3 className="text-lg font-semibold text-encre dark:text-white mb-3">{t}</h3>;
 
   return (
@@ -271,21 +279,28 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
 
               {/* Action principale fixe en bas (maquette) */}
               <div className="absolute inset-x-0 bottom-0 px-6 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-creme via-creme to-creme/0 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/0">
-                <button onClick={ouvrirDemande} disabled={detail === null}
-                  className={`w-full py-4 rounded-full text-lg font-semibold disabled:opacity-60 ${detail?.ma_demande_id ? 'bg-white dark:bg-gray-900 border border-vin-500 text-vin-600 dark:text-vin-300' : 'bg-vin-600 hover:bg-vin-700 text-white'}`}>
-                  {detail?.ma_demande_id ? 'Voir ma demande' : 'Demander cette prestation'}
+                <button onClick={() => setChoix(true)} disabled={detail === null}
+                  className="w-full py-4 rounded-full text-lg font-semibold disabled:opacity-60 bg-vin-600 hover:bg-vin-700 text-white">
+                  Réserver
                 </button>
-                {detail?.ma_demande_id && <p className="mt-2 text-center text-xs text-gray-500">Tu as une demande en cours pour ce modèle</p>}
+                {detail?.ma_demande_id && <button onClick={voirMaDemande} className="mt-2 w-full text-center text-sm font-medium text-vin-600 dark:text-vin-300">Tu as une demande en cours · Voir</button>}
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <DemandeModeleForm modele={demander && fiche ? fiche : null} onFermer={() => setDemander(false)}
+      <ChoixReservation ouvert={choix} onFermer={() => setChoix(false)}
+        pros={autres} prosSimilaires={detail?.similaires || []} maCommune={maCommune} maDemandeId={detail?.ma_demande_id}
+        onReserver={(serviceId) => { setChoix(false); reserver(serviceId); }}
+        onProposerA={(o) => ouvrirDemande({ id: o.prestataire.id, nom: o.prestataire.nom_commercial, prix: o.service.prix })}
+        onProposerATous={() => ouvrirDemande(null)}
+        onVoirMaDemande={voirMaDemande} />
+
+      <DemandeModeleForm modele={demander && fiche ? fiche : null} cible={cible} onFermer={() => setDemander(false)}
         onEnvoyee={(id, n) => {
           setDemander(false);
-          showToast(n ? `Demande envoyée à ${n} prestataire${n > 1 ? 's' : ''} proche${n > 1 ? 's' : ''} ✨` : 'Demande envoyée ✨', 'success');
+          showToast(cible ? `Demande envoyée à ${cible.nom} ✨` : n ? `Demande envoyée à ${n} prestataire${n > 1 ? 's' : ''} proche${n > 1 ? 's' : ''} ✨` : 'Demande envoyée ✨', 'success');
           onClose();
           navigate(`/app/mes-demandes?demande=${id}`);
         }} />

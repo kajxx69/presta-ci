@@ -28,6 +28,8 @@ const demandeSchema = new mongoose.Schema({
   // refuser ou négocier (fil d'offres par prestataire). Un accord crée la réservation.
   modele_id: { type: Number, default: null, ref: 'Modele' },
   modele_categorie: { type: String, default: null }, // coiffure, ongles… (ciblage des pros)
+  // Demande adressée à UNE prestataire (« Proposer mon prix » depuis sa ligne) ; null = toutes les pros proches
+  prestataire_cible_id: { type: Number, default: null, ref: 'Prestataire' },
   prix_propose: { type: Number, default: null },
   prix_reference: { type: Number, default: null }, // copie au moment de la demande
   meches_comprises: { type: Boolean, default: null }, // coiffure uniquement
@@ -83,6 +85,7 @@ demandeSchema.index({ client_id: 1, statut: 1 });
 demandeSchema.index({ statut: 1, categorie_id: 1, expires_at: 1 });
 demandeSchema.index({ statut: 1, modele_categorie: 1, expires_at: 1 });
 demandeSchema.index({ 'accord.prestataire_id': 1 });
+demandeSchema.index({ prestataire_cible_id: 1, statut: 1 });
 demandeSchema.index({ 'negociations.prestataire_id': 1 });
 
 export const Demande = mongoose.model('Demande', demandeSchema);

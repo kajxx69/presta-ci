@@ -30,7 +30,7 @@ export interface ModeleDemande { id: number; titre: string; photo_url: string | 
 export interface ProDemande { id: number; nom_commercial: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; commune?: string | null; photo?: string | null }
 export type EtatDemande = 'sans_reponse' | 'en_discussion' | 'acceptee' | 'annulee' | 'expiree';
 export interface MaDemande {
-  id: number; modele: ModeleDemande; prix_propose: number; prix_reference: number | null; meches_comprises: boolean | null;
+  id: number; modele: ModeleDemande; prix_propose: number; cible: ProDemande | null; prix_reference: number | null; meches_comprises: boolean | null;
   date_souhaitee: string; heure_souhaitee: string; commune: string; message: string | null; etat: EtatDemande;
   relance_envoyee: boolean; created_at: string; expires_at: string;
   accord: { prix: number; reservation_id: number | null; prestataire: ProDemande } | null;
@@ -38,7 +38,7 @@ export interface MaDemande {
 }
 export interface DemandePro {
   id: number; onglet: 'nouvelles' | 'en_discussion' | 'acceptees'; cliente: string; modele: ModeleDemande;
-  prix_cliente: number; prix_reference: number | null; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string;
+  prix_cliente: number; pour_toi: boolean; prix_reference: number | null; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string;
   commune: string; distance_km: number | null; message: string | null; offres: OffreFil[]; ma_derniere_offre: number | null;
   derniere_offre: number | null; accord: { prix: number; reservation_id: number | null } | null; created_at: string;
 }
@@ -721,7 +721,7 @@ export const api = {
       http('/api/demandes', { method: 'POST', body: JSON.stringify(payload) }),
     mine: (): Promise<any[]> => http('/api/demandes/mes'),
     // Demande sur un modèle : prix proposé + négociation
-    creerSurModele: (body: { modele_id: number; prix_propose: number; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string; commune: string; message?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
+    creerSurModele: (body: { modele_id: number; prestataire_id?: number; prix_propose: number; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string; commune: string; message?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
       http('/api/demandes/modele', { method: 'POST', body: JSON.stringify(body) }),
     mesSurModele: (): Promise<MaDemande[]> => http('/api/demandes/modele/mes'),
     pourPro: (): Promise<DemandesPro> => http('/api/demandes/modele/pro'),

@@ -79,6 +79,7 @@ export default function DemandesPro({ ouvrirId }: { ouvrirId?: number | null }) 
                     {d.prix_reference != null && <span className="text-gray-500 text-sm"> Réf. {d.prix_reference.toLocaleString('fr-FR')}</span>}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {d.pour_toi && <Pastille ton="vin">Pour toi</Pastille>}
                     <PastilleMeches meches={d.meches_comprises} />
                     {d.ma_derniere_offre != null && <Pastille ton="vin">Tu proposes {fcfa(d.ma_derniere_offre)}</Pastille>}
                   </div>

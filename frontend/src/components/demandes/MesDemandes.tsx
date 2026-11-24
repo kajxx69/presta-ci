@@ -60,7 +60,7 @@ export default function MesDemandes({ ouvrirId, onChoisirModele }: { ouvrirId?: 
               <div>
                 <p className="text-lg font-semibold text-encre dark:text-white truncate first-letter:uppercase">{d.modele.titre}</p>
                 <p className="text-gray-500 dark:text-gray-400 truncate">
-                  {CATEGORIE_LABEL[d.modele.categorie]} · {d.accord ? d.accord.prestataire.nom_commercial : `${prix.toLocaleString('fr-FR')} F`}
+                  {d.accord ? d.accord.prestataire.nom_commercial : d.cible ? `Pour ${d.cible.nom_commercial}` : CATEGORIE_LABEL[d.modele.categorie]} · {prix.toLocaleString('fr-FR')} F
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -145,7 +145,7 @@ function DetailDemande({ demande: d, onFermer, onChange }: { demande: MaDemande 
               <div>
                 <h3 className="text-lg font-semibold text-encre dark:text-white mb-3">Réponses des prestataires</h3>
                 {d.discussions.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">Les prestataires proches ont été prévenues. Elles peuvent accepter ton prix directement ou t’en proposer un autre.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{d.cible ? `${d.cible.nom_commercial} a été prévenue. Elle peut accepter ton prix directement ou t’en proposer un autre.` : 'Les prestataires proches ont été prévenues. Elles peuvent accepter ton prix directement ou t’en proposer un autre.'}</p>
                 ) : (
                   <ul className="space-y-2.5">
                     {d.discussions.map((x) => (
