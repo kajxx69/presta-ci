@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, MapPin, Phone, Star, RefreshCw, Info, CheckCircle2, Headphones } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone, Star, RefreshCw, Info, CheckCircle2, Headphones, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
+import { ouvrirConversationPro } from '../../lib/contacterPro';
 import RatingModal from './RatingModal';
 import SupportTicketModal from '../common/SupportTicketModal';
 import { SearchInput } from '../ui/SearchInput';
@@ -130,11 +131,15 @@ export default function ReservationsTab() {
     }
   };
 
+  // Téléphone seulement une fois confirmé ; sinon (ou s'il manque) : la messagerie Chicly
   const handleContact = (reservation: any) => {
     if (reservation.prestataire_telephone) {
       window.open(`tel:${reservation.prestataire_telephone}`, '_self');
+    } else if (reservation.prestataire_id) {
+      if (reservation.telephone_apres_confirmation) showToast('Le numéro s’affiche dès que la pro confirme. En attendant, écris-lui ici 💬', 'info');
+      ouvrirConversationPro(reservation.prestataire_id, navigate);
     } else {
-      showToast('Numéro de téléphone non disponible', 'error');
+      showToast('Contact non disponible', 'error');
     }
   };
 
@@ -388,7 +393,8 @@ export default function ReservationsTab() {
                         variant="ghost"
                         size="sm"
                         onClick={(e) => { e.stopPropagation(); handleContact(reservation); }}
-                        icon={Phone}
+                        icon={reservation.prestataire_telephone ? Phone : MessageCircle}
+                        aria-label={reservation.prestataire_telephone ? 'Appeler' : 'Écrire à la pro'}
                       />
                     </div>
                   </div>
@@ -494,15 +500,13 @@ export default function ReservationsTab() {
             )}
 
             <div className="flex gap-2">
-              {selectedReservation.prestataire_telephone && (
-                <Button
-                  fullWidth
-                  onClick={() => handleContact(selectedReservation)}
-                  icon={Phone}
-                >
-                  Appeler
-                </Button>
-              )}
+              <Button
+                fullWidth
+                onClick={() => handleContact(selectedReservation)}
+                icon={selectedReservation.prestataire_telephone ? Phone : MessageCircle}
+              >
+                {selectedReservation.prestataire_telephone ? 'Appeler' : 'Écrire'}
+              </Button>
               <Button
                 variant="secondary"
                 fullWidth

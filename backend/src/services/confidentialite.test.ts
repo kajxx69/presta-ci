@@ -9,11 +9,13 @@ describe('confidentialité des adresses', () => {
     verification_document: '/uploads/cni-awa.jpg', relance_j3_pour: new Date(), telephone_pro: '0700000000',
   };
 
-  it('la fiche publique ne contient ni adresse, ni GPS exact, ni pièce d’identité', () => {
+  it('la fiche publique ne contient ni adresse, ni GPS exact, ni téléphone, ni pièce d’identité', () => {
     const v: any = vuePubliquePrestataire(pro);
     const json = JSON.stringify(v);
     expect(json).not.toContain('Riviera');
     expect(json).not.toContain('cni-awa');
+    expect(json).not.toContain('0700000000');
+    expect(v.telephone_pro).toBeUndefined();
     expect(v.user_id).toBeUndefined();
     expect(v.location).toBeUndefined();
     expect(v.relance_j3_pour).toBeUndefined();

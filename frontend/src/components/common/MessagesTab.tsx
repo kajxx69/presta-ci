@@ -329,8 +329,10 @@ export default function MessagesTab() {
 
   // ── Vue conversation ──
   if (activeConv) {
+    // Hauteur = écran − barre du haut − en-tête « Messages » − navigation du bas (téléphone) :
+    // sinon le champ de saisie passe sous la navigation
     return (
-      <div className="flex flex-col h-[calc(100vh-8rem)] max-w-2xl mx-auto">
+      <div className="flex flex-col h-[calc(100dvh-13rem-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-7.5rem)] max-w-2xl mx-auto">
         {/* En-tête */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-2xl">
           <button

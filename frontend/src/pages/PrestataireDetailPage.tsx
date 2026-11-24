@@ -335,12 +335,10 @@ export default function PrestataireDetailPage() {
               <div className="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 inline-flex items-center space-x-2">
                 <StarRating rating={prestataire.note_moyenne || 0} reviewCount={prestataire.nombre_avis || 0} />
               </div>
-              {prestataire.telephone_pro && (
-                <div className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 inline-flex items-center space-x-2">
-                  <Phone className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-gray-700 dark:text-gray-200">{prestataire.telephone_pro}</span>
-                </div>
-              )}
+              <div className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 inline-flex items-center space-x-2" title="Partagé une fois ton rendez-vous confirmé">
+                <Phone className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-700 dark:text-gray-200">Téléphone après confirmation 🔒</span>
+              </div>
             </div>
 
             {/* Badges d'activité calculés automatiquement */}

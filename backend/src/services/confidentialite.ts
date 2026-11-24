@@ -3,7 +3,8 @@ import { estPro } from './plans.js';
 
 // Sécurité des pros (beaucoup travaillent chez elles) et des clientes :
 //  - le public ne voit que la commune et une position approximative, jamais l'adresse exacte
-//  - l'adresse exacte et l'itinéraire n'apparaissent qu'une fois la réservation confirmée
+//  - l'adresse exacte, l'itinéraire et le téléphone n'apparaissent qu'une fois la réservation confirmée
+//    (avant : la messagerie Chicly)
 
 /** Statuts où l'adresse exacte est partagée entre la cliente et la pro. */
 export const STATUTS_ADRESSE_VISIBLE = ['confirmee', 'acceptee', 'en_attente_confirmation', 'terminee'];
@@ -21,7 +22,7 @@ export function positionApprox(p: { latitude?: number | null; longitude?: number
 
 /**
  * Fiche publique d'une pro : liste blanche de champs. Jamais d'adresse exacte, de GPS précis,
- * de document d'identité, d'identifiant de compte ni de champ interne.
+ * de téléphone, de document d'identité, d'identifiant de compte ni de champ interne.
  */
 export function vuePubliquePrestataire(doc: any, extra: Record<string, unknown> = {}) {
   const p = typeof doc?.toJSON === 'function' ? doc.toJSON() : doc;
@@ -33,7 +34,6 @@ export function vuePubliquePrestataire(doc: any, extra: Record<string, unknown> 
     ville: p.ville ?? null,
     commune: p.commune ?? null,
     pays: p.pays ?? null,
-    telephone_pro: p.telephone_pro ?? null,
     horaires_ouverture: p.horaires_ouverture ?? {},
     photos_etablissement: Array.isArray(p.photos_etablissement) ? p.photos_etablissement : [],
     note_moyenne: p.note_moyenne ?? 0,

@@ -50,6 +50,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const statutById = new Map(statuts.map(s => [s._id as number, s]));
     const serviceById = new Map(services.map(s => [s._id as number, s]));
     const prestataireById = new Map(prestataires.map(p => [p._id as number, p]));
+    // Repli du téléphone (une fois confirmé) : numéro du compte si la pro n'a pas de numéro pro
+    const comptesPros = await User.find({ _id: { $in: prestataires.filter(p => !p.telephone_pro).map(p => p.user_id) } }).select('telephone');
+    const telCompte = new Map(comptesPros.map(u => [u._id as number, (u as any).telephone as string | undefined]));
     const avisByReservation = new Set(avisList.map(a => a.reservation_id));
 
     const results = reservations.map((r) => {
@@ -78,7 +81,9 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         adresse_apres_confirmation: !rObj.a_domicile && !adresseVisible(statut?.nom) && !['annulee', 'refusee'].includes(statut?.nom || ''),
         itineraire_url: !rObj.a_domicile && adresseVisible(statut?.nom) && statut?.nom !== 'terminee'
           ? lienItineraire(prestataire?.latitude, prestataire?.longitude, prestataire?.adresse) : null,
-        prestataire_telephone: prestataire?.telephone_pro || null,
+        // Téléphone de la pro : seulement une fois le rendez-vous confirmé (avant : la messagerie)
+        prestataire_telephone: adresseVisible(statut?.nom) ? prestataire?.telephone_pro || (prestataire ? telCompte.get(prestataire.user_id) : null) || null : null,
+        telephone_apres_confirmation: !adresseVisible(statut?.nom) && !['annulee', 'refusee'].includes(statut?.nom || ''),
         booking_type: rObj.booking_type || 'appointment',
         quantite: rObj.quantite || 1,
         prix_total: rObj.prix_total ?? rObj.prix_final,

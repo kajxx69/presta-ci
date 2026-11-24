@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { ouvrirConversationPro } from '../lib/contacterPro';
 import Layout from '../components/Layout';
 import ReservationModal from '../components/client/ReservationModal';
 import {
@@ -264,14 +265,13 @@ export default function ServiceDetailPage() {
                   >
                     Voir le profil
                   </button>
-                  {prestataire.telephone_pro && (
-                    <button
-                      onClick={() => window.open(`tel:${prestataire.telephone_pro}`, '_self')}
-                      className="flex-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
-                    >
-                      Appeler
-                    </button>
-                  )}
+                  {/* Téléphone partagé seulement après confirmation d'un rendez-vous : avant, la messagerie */}
+                  <button
+                    onClick={() => (isAuthenticated ? ouvrirConversationPro(prestataire.id, navigate) : navigate('/login'))}
+                    className="flex-1 px-4 py-2 rounded-xl bg-[#7A1638] text-white text-sm font-semibold hover:opacity-90"
+                  >
+                    💬 Écrire
+                  </button>
                 </div>
               </div>
             )}
