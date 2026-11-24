@@ -28,7 +28,10 @@ export default function EcranAuth({ mode }: { mode: 'inscription' | 'connexion' 
   const vientPourPro = params.get('role') === 'prestataire';
   const { login, register } = useAuthStore();
   const placesOffre = useOffreLancement();
-  const [f, setF] = useState({ prenom: '', nom: '', telephone: '', email: '', password: '' });
+  // Code de parrainage : saisi, ou reçu par un lien d'invitation (?ref=AWA-3F2A1B)
+  const codeLien = (params.get('ref') || params.get('parrain') || '').toUpperCase();
+  const [f, setF] = useState({ prenom: '', nom: '', telephone: '', email: '', password: '', code_parrain: codeLien });
+  const [voirParrain, setVoirParrain] = useState(!!codeLien);
   const [voir, setVoir] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -47,7 +50,7 @@ export default function EcranAuth({ mode }: { mode: 'inscription' | 'connexion' 
     setErreur('');
     try {
       if (inscription) {
-        await register({ ...f, email: f.email.trim(), prenom: f.prenom.trim(), nom: f.nom.trim(), role_id: 1 } as any);
+        await register({ ...f, code_parrain: f.code_parrain.trim() || undefined, email: f.email.trim(), prenom: f.prenom.trim(), nom: f.nom.trim(), role_id: 1 } as any);
         navigate('/app', { replace: true });
       } else {
         const ok = await login(f.email.trim(), f.password);
@@ -120,6 +123,13 @@ export default function EcranAuth({ mode }: { mode: 'inscription' | 'connexion' 
             </div>
           )}
 
+          {inscription && (voirParrain ? (
+            <Champ label="Code de parrainage (facultatif)">
+              <input value={f.code_parrain} onChange={(e) => setF({ ...f, code_parrain: e.target.value.toUpperCase().slice(0, 20) })} autoCapitalize="characters" placeholder="Ex. AWA-3F2A1B" className={champ} />
+            </Champ>
+          ) : (
+            <button type="button" onClick={() => setVoirParrain(true)} className="text-sm font-medium text-vin-600 dark:text-vin-300">J’ai un code de parrainage</button>
+          ))}
           {erreur && <p role="alert" className="rounded-2xl bg-vin-50 dark:bg-vin-900/30 text-vin-800 dark:text-vin-200 px-4 py-3 text-[15px]">{erreur}</p>}
 
           <button type="submit" disabled={!valide || envoi}
