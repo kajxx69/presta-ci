@@ -22,7 +22,30 @@ export interface DemandeZone {
   top_modeles: { modele: Modele; clientes: number; je_le_propose: boolean }[];
   top_masques: number;
 }
-export interface DetailModele { modele: Modele; offres: OuLeFaire[]; similaires: OuLeFaire[]; nb_offres_total?: number; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
+export interface CouleurModele { nom: string; hex: string }
+export interface ConseilEntretien { critere: string; conseil: string; statut: 'oui' | 'non' | 'prudence' }
+export interface FicheModele extends Modele { prix_reference?: number | null; couleurs?: CouleurModele[]; conseils_entretien?: ConseilEntretien[] }
+export interface OffreFil { auteur: 'cliente' | 'pro'; montant: number; created_at: string }
+export interface ModeleDemande { id: number; titre: string; photo_url: string | null; categorie: CategorieModele }
+export interface ProDemande { id: number; nom_commercial: string; note_moyenne?: number; nombre_avis?: number; is_verified?: boolean; commune?: string | null; photo?: string | null }
+export type EtatDemande = 'sans_reponse' | 'en_discussion' | 'acceptee' | 'annulee' | 'expiree';
+export interface MaDemande {
+  id: number; modele: ModeleDemande; prix_propose: number; prix_reference: number | null; meches_comprises: boolean | null;
+  date_souhaitee: string; heure_souhaitee: string; commune: string; message: string | null; etat: EtatDemande;
+  relance_envoyee: boolean; created_at: string; expires_at: string;
+  accord: { prix: number; reservation_id: number | null; prestataire: ProDemande } | null;
+  discussions: { prestataire: ProDemande; offres: OffreFil[]; offre_pro_en_attente: number | null; derniere_offre: number | null; updated_at: string }[];
+}
+export interface DemandePro {
+  id: number; onglet: 'nouvelles' | 'en_discussion' | 'acceptees'; cliente: string; modele: ModeleDemande;
+  prix_cliente: number; prix_reference: number | null; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string;
+  commune: string; distance_km: number | null; message: string | null; offres: OffreFil[]; ma_derniere_offre: number | null;
+  derniere_offre: number | null; accord: { prix: number; reservation_id: number | null } | null; created_at: string;
+}
+export interface DemandesPro { nouvelles: DemandePro[]; en_discussion: DemandePro[]; acceptees: DemandePro[] }
+export type ActionDemande = 'accepter' | 'refuser' | 'proposer';
+
+export interface DetailModele { ma_demande_id?: number | null; modele: FicheModele; offres: OuLeFaire[]; similaires: OuLeFaire[]; nb_offres_total?: number; est_prestataire: boolean; mon_offre: { service_id: number } | null; }
 
 const envApiBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) as string | undefined;
 const isLocalHost =
@@ -630,6 +653,8 @@ export const api = {
         return http(`/api/modeles/admin?${q.toString()}`);
       },
       toggle: (id: number): Promise<{ ok: boolean; is_active: boolean }> => http(`/api/modeles/admin/${id}/toggle`, { method: 'PUT' }),
+      fiche: (id: number, body: { prix_reference?: number | null; couleurs?: CouleurModele[]; conseils_entretien?: ConseilEntretien[] }) =>
+        http(`/api/modeles/admin/${id}/fiche`, { method: 'PUT', body: JSON.stringify(body) }),
       lienPinterest: (body: { url: string; categorie: string; titre?: string }): Promise<{ ok: boolean; type: 'epingle' | 'tableau'; message: string }> =>
         http('/api/modeles/admin/lien-pinterest', { method: 'POST', body: JSON.stringify(body) }),
       importerEpingles: (body: { urls: string; categorie: string; titre: string; tags?: string }): Promise<{ ok: boolean; ajoutees: number; doublons: number; refusees: string[] }> =>
@@ -694,6 +719,18 @@ export const api = {
     create: (payload: { titre: string; description: string; categorie_id: number; sous_categorie_id?: number; ville?: string; budget_max?: number; date_souhaitee?: string; photo?: string; lien_inspiration?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
       http('/api/demandes', { method: 'POST', body: JSON.stringify(payload) }),
     mine: (): Promise<any[]> => http('/api/demandes/mes'),
+    // Demande sur un modèle : prix proposé + négociation
+    creerSurModele: (body: { modele_id: number; prix_propose: number; meches_comprises: boolean | null; date_souhaitee: string; heure_souhaitee: string; commune: string; message?: string }): Promise<{ id: number; prestataires_notifies: number }> =>
+      http('/api/demandes/modele', { method: 'POST', body: JSON.stringify(body) }),
+    mesSurModele: (): Promise<MaDemande[]> => http('/api/demandes/modele/mes'),
+    pourPro: (): Promise<DemandesPro> => http('/api/demandes/modele/pro'),
+    augmenter: (id: number, prix: number): Promise<{ ok: true; prix_propose: number }> =>
+      http(`/api/demandes/${id}/montant`, { method: 'PUT', body: JSON.stringify({ prix }) }),
+    reponsePro: (id: number, action: ActionDemande, montant?: number): Promise<{ ok: true; prix?: number; reservation_id?: number }> =>
+      http(`/api/demandes/${id}/pro`, { method: 'POST', body: JSON.stringify({ action, montant }) }),
+    reponseCliente: (id: number, prestataire_id: number, action: ActionDemande, montant?: number): Promise<{ ok: true; prix?: number; reservation_id?: number }> =>
+      http(`/api/demandes/${id}/cliente`, { method: 'POST', body: JSON.stringify({ prestataire_id, action, montant }) }),
+    annulerSurModele: (id: number): Promise<{ ok: true }> => http(`/api/demandes/modele/${id}/annuler`, { method: 'PUT' }),
     opportunites: (): Promise<any[]> => http('/api/demandes/opportunites'),
     repondre: (id: number, message?: string): Promise<{ ok: boolean; conversation_id: number }> =>
       http(`/api/demandes/${id}/repondre`, { method: 'POST', body: JSON.stringify({ message }) }),

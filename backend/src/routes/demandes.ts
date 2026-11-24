@@ -483,8 +483,8 @@ async function conclureAccord(demandeId: number, prestataire: any, prix: number,
     await Demande.updateOne({ _id: demandeId }, { $set: { 'accord.reservation_id': reservation._id } });
 
     const client = await User.findById(demande.client_id).select('prenom nom');
-    await notifier(demande.client_id, '✅ C\'est réservé !', `${prestataire.nom_commercial || 'Une prestataire'} réalise « ${demande.titre} » pour ${fcfa(prix)}.`, { kind: 'demande_accord', demande_id: demandeId, reservation_id: reservation._id }, 'success');
-    await notifier(prestataire.user_id, '✅ Demande conclue', `${nomCourt(client)} : « ${demande.titre} » pour ${fcfa(prix)}. Le rendez-vous est dans tes réservations.`, { kind: 'demande_accord', demande_id: demandeId, reservation_id: reservation._id }, 'success');
+    await notifier(demande.client_id, '✅ C\'est réservé !', `${prestataire.nom_commercial || 'Une prestataire'} réalise « ${demande.titre} » pour ${fcfa(prix)}.`, { kind: 'demande_accord', pour: 'cliente', demande_id: demandeId, reservation_id: reservation._id }, 'success');
+    await notifier(prestataire.user_id, '✅ Demande conclue', `${nomCourt(client)} : « ${demande.titre} » pour ${fcfa(prix)}. Le rendez-vous est dans tes réservations.`, { kind: 'demande_accord', pour: 'pro', demande_id: demandeId, reservation_id: reservation._id }, 'success');
     return { reservation_id: reservation._id as number };
   } catch (e) {
     // La réservation a échoué : on rouvre la demande

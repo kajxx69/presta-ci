@@ -315,6 +315,22 @@ export default function NotificationCenter({ onClose, onUnreadCountChange }: Not
                       </button>
                     )}
                     
+                    {['demande_modele', 'demande_contre_offre', 'demande_relance', 'demande_accord'].includes(notification.data?.kind) && notification.data?.demande_id && (
+                      <button
+                        onClick={() => {
+                          if (!notification.is_read) handleMarkAsRead(notification.id);
+                          onClose?.();
+                          const d = notification.data;
+                          // demande_modele : reçue par la pro ; demande_accord : envoyée aux deux (champ « pour »)
+                          const pourPro = d.kind === 'demande_modele' || d.pour === 'pro';
+                          navigate(pourPro ? `/app/demandes?demande=${d.demande_id}` : `/app/mes-demandes?demande=${d.demande_id}`);
+                        }}
+                        className="mt-2 px-3 py-1.5 rounded-lg bg-vin-600 hover:bg-vin-700 text-white text-xs font-semibold"
+                      >
+                        {notification.data.kind === 'demande_relance' ? 'Augmenter mon montant' : 'Voir la demande'}
+                      </button>
+                    )}
+
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs text-gray-500 dark:text-gray-500">
                         {formatDate(notification.sent_at)}

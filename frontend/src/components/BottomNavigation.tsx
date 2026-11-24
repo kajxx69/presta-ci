@@ -32,7 +32,7 @@ const ONGLETS_PRO: Onglet[] = [ONGLETS[0], ONGLETS[1], { id: 'demandes', label: 
 
 const DEMANDES_TABS = new Set(['demandes', 'reservations']);
 // Le Profil regroupe Enregistrés, Réservations, Messages, Mon compte et l'espace pro
-const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'mes-reservations', 'demandes', 'messages', 'compte', 'dashboard', 'services', 'plans']);
+const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'mes-reservations', 'demandes', 'mes-demandes', 'messages', 'compte', 'dashboard', 'services', 'plans']);
 
 const adminTabs: Onglet[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -55,7 +55,10 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
     if (!isAuthenticated) return;
     const load = () => {
       api.conversations.getUnreadCount().then((res) => setUnreadMessages(res.count)).catch(() => {});
-      if (estPro) api.prestataireReservations.list('en_attente').then((r) => setDemandesEnAttente(r.length)).catch(() => {});
+      if (estPro) Promise.all([
+        api.prestataireReservations.list('en_attente').then((r) => r.length).catch(() => 0),
+        api.demandes.pourPro().then((r) => r.nouvelles.length).catch(() => 0),
+      ]).then(([a, b]) => setDemandesEnAttente(a + b));
     };
     load();
     const interval = setInterval(load, 30000);

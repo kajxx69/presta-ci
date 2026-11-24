@@ -37,7 +37,7 @@ const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
 // Écran de chargement Chicly : identique à celui d'index.html (aucun saut visuel)
 function EcranChicly() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#F9F6F2]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#FAF7F2]">
       <img src="/chicly-splash.png" alt="Chicly" className="w-[min(72vw,360px)] h-auto animate-[chicly-pulse_1.6s_ease-in-out_infinite]" />
     </div>
   );
@@ -68,6 +68,7 @@ function AppTabRenderer({ currentTab, setCurrentTab, estPro }: {
     case 'mes-reservations': return <ClientProfileHub onglet="reservations" onNavigateToTab={setCurrentTab} />;
     // « reservations » : réservations reçues pour une pro (liens des notifications), sinon les siennes
     case 'reservations': return <ClientProfileHub onglet={estPro ? 'demandes' : 'reservations'} onNavigateToTab={setCurrentTab} />;
+    case 'mes-demandes': return <ClientProfileHub onglet="mes-demandes" onNavigateToTab={setCurrentTab} />;
     case 'demandes': return <ClientProfileHub onglet={estPro ? 'demandes' : 'reservations'} onNavigateToTab={setCurrentTab} />;
     case 'messages': return <ClientProfileHub onglet="messages" onNavigateToTab={setCurrentTab} />;
     case 'compte': return <ClientProfileHub onglet="compte" onNavigateToTab={setCurrentTab} />;
@@ -80,7 +81,7 @@ function AppTabRenderer({ currentTab, setCurrentTab, estPro }: {
 }
 
 // Onglets valides par rôle (protège contre les URLs /app/nimportequoi)
-const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-reservations', 'demandes', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard', 'devenir-pro']);
+const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-reservations', 'demandes', 'mes-demandes', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard', 'devenir-pro']);
 
 /** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
 function AppShell() {

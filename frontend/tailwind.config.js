@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       // Identité Chicly (maquette « pro ») : fond crème, encre chaude, UNE couleur d'accent bordeaux.
       // Les anciennes classes blue-/purple-/pink-/indigo-/violet- pointent vers ce bordeaux
@@ -22,8 +22,8 @@ export default {
         return {
           vin, blue: vin, purple: vin, pink: vin, indigo: vin, violet: vin, fuchsia: vin,
           gray: gris, slate: gris,
-          creme: '#F9F6F2',
-          encre: '#1F1A17',
+          creme: '#FAF7F2',
+          encre: '#1F1B18',
           ligne: '#EAE2DA',
           sable: '#EFE7DF',
         };

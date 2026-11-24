@@ -11,7 +11,8 @@ const ReservationsTab = lazy(() => import('./ReservationsTab'));
 const MessagesTab = lazy(() => import('../common/MessagesTab'));
 const ProfileTab = lazy(() => import('./ProfileTab'));
 // Espace pro (visible dès qu'on a proposé un modèle)
-const DemandesRecues = lazy(() => import('../prestataire/ReservationsTab'));
+const DemandesPro = lazy(() => import('../demandes/DemandesPro'));
+const MesDemandes = lazy(() => import('../demandes/MesDemandes'));
 const ProfilPro = lazy(() => import('../prestataire/ProfileTab'));
 const DashboardTab = lazy(() => import('../prestataire/DashboardTab'));
 const ServicesTab = lazy(() => import('../prestataire/ServicesTab'));
@@ -23,8 +24,11 @@ const DevenirPro = lazy(() => import('./DevenirPro'));
 //  - pro (a proposé un modèle) : + Demandes (réservations reçues) et l'espace pro
 //    (Tableau de bord, Mes prestations, Abonnement)
 export type SousOngletProfil =
-  | 'enregistres' | 'reservations' | 'demandes'
+  | 'enregistres' | 'reservations' | 'demandes' | 'mes-demandes'
   | 'messages' | 'compte' | 'dashboard' | 'services' | 'plans' | 'devenir-pro';
+
+/** ?demande=12 dans l'adresse (lien d'une notification) */
+const idDansUrl = () => Number(new URLSearchParams(window.location.search).get('demande')) || null;
 
 const Chargement = () => <div className="p-8 text-center text-gray-400">Chargement…</div>;
 
@@ -93,7 +97,7 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
   if (estPro && onglet === 'demandes') return (
     <div className="max-w-3xl mx-auto pb-6">
       <h1 className="px-5 pt-5 pb-1 text-3xl font-bold text-encre dark:text-white">Demandes</h1>
-      <Suspense fallback={<Chargement />}><DemandesRecues /></Suspense>
+      <Suspense fallback={<Chargement />}><DemandesPro ouvrirId={idDansUrl()} /></Suspense>
     </div>
   );
 
@@ -101,7 +105,7 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
   const nom = u ? `${u.prenom || ''} ${u.nom ? `${u.nom[0]}.` : ''}`.trim() : '';
   const pseudo = u?.email ? `@${String(u.email).split('@')[0]}` : '';
   const initiales = `${u?.prenom?.[0] || ''}${u?.nom?.[0] || ''}`.toUpperCase();
-  const actif: 'enregistres' | 'reservations' = onglet === 'reservations' ? 'reservations' : 'enregistres';
+  const actif: 'enregistres' | 'mes-demandes' | 'reservations' = onglet === 'reservations' ? 'reservations' : onglet === 'mes-demandes' ? 'mes-demandes' : 'enregistres';
   const estAbonnePro = !!abo?.plan_actuel_id && abo.plan_actuel_id !== 1;
 
   const stats = [
@@ -111,7 +115,8 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
   ];
   const sousOnglets: [typeof actif, string, string][] = [
     ['enregistres', 'Enregistrés', 'profile'],
-    ['reservations', estPro ? 'Mes réservations' : 'Réservations', 'mes-reservations'],
+    ['mes-demandes', 'Demandes', 'mes-demandes'],
+    ['reservations', 'Réservations', 'mes-reservations'],
   ];
 
   return (
@@ -175,7 +180,7 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
       )}
 
       {/* Sous-onglets : soulignement noir (maquette) */}
-      <div className="grid grid-cols-2 mt-6 border-b border-ligne dark:border-gray-800">
+      <div className="grid grid-cols-3 mt-6 border-b border-ligne dark:border-gray-800">
         {sousOnglets.map(([id, label, tab]) => (
           <button key={id} onClick={() => aller(tab)}
             className={`py-3.5 text-[17px] font-semibold border-b-2 -mb-px transition-colors ${actif === id ? 'border-encre dark:border-white text-encre dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400'}`}>
@@ -200,7 +205,9 @@ export default function ClientProfileHub({ onglet, onNavigateToTab }: { onglet: 
           <Grille modeles={favoris} onOuvrir={setOuvert} />
         )
       ) : !isAuthenticated ? (
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-14 px-6">Connecte-toi pour voir et suivre tes réservations.</p>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-14 px-6">Connecte-toi pour voir et suivre tes demandes et tes réservations.</p>
+      ) : actif === 'mes-demandes' ? (
+        <Suspense fallback={<Chargement />}><MesDemandes ouvrirId={idDansUrl()} onChoisirModele={favoris.length ? () => aller('profile') : undefined} /></Suspense>
       ) : (
         <Suspense fallback={<Chargement />}><ReservationsTab /></Suspense>
       )}
