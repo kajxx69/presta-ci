@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Heart, MapPin, Star, BadgeCheck, ChevronRight, Scissors, Home, ExternalLink, LocateFixed, Loader2 } from 'lucide-react';
+import { X, Heart, MapPin, Star, BadgeCheck, ChevronRight, ChevronLeft, Scissors, Home, ExternalLink, LocateFixed, Loader2 } from 'lucide-react';
 import { api, Modele, DetailModele, OuLeFaire } from '../../lib/api';
 import { useAppStore } from '../../store/appStore';
 import ModeleVisuel from './ModeleVisuel';
@@ -25,33 +25,30 @@ const duree = (min?: number | null) => (!min ? '' : min < 60 ? `${min} min` : `$
 function LignePrestataire({ o, onReserver, maCommune }: { o: OuLeFaire; onReserver: () => void; maCommune?: string | null }) {
   const { prestataire: p, service: s } = o;
   const ou = libelleLieu(p, maCommune);
+  const domicile = s.is_domicile
+    ? p.vient_chez_moi === true ? `Vient chez toi${p.frais_deplacement ? ` · +${p.frais_deplacement.toLocaleString('fr-FR')} F` : ''}`
+      : p.vient_chez_moi === false && maCommune ? `À domicile, pas à ${maCommune}` : 'À domicile'
+    : null;
   return (
     <button onClick={onReserver}
-      className="w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-400 to-purple-500 overflow-hidden flex-shrink-0 flex items-center justify-center text-white font-bold">
+      className="w-full flex items-center gap-3.5 p-3.5 rounded-[20px] bg-white dark:bg-gray-900 border border-ligne dark:border-gray-800 text-left active:bg-gray-50">
+      <div className="w-14 h-14 rounded-2xl bg-vin-100 dark:bg-vin-900/40 overflow-hidden flex-shrink-0 flex items-center justify-center text-vin-700 dark:text-vin-200 text-lg font-semibold">
         {p.photo ? <img src={p.photo} alt="" className="w-full h-full object-cover" /> : (p.nom_commercial || '?')[0]}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-1 min-w-0">
-          <span className="truncate">{p.nom_commercial}</span>{p.is_verified && <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />}
-          {p.is_pro && <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white">PRO ✨</span>}
+        <p className="font-semibold text-encre dark:text-white flex items-center gap-1.5 min-w-0">
+          <span className="truncate">{p.nom_commercial}</span>
+          {p.is_verified && <BadgeCheck className="w-4 h-4 text-vin-600 flex-shrink-0" strokeWidth={1.8} />}
+          {p.is_pro && <span className="flex-shrink-0 text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-encre text-white">PRO</span>}
         </p>
-        {ou && <p className={`text-xs flex items-center gap-0.5 min-w-0 ${p.distance_km != null ? 'text-pink-700 dark:text-pink-300 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}><MapPin className="w-3 h-3 flex-shrink-0" /><span className="truncate">{ou}</span></p>}
-        <p className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2">
-          {!!p.nombre_avis && <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{(p.note_moyenne || 0).toFixed(1)}</span>}
-          {s.is_domicile && (p.vient_chez_moi === true ? (
-            <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 font-semibold">
-              <Home className="w-3 h-3" />Vient chez toi{p.frais_deplacement ? ` · +${p.frais_deplacement.toLocaleString('fr-FR')} F` : ''}
-            </span>
-          ) : p.vient_chez_moi === false && maCommune ? (
-            <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile, pas à {maCommune}</span>
-          ) : (
-            <span className="inline-flex items-center gap-0.5"><Home className="w-3 h-3" />à domicile</span>
-          ))}
+        {ou && <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1 min-w-0"><MapPin className="w-3.5 h-3.5 flex-shrink-0 text-vin-600" /><span className="truncate">{ou}</span></p>}
+        <p className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2.5">
+          {!!p.nombre_avis && <span className="inline-flex items-center gap-0.5"><Star className="w-3.5 h-3.5 fill-encre text-encre dark:fill-white dark:text-white" />{(p.note_moyenne || 0).toFixed(1)}</span>}
+          {domicile && <span className={`inline-flex items-center gap-1 ${p.vient_chez_moi === true ? 'text-[#3C5A35] dark:text-emerald-400 font-medium' : ''}`}><Home className="w-3.5 h-3.5" />{domicile}</span>}
         </p>
-        <p className="text-sm text-gray-800 dark:text-gray-200"><strong>{fcfa(s.prix)}</strong>{s.duree_minutes ? ` · ${duree(s.duree_minutes)}` : ''}</p>
+        <p className="mt-0.5 text-encre dark:text-gray-100"><strong>{fcfa(s.prix)}</strong><span className="text-gray-500">{s.duree_minutes ? ` · ${duree(s.duree_minutes)}` : ''}</span></p>
       </div>
-      <span className="flex-shrink-0 flex items-center text-sm font-semibold text-pink-600">Réserver<ChevronRight className="w-4 h-4" /></span>
+      <ChevronRight className="w-5 h-5 flex-shrink-0 text-gray-400" />
     </button>
   );
 }
@@ -95,125 +92,147 @@ export default function ModeleDetailSheet({ modele, onClose, aime, onToggleLike,
     try { await api.modeles.retirerOffre(modele.id); showToast('Offre retirée', 'info'); charger(); } catch { showToast('Action impossible', 'error'); }
   };
 
+  const prixMin = detail && detail.offres.length ? Math.min(...detail.offres.map((o) => o.service.prix)) : null;
+  const categorieLabel = ({ coiffure: 'Coiffure', ongles: 'Ongles', maquillage: 'Maquillage', cils: 'Cils & sourcils', soins: 'Soins' } as Record<string, string>)[modele?.categorie || ''] || '';
+  const enTete = (t: string) => <h3 className="text-lg font-semibold text-encre dark:text-white mb-3">{t}</h3>;
+
   return (
     <>
       <AnimatePresence>
         {modele && (
-          <motion.div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center"
+          <motion.div className="fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-            <motion.div className="bg-white dark:bg-gray-900 w-full sm:max-w-md max-h-[94dvh] rounded-t-3xl sm:rounded-3xl overflow-y-auto"
-              initial={{ y: 60 }} animate={{ y: 0 }} exit={{ y: 60 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+            <motion.div className="relative bg-creme dark:bg-gray-950 w-full sm:max-w-md h-[100dvh] sm:h-[92dvh] sm:rounded-[28px] overflow-hidden flex flex-col"
+              initial={{ y: 40, opacity: 0.6 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 36 }}
               onClick={(e) => e.stopPropagation()}>
-              <div className="relative">
-                <ModeleVisuel modele={modele} className="w-full aspect-[4/5]" />
-                <button onClick={onClose} aria-label="Fermer" className="absolute top-3 right-3 p-2 rounded-full bg-black/40 text-white backdrop-blur z-10"><X className="w-5 h-5" /></button>
-                {onToggleLike && (
-                  <button onClick={() => onToggleLike(modele)} aria-label={aime ? 'Retirer de mes favoris' : 'Ajouter à mes favoris'}
-                    className="absolute bottom-3 right-3 p-3 rounded-full bg-white/90 shadow-lg z-10">
-                    <Heart className={`w-6 h-6 ${aime ? 'fill-pink-500 text-pink-500' : 'text-gray-700'}`} />
+              <div className="flex-1 overflow-y-auto">
+                {/* Photo plein cadre */}
+                <div className="relative">
+                  <ModeleVisuel modele={modele} className="w-full h-[52dvh] sm:h-[46dvh]" />
+                  <button onClick={onClose} aria-label="Retour"
+                    className="absolute top-4 left-4 w-11 h-11 rounded-full bg-creme/95 border border-ligne flex items-center justify-center z-10">
+                    <ChevronLeft className="w-6 h-6 text-encre" strokeWidth={1.8} />
                   </button>
-                )}
-                {modele.pin_url && (
-                  <a href={modele.pin_url} target="_blank" rel="noreferrer"
-                    className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 text-[11px] text-white/90 bg-black/50 px-2 py-1 rounded-full backdrop-blur">
-                    Voir sur Pinterest <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-
-              <div className="p-5 space-y-5">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white first-letter:uppercase">{modele.titre}</h2>
-                  {detail && detail.offres.length > 0 && (
-                    <p className="text-pink-600 font-semibold mt-0.5">
-                      {detail.offres.length} prestataire{detail.offres.length > 1 ? 's' : ''} · dès {fcfa(Math.min(...detail.offres.map((o) => o.service.prix)))}
-                    </p>
+                  {onToggleLike && (
+                    <button onClick={() => onToggleLike(modele)} aria-label={aime ? 'Retirer de mes favoris' : 'Ajouter à mes favoris'}
+                      className="absolute top-4 right-4 w-11 h-11 rounded-full bg-creme/95 border border-ligne flex items-center justify-center z-10">
+                      <Heart className={`w-[22px] h-[22px] text-vin-600 ${aime ? 'fill-vin-600' : ''}`} strokeWidth={1.8} />
+                    </button>
                   )}
-                  {plusProche && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-pink-600" />
-                      La plus proche : <strong className="text-gray-900 dark:text-white">{libelleLieu(plusProche.prestataire, maCommune)}</strong>
-                    </p>
+                  {modele.pin_url && (
+                    <a href={modele.pin_url} target="_blank" rel="noreferrer"
+                      className="absolute bottom-10 left-4 z-10 inline-flex items-center gap-1 text-[11px] text-white bg-black/45 px-2.5 py-1 rounded-full">
+                      Voir sur Pinterest <ExternalLink className="w-3 h-3" />
+                    </a>
                   )}
                 </div>
 
-                {/* Je sais le faire / mon offre */}
-                {monOffre ? (
-                  <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/15 p-3 flex items-center gap-3">
-                    <Scissors className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                    <p className="flex-1 text-sm text-amber-900 dark:text-amber-100">Tu proposes ce modèle à <strong>{fcfa(monOffre.service.prix)}</strong></p>
-                    <button onClick={() => setProposer(true)} className="text-sm font-semibold text-amber-700 dark:text-amber-300">Modifier</button>
-                    <button onClick={retirer} className="text-sm text-gray-500">Retirer</button>
+                {/* Feuille de contenu */}
+                <div className="relative -mt-7 rounded-t-[30px] bg-creme dark:bg-gray-950 px-6 pt-6 pb-32 space-y-7">
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      {categorieLabel && <span className="px-3.5 py-1.5 rounded-full bg-sable dark:bg-gray-800 text-sm font-medium text-encre dark:text-gray-200">{categorieLabel}</span>}
+                      {prixMin != null && <span className="text-[15px] text-gray-500 dark:text-gray-400">À partir de <strong className="text-encre dark:text-white">{fcfa(prixMin)}</strong></span>}
+                    </div>
+                    <h2 className="mt-4 text-[30px] leading-tight font-bold text-encre dark:text-white first-letter:uppercase">{modele.titre}</h2>
+                    <p className="mt-1 text-gray-500 dark:text-gray-400">
+                      {detail === null ? 'Chargement…'
+                        : detail.offres.length ? `${detail.offres.length} pro${detail.offres.length > 1 ? 's' : ''} le proposent${plusProche ? ` · la plus proche : ${libelleLieu(plusProche.prestataire, maCommune)}` : ''}`
+                          : 'Aucune pro ne le propose encore'}
+                    </p>
                   </div>
-                ) : (
-                  <button onClick={() => setProposer(true)}
-                    className="w-full flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-left shadow-md">
-                    <span className="text-2xl">✋</span>
-                    <span className="flex-1">
-                      <span className="block font-bold">Je sais le faire</span>
-                      <span className="block text-xs text-white/85">Propose ce modèle et reçois des réservations</span>
-                    </span>
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                )}
 
-                {/* Réserver chez… (les plus proches d'abord) */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Réserver ce modèle chez</h3>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">Près de</span>
-                    {gps ? (
-                      <span className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 rounded-full bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 text-sm font-medium">
-                        <LocateFixed className="w-3.5 h-3.5" /> Ma position
-                        <button onClick={oublierGPS} aria-label="Ne plus utiliser ma position" className="p-1 rounded-full hover:bg-pink-100 dark:hover:bg-pink-900/40"><X className="w-3.5 h-3.5" /></button>
-                      </span>
-                    ) : (
-                      <>
-                        <ChoixCommune compact valeur={communeAffichee} onChange={choisirCommune} vide="Ma commune ?" className="min-w-0 flex-1 max-w-[11rem]" />
-                        <button onClick={maPosition} disabled={enCours}
-                          className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-60">
-                          {enCours ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />} Ma position
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  <button onClick={() => setChezMoi((v) => !v)} aria-pressed={chezMoi}
-                    className={`mb-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                      chezMoi ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'
-                    }`}>
-                    <Home className="w-4 h-4" /> Elle vient chez moi{chezMoi && maCommune ? ` · ${maCommune}` : ''}
-                  </button>
-                  {detail === null ? (
-                    <div className="space-y-2">{[0, 1].map((i) => <div key={i} className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}</div>
-                  ) : autres.length === 0 ? (
-                    chezMoi ? (
-                      <div className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300">
-                        Aucune pro ne se déplace {maCommune ? `à ${maCommune}` : 'à domicile'} pour ce modèle pour l'instant.
-                        {!!detail.nb_offres_total && <button onClick={() => setChezMoi(false)} className="block mt-2 font-semibold text-pink-600">Voir les {detail.nb_offres_total} pro{detail.nb_offres_total > 1 ? 's' : ''} en salon</button>}
+                  {/* Réserver chez… (les plus proches d'abord) */}
+                  <div id="pros-du-modele">
+                    {enTete('Réserver chez')}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      {gps ? (
+                        <span className="inline-flex items-center gap-1.5 pl-3.5 pr-1.5 py-1.5 rounded-full bg-white dark:bg-gray-900 border border-vin-300 text-vin-700 dark:text-vin-200 text-sm font-medium">
+                          <LocateFixed className="w-4 h-4" /> Ma position
+                          <button onClick={oublierGPS} aria-label="Ne plus utiliser ma position" className="p-1 rounded-full hover:bg-vin-50"><X className="w-3.5 h-3.5" /></button>
+                        </span>
+                      ) : (
+                        <>
+                          <ChoixCommune compact valeur={communeAffichee} onChange={choisirCommune} vide="Ma commune" className="min-w-0 w-40 [&_select]:py-2" />
+                          <button onClick={maPosition} disabled={enCours}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white dark:bg-gray-900 border border-ligne dark:border-gray-700 text-sm font-medium text-encre dark:text-gray-200 disabled:opacity-60">
+                            {enCours ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Ma position
+                          </button>
+                        </>
+                      )}
+                      <button onClick={() => setChezMoi((v) => !v)} aria-pressed={chezMoi}
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium border transition-colors ${
+                          chezMoi ? 'bg-vin-600 border-vin-600 text-white' : 'bg-white dark:bg-gray-900 border-ligne dark:border-gray-700 text-encre dark:text-gray-200'
+                        }`}>
+                        <Home className="w-4 h-4" /> Vient chez moi
+                      </button>
+                    </div>
+                    {detail === null ? (
+                      <div className="space-y-2.5">{[0, 1].map((i) => <div key={i} className="h-[86px] rounded-[20px] bg-sable dark:bg-gray-800 animate-pulse" />)}</div>
+                    ) : autres.length === 0 ? (
+                      <div className="rounded-[20px] border border-dashed border-gray-300 dark:border-gray-700 p-5 text-gray-600 dark:text-gray-300">
+                        {chezMoi ? (
+                          <>
+                            Aucune pro ne se déplace {maCommune ? `à ${maCommune}` : 'à domicile'} pour ce modèle pour l'instant.
+                            {!!detail.nb_offres_total && <button onClick={() => setChezMoi(false)} className="block mt-2 font-semibold text-vin-600">Voir les {detail.nb_offres_total} pro{detail.nb_offres_total > 1 ? 's' : ''} en salon</button>}
+                          </>
+                        ) : 'Personne ne propose encore ce modèle. Garde-le dans tes favoris : tu le verras dès qu’une pro se propose.'}
                       </div>
                     ) : (
-                    <p className="rounded-2xl bg-gray-50 dark:bg-gray-800 p-4 text-sm text-gray-600 dark:text-gray-300">
-                      Personne ne propose encore ce modèle. Ajoute-le à tes favoris : tu seras parmi les premières à le voir dès qu'une coiffeuse se propose.
-                    </p>
-                    )
-                  ) : (
-                    <ul className="space-y-2">
-                      {autres.map((o) => (
-                        <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {detail && detail.similaires.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Ils font des styles proches</h3>
-                    <ul className="space-y-2">
-                      {detail.similaires.map((o) => (
-                        <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
-                      ))}
-                    </ul>
+                      <ul className="space-y-2.5">
+                        {autres.map((o) => (
+                          <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
+
+                  {detail && detail.similaires.length > 0 && (
+                    <div>
+                      {enTete('Styles proches')}
+                      <ul className="space-y-2.5">
+                        {detail.similaires.map((o) => (
+                          <li key={o.prestataire.id}><LignePrestataire o={o} maCommune={maCommune} onReserver={() => reserver(o.service.id)} /></li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Pour les pros : se proposer sur ce modèle */}
+                  <div className="border-t border-ligne dark:border-gray-800 pt-6">
+                    {monOffre ? (
+                      <div className="flex items-center gap-3">
+                        <Scissors className="w-5 h-5 text-vin-600 flex-shrink-0" strokeWidth={1.8} />
+                        <p className="flex-1 text-encre dark:text-gray-100">Tu proposes ce modèle à <strong>{fcfa(monOffre.service.prix)}</strong></p>
+                        <button onClick={() => setProposer(true)} className="text-sm font-semibold text-vin-600">Modifier</button>
+                        <button onClick={retirer} className="text-sm text-gray-500">Retirer</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setProposer(true)} className="w-full flex items-center gap-3 text-left">
+                        <Scissors className="w-5 h-5 text-vin-600 flex-shrink-0" strokeWidth={1.8} />
+                        <span className="flex-1">
+                          <span className="block font-semibold text-encre dark:text-white">Tu sais réaliser ce modèle ?</span>
+                          <span className="block text-sm text-gray-500 dark:text-gray-400">Propose-le et reçois des réservations</span>
+                        </span>
+                        <span className="px-4 py-2 rounded-full border border-vin-500 text-sm font-semibold text-vin-600 dark:text-vin-300">Je sais le faire</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action principale fixe en bas (maquette) */}
+              <div className="absolute inset-x-0 bottom-0 px-6 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-creme via-creme to-creme/0 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/0">
+                {autres.length > 0 ? (
+                  <button onClick={() => reserver(autres[0].service.id)}
+                    className="w-full py-4 rounded-full bg-vin-600 hover:bg-vin-700 text-white text-lg font-semibold truncate px-4">
+                    Réserver chez {autres[0].prestataire.nom_commercial}
+                  </button>
+                ) : (
+                  <button onClick={() => setProposer(true)} disabled={!!monOffre}
+                    className="w-full py-4 rounded-full bg-vin-600 hover:bg-vin-700 text-white text-lg font-semibold disabled:opacity-50">
+                    {monOffre ? 'Tu proposes ce modèle' : 'Je sais le faire'}
+                  </button>
                 )}
               </div>
             </motion.div>
