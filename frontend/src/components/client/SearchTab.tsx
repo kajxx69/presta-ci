@@ -54,14 +54,15 @@ export default function SearchTab() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pt-3 pb-6 space-y-3">
+    <div className="max-w-3xl mx-auto px-5 pt-3 pb-6 space-y-4">
+      <h1 className="text-3xl font-bold text-encre dark:text-white">Rechercher</h1>
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-encre dark:text-gray-300" strokeWidth={1.8} />
         <input
           value={saisie}
           onChange={(e) => setSaisie(e.target.value)}
-          placeholder="Knotless, nail art, Cocody…"
-          className="w-full pl-11 pr-10 py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+          placeholder="Tresses, french, knotless…"
+          className="w-full pl-14 pr-11 py-4 rounded-full bg-white dark:bg-gray-900 border border-ligne dark:border-gray-700 text-encre dark:text-white text-[17px] placeholder-gray-400 focus:outline-none focus:border-vin-400"
           enterKeyHint="search"
         />
         {saisie && (
@@ -72,13 +73,13 @@ export default function SearchTab() {
       </div>
 
       <div className="flex items-center gap-2">
-        <ChoixCommune compact valeur={commune} onChange={setCommune} vide="Partout" className="w-44" />
+        <ChoixCommune compact valeur={commune} onChange={setCommune} vide="Partout" className="w-44 [&_select]:py-2 [&_select]:text-[15px]" />
         {commune && (
           <button onClick={() => setChezMoi((v) => !v)} aria-pressed={chezMoi}
-            className={`flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold border ${
-              chezMoi ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'
+            className={`flex-shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-full text-[15px] font-medium border ${
+              chezMoi ? 'bg-vin-600 border-vin-600 text-white' : 'bg-white border-ligne text-encre dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200'
             }`}>
-            🏠 Vient chez moi
+            Vient chez moi
           </button>
         )}
       </div>
@@ -86,10 +87,10 @@ export default function SearchTab() {
       <div className="flex gap-2 overflow-x-auto -mx-4 px-4 scrollbar-hide">
         {CATEGORIES.map((c) => (
           <button key={c.id || 'tout'} onClick={() => setCategorie(c.id)}
-            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium ${
-              categorie === c.id ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-[15px] font-medium border ${
+              categorie === c.id ? 'bg-vin-600 border-vin-600 text-white' : 'bg-white border-ligne text-encre dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200'
             }`}>
-            {c.emoji} {c.label}
+            {c.label}
           </button>
         ))}
       </div>
@@ -97,7 +98,7 @@ export default function SearchTab() {
       {!q && (
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => setSaisie(s)} className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
+            <button key={s} onClick={() => setSaisie(s)} className="px-3 py-1.5 rounded-full border border-ligne dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
               {s}
             </button>
           ))}
@@ -110,11 +111,11 @@ export default function SearchTab() {
 
       {chargement && resultats.length === 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="aspect-[3/4] rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="aspect-[3/4] rounded-[22px] bg-sable dark:bg-gray-800 animate-pulse" />)}
         </div>
       ) : resultats.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <p className="text-4xl mb-2">🔍</p>
+          
           <p>{commune ? `Aucun modèle réservable ${domicile ? 'à domicile ' : ''}à ${commune} pour l'instant.` : 'Aucun modèle trouvé. Essaie un autre mot.'}</p>
           {commune && <button onClick={() => setCommune(null)} className="mt-3 text-sm font-semibold text-pink-600">Voir partout</button>}
         </div>
@@ -122,7 +123,7 @@ export default function SearchTab() {
         <>
           <ModeleGrid modeles={resultats} onOuvrir={setOuvert} aimes={aimes} onToggleLike={basculer} />
           {plus && (
-            <button onClick={suite} className="w-full py-3 rounded-2xl bg-gray-100 dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <button onClick={suite} className="w-full py-3.5 rounded-full bg-white dark:bg-gray-900 border border-ligne dark:border-gray-700 font-semibold text-encre dark:text-gray-200">
               Voir plus
             </button>
           )}

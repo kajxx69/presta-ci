@@ -18,17 +18,21 @@
 
   /* Titres légèrement resserrés — rendu plus éditorial */
   h1, h2, h3 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
+  }
+
+  body {
+    color: #1F1A17;
   }
 
   /* Sélection de texte aux couleurs de la marque */
   ::selection {
-    background: rgba(99, 102, 241, 0.22);
+    background: rgba(163, 68, 90, 0.18);
   }
 
   /* Focus clavier visible et cohérent partout */
   :focus-visible {
-    outline: 2px solid rgba(99, 102, 241, 0.7);
+    outline: 2px solid rgba(163, 68, 90, 0.6);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -71,32 +75,22 @@
 }
 
 @layer components {
-  /* Glass card effect */
+  /* Barres (haut / bas) : surface crème unie, filet fin — plus de verre dépoli */
   .glass {
-    @apply bg-white/75 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-white/[0.06];
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(16, 24, 40, 0.04);
-  }
-  .dark .glass {
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    @apply bg-creme/95 dark:bg-gray-950/95 border-ligne dark:border-white/[0.06];
   }
 
-  /* Gradient text */
+  /* Ancien texte en dégradé : couleur d'accent unie */
   .text-gradient {
-    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+    @apply text-vin-700 dark:text-vin-300;
   }
 
-  /* Fond d'application : dégradé très subtil, plus chaleureux qu'un gris plat */
+  /* Fond d'application : crème uni (maquette) */
   .bg-app {
-    background:
-      radial-gradient(80rem 40rem at 110% -10%, rgba(139, 92, 246, 0.06), transparent 50%),
-      radial-gradient(70rem 35rem at -20% 0%, rgba(99, 102, 241, 0.07), transparent 50%),
-      #f8f9fc;
+    background: #F9F6F2;
   }
   .dark .bg-app {
-    background:
-      radial-gradient(80rem 40rem at 110% -10%, rgba(139, 92, 246, 0.08), transparent 50%),
-      radial-gradient(70rem 35rem at -20% 0%, rgba(99, 102, 241, 0.09), transparent 50%),
-      #0d1117;
+    background: #141110;
   }
 
   /* Carte interactive : léger soulèvement au survol */
@@ -105,7 +99,7 @@
   }
   .card-lift:hover {
     transform: translateY(-2px);
-    @apply shadow-soft-md border-blue-200/70 dark:border-blue-500/25;
+    @apply shadow-soft border-gray-300 dark:border-gray-700;
   }
 
   /* Fond décoratif "aurora" pour les pages d'authentification */
@@ -154,7 +148,7 @@
 /* Carte Leaflet : habillage aux couleurs de la marque (le DOM interne de Leaflet
    n'est pas stylable via classes Tailwind, on cible ses classes globales) */
 .presta-map .leaflet-container {
-  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   border-radius: 20px;
   box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05), 0 16px 40px -8px rgba(16, 24, 40, 0.12);
 }

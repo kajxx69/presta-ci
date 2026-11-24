@@ -5,38 +5,29 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
-      // Identité visuelle : les classes blue-*/purple-* existantes pointent vers
-      // une palette indigo -> violet plus premium (se propage à toute l'app)
-      colors: {
-        blue: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-        },
-        purple: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
-        },
-      },
+      // Identité Chicly (maquette « pro ») : fond crème, encre chaude, UNE couleur d'accent bordeaux.
+      // Les anciennes classes blue-/purple-/pink-/indigo-/violet- pointent vers ce bordeaux
+      // (toute l'app suit sans réécrire chaque écran), les gris deviennent des gris chauds.
+      colors: (() => {
+        const vin = {
+          50: '#FBF3F5', 100: '#F6E4E9', 200: '#ECC7D1', 300: '#DDA0B0', 400: '#C8728A',
+          500: '#B4566F', 600: '#A3445A', 700: '#8A3349', 800: '#72283C', 900: '#5C2132', 950: '#36111C',
+        };
+        const gris = {
+          50: '#FAF7F3', 100: '#F3EEE8', 200: '#EAE2DA', 300: '#D9CFC6', 400: '#ABA097', 500: '#81776F',
+          600: '#655C55', 700: '#4A433E', 800: '#2B2623', 900: '#1F1A17', 950: '#141110',
+        };
+        return {
+          vin, blue: vin, purple: vin, pink: vin, indigo: vin, violet: vin, fuchsia: vin,
+          gray: gris, slate: gris,
+          creme: '#F9F6F2',
+          encre: '#1F1A17',
+          ligne: '#EAE2DA',
+          sable: '#EFE7DF',
+        };
+      })(),
       animation: {
         'in': 'in 0.2s ease-out',
         'slide-in': 'slide-in 0.3s ease-out',
@@ -76,8 +67,8 @@ export default {
         'soft': '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px -2px rgba(16, 24, 40, 0.06)',
         'soft-md': '0 2px 4px rgba(16, 24, 40, 0.04), 0 8px 24px -4px rgba(16, 24, 40, 0.08)',
         'soft-lg': '0 2px 4px rgba(16, 24, 40, 0.05), 0 16px 40px -8px rgba(16, 24, 40, 0.12)',
-        'glow': '0 0 24px rgba(99, 102, 241, 0.18)',
-        'glow-purple': '0 0 24px rgba(139, 92, 246, 0.18)',
+        'glow': 'none',
+        'glow-purple': 'none',
         'brand': '0 4px 14px -2px rgba(79, 70, 229, 0.35)',
         'brand-lg': '0 8px 24px -4px rgba(79, 70, 229, 0.40)',
       },

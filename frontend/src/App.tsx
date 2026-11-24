@@ -9,8 +9,8 @@ import { notificationService } from './services/notifications';
 import ToastContainer from './components/ToastContainer';
 
 // ─── Lazy: Auth (léger, chargé uniquement si non connecté) ───
-const LoginForm = lazy(() => import('./components/auth/LoginForm'));
-const RegisterForm = lazy(() => import('./components/auth/RegisterForm'));
+const EcranAuth = lazy(() => import('./components/auth/EcranAuth'));
+const CGUPage = lazy(() => import('./components/legal/CGUPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 // ─── Lazy: Layout shell (chargé dès qu'on est client/prestataire) ───
@@ -37,7 +37,7 @@ const AdminPanel = lazy(() => import('./components/admin/AdminPanel'));
 // Écran de chargement Chicly : identique à celui d'index.html (aucun saut visuel)
 function EcranChicly() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#F7F5F6]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#F9F6F2]">
       <img src="/chicly-splash.png" alt="Chicly" className="w-[min(72vw,360px)] h-auto animate-[chicly-pulse_1.6s_ease-in-out_infinite]" />
     </div>
   );
@@ -71,6 +71,7 @@ function AppTabRenderer({ currentTab, setCurrentTab, estPro }: {
     case 'demandes': return <ClientProfileHub onglet={estPro ? 'demandes' : 'reservations'} onNavigateToTab={setCurrentTab} />;
     case 'messages': return <ClientProfileHub onglet="messages" onNavigateToTab={setCurrentTab} />;
     case 'compte': return <ClientProfileHub onglet="compte" onNavigateToTab={setCurrentTab} />;
+    case 'devenir-pro': return <ClientProfileHub onglet="devenir-pro" onNavigateToTab={setCurrentTab} />;
     case 'dashboard':
     case 'services':
     case 'plans': return estPro ? <ClientProfileHub onglet={currentTab} onNavigateToTab={setCurrentTab} /> : <DiscoverTab />;
@@ -79,7 +80,7 @@ function AppTabRenderer({ currentTab, setCurrentTab, estPro }: {
 }
 
 // Onglets valides par rôle (protège contre les URLs /app/nimportequoi)
-const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-reservations', 'demandes', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard']);
+const VALID_TABS = new Set(['home', 'search', 'compte', 'reservations', 'mes-reservations', 'demandes', 'publications', 'messages', 'favorites', 'profile', 'services', 'plans', 'dashboard', 'devenir-pro']);
 
 /** Shell principal : synchronise l'onglet courant avec l'URL /app/:tab (deep-linking + bouton retour) */
 function AppShell() {
@@ -218,9 +219,7 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-0 sm:px-4 sm:py-8">
-                <LoginForm />
-              </div>
+              <EcranAuth mode="connexion" />
             )
           }
         />
@@ -231,9 +230,7 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-0 sm:px-4 sm:py-6">
-                <RegisterForm />
-              </div>
+              <EcranAuth mode="inscription" />
             )
           }
         />
@@ -243,6 +240,7 @@ function App() {
         <Route path="/pro" element={<Navigate to="/app/profile" replace />} />
 
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/conditions" element={<div className="min-h-screen bg-creme dark:bg-gray-950"><CGUPage onBack={() => window.history.back()} /></div>} />
         <Route path="/reset-password" element={<ForgotPasswordPage />} />
 
         <Route path="/prestataires/:id" element={<PrestataireDetailPage />} />

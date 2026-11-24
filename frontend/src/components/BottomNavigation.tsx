@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Search, User, Package, CreditCard, LayoutDashboard } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, User, Package, CreditCard, LayoutDashboard, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
@@ -11,19 +10,31 @@ interface BottomNavigationProps {
   setCurrentTab: (tab: string) => void;
 }
 
-const clientTabs = [
-  { id: 'home', label: 'Découvrir', icon: Sparkles },
+/** Icône « Découvrir » : une carte avec un cœur (maquette). */
+function IconeDecouvrir({ className, strokeWidth = 1.8 }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="4" y="3" width="16" height="18" rx="3.5" />
+      <path d="M12 15.2s-3.2-1.9-3.2-4a1.8 1.8 0 0 1 3.2-1.1 1.8 1.8 0 0 1 3.2 1.1c0 2.1-3.2 4-3.2 4z" />
+    </svg>
+  );
+}
+
+type Onglet = { id: string; label: string; icon: React.ComponentType<any> };
+
+const ONGLETS: Onglet[] = [
+  { id: 'home', label: 'Découvrir', icon: IconeDecouvrir },
   { id: 'search', label: 'Recherche', icon: Search },
   { id: 'profile', label: 'Profil', icon: User },
 ];
-// Le Profil regroupe Enregistrés (favoris), Demandes (réservations), Messages et Mon compte
+// Pro : un onglet « Demandes » en plus (réservations reçues), comme dans la maquette
+const ONGLETS_PRO: Onglet[] = [ONGLETS[0], ONGLETS[1], { id: 'demandes', label: 'Demandes', icon: Inbox }, ONGLETS[2]];
+
+const DEMANDES_TABS = new Set(['demandes', 'reservations']);
+// Le Profil regroupe Enregistrés, Réservations, Messages, Mon compte et l'espace pro
 const PROFIL_TABS = new Set(['profile', 'favorites', 'reservations', 'mes-reservations', 'demandes', 'messages', 'compte', 'dashboard', 'services', 'plans']);
-const estActif = (tabId: string, currentTab: string, estCliente: boolean) =>
-  currentTab === tabId || (estCliente && tabId === 'profile' && PROFIL_TABS.has(currentTab));
 
-
-
-const adminTabs = [
+const adminTabs: Onglet[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'users', label: 'Utilisateurs', icon: User },
   { id: 'services', label: 'Services', icon: Package },
@@ -36,111 +47,71 @@ export default function BottomNavigation({ currentTab, setCurrentTab }: BottomNa
   const { showToast } = useAppStore();
   const navigate = useNavigate();
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [demandesEnAttente, setDemandesEnAttente] = useState(0);
+  const estPro = isAuthenticated && role?.nom === 'prestataire';
 
-  // Badge messages non lus (poll 30s)
+  // Badges : messages non lus (tous) et demandes en attente (pros) — toutes les 30 s
   useEffect(() => {
     if (!isAuthenticated) return;
-    const load = () => api.conversations.getUnreadCount()
-      .then(res => setUnreadMessages(res.count))
-      .catch(() => {});
+    const load = () => {
+      api.conversations.getUnreadCount().then((res) => setUnreadMessages(res.count)).catch(() => {});
+      if (estPro) api.prestataireReservations.list('en_attente').then((r) => setDemandesEnAttente(r.length)).catch(() => {});
+    };
     load();
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, estPro]);
 
   const handleTabSelect = (tabId: string) => {
     if (tabId === 'messages' && !isAuthenticated) {
-      showToast('Connectez-vous pour accéder à vos messages', 'info');
+      showToast('Connecte-toi pour accéder à tes messages', 'info');
       navigate('/login');
       return;
     }
     setCurrentTab(tabId);
   };
 
-  // Clientes et pros ont la même navigation (l'espace pro est dans le Profil)
-  let tabs = clientTabs;
-  // Admin en visite dans l'app : mêmes onglets que les utilisatrices
-  if (role?.nom === 'admin' && !useAppStore.getState().adminDansApp) tabs = adminTabs;
+  const enApp = !(role?.nom === 'admin' && !useAppStore.getState().adminDansApp);
+  const tabs = !enApp ? adminTabs : estPro ? ONGLETS_PRO : ONGLETS;
+
+  const estActif = (id: string) => {
+    if (!enApp) return currentTab === id;
+    if (estPro && id === 'demandes') return DEMANDES_TABS.has(currentTab);
+    if (id === 'profile') return PROFIL_TABS.has(currentTab) && !(estPro && DEMANDES_TABS.has(currentTab));
+    return currentTab === id;
+  };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-gray-200/50 dark:border-gray-700/50 safe-bottom lg:hidden">
-      <div className="max-w-lg mx-auto px-2">
-        <div className="flex justify-around items-center h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-creme dark:bg-gray-950 border-t border-ligne dark:border-gray-800 safe-bottom lg:hidden">
+      <div className="max-w-lg mx-auto">
+        <div className="flex justify-around items-stretch h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = estActif(tab.id, currentTab, tabs === clientTabs);
-
+            const actif = estActif(tab.id);
+            const badge = tab.id === 'demandes' ? demandesEnAttente : tab.id === 'profile' && enApp ? unreadMessages : 0;
             return (
-              <motion.button
+              <button
                 key={tab.id}
-                whileTap={{ scale: 0.85 }}
                 onClick={() => handleTabSelect(tab.id)}
-                className="relative flex flex-col items-center justify-center w-full py-1 gap-0.5"
+                aria-current={actif ? 'page' : undefined}
+                className={`relative flex flex-col items-center justify-center flex-1 gap-1 transition-colors ${
+                  actif ? 'text-vin-600 dark:text-vin-300' : 'text-gray-600 dark:text-gray-400'
+                }`}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="bottom-nav-pill"
-                    className="absolute inset-x-1 inset-y-0 rounded-2xl bg-blue-50 dark:bg-blue-900/30"
-                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                  />
-                )}
-                <div className="relative">
-                  <motion.div
-                    animate={{
-                      y: isActive ? -2 : 0,
-                      scale: isActive ? 1.1 : 1,
-                    }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                  >
-                    <Icon
-                      className={`w-5 h-5 transition-colors duration-200 ${
-                        isActive
-                          ? 'text-blue-600 dark:text-blue-400'
-                          : 'text-gray-400 dark:text-gray-500'
-                      }`}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                  </motion.div>
-
-                  {/* Active indicator dot */}
-                  <AnimatedDot visible={isActive} />
-
-                  {/* Badge messages non lus */}
-                  {(tab.id === 'messages' || (tab.id === 'profile' && tabs === clientTabs)) && unreadMessages > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                <span className="relative">
+                  <Icon className="w-6 h-6" strokeWidth={actif ? 2 : 1.7} />
+                  {badge > 0 && (
+                    <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-vin-600 text-white text-[9px] font-bold flex items-center justify-center">
+                      {badge > 9 ? '9+' : badge}
                     </span>
                   )}
-                </div>
-
-                <span
-                  className={`text-[10px] font-medium transition-colors duration-200 ${
-                    isActive
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-400 dark:text-gray-500'
-                  }`}
-                >
-                  {tab.label}
                 </span>
-              </motion.button>
+                <span className={`text-[11px] ${actif ? 'font-semibold' : 'font-medium'}`}>{tab.label}</span>
+              </button>
             );
           })}
         </div>
       </div>
     </nav>
-  );
-}
-
-function AnimatedDot({ visible }: { visible: boolean }) {
-  return (
-    <motion.div
-      initial={false}
-      animate={{
-        scale: visible ? 1 : 0,
-        opacity: visible ? 1 : 0,
-      }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600 dark:bg-blue-400"
-    />
   );
 }

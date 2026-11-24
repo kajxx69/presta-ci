@@ -7,13 +7,12 @@ import { useAppStore } from '../store/appStore';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import Logo from './Logo';
 
 export default function Header() {
-  const { setCurrentTab, adminDansApp, setAdminDansApp } = useAppStore();
+  const { adminDansApp, setAdminDansApp } = useAppStore();
   const [reglages, setReglages] = useState(false);
   const [messagesNonLus, setMessagesNonLus] = useState(0);
-  const { user, role, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -57,15 +56,11 @@ export default function Header() {
   if (!isAuthenticated) return null;
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-      <div className="flex items-center justify-between max-w-lg lg:max-w-none mx-auto px-4 h-14">
-        {/* Logo - hidden on desktop (shown in sidebar) */}
-        <button
-          onClick={() => navigate('/app')}
-          className="flex items-center gap-2 active:scale-95 transition-transform lg:hidden"
-        >
-          <Logo className="h-9 w-9 rounded-full" />
-          <span className={`text-xl font-extrabold tracking-tight text-[#7A1638] dark:text-pink-300 ${role?.nom === 'admin' && adminDansApp ? 'hidden sm:inline' : ''}`}>Chicly</span>
+    <header className="sticky top-0 z-50 bg-creme dark:bg-gray-950">
+      <div className="flex items-center justify-between max-w-lg lg:max-w-none mx-auto px-5 h-14">
+        {/* Logotype texte (maquette) — caché sur ordinateur (déjà dans la barre latérale) */}
+        <button onClick={() => navigate('/app')} className="lg:hidden text-[26px] font-bold tracking-tight text-encre dark:text-white leading-none" aria-label="Chicly — accueil">
+          Chicly<span className="text-vin-600">.</span>
         </button>
         <div className="hidden lg:block" />
 
@@ -76,7 +71,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => { setAdminDansApp(false); navigate('/app'); }}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-[#7A1638] text-white text-xs font-semibold shadow-sm"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-encre text-white text-xs font-semibold"
               title="Retour au back office"
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -91,9 +86,9 @@ export default function Header() {
             aria-label="Messages"
             className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <MessageCircle className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <MessageCircle className="w-[22px] h-[22px] text-encre dark:text-gray-200" strokeWidth={1.7} />
             {messagesNonLus > 0 && (
-              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-vin-600 text-white text-[9px] font-bold flex items-center justify-center">
                 {messagesNonLus > 9 ? '9+' : messagesNonLus}
               </span>
             )}
@@ -106,14 +101,14 @@ export default function Header() {
               onClick={() => setShowNotifications(prev => !prev)}
               className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Bell className="w-[22px] h-[22px] text-encre dark:text-gray-200" strokeWidth={1.7} />
               <AnimatePresence>
                 {unreadCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
-                    className="absolute -top-0.5 -right-0.5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-lg"
+                    className="absolute top-0.5 right-0.5 bg-vin-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
                   >
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </motion.span>
@@ -146,27 +141,9 @@ export default function Header() {
             aria-label="Réglages et déconnexion"
             className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <Settings className="w-[22px] h-[22px] text-encre dark:text-gray-200" strokeWidth={1.7} />
           </motion.button>
 
-          {/* Avatar */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setCurrentTab('profile')}
-            className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-transparent hover:ring-blue-500/50 transition-all duration-200 shadow-sm flex-shrink-0"
-          >
-            {user?.photo_profil ? (
-              <img
-                src={user.photo_profil}
-                alt={`${user.prenom} ${user.nom}`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#7A1638] to-pink-500 flex items-center justify-center text-white text-sm font-bold">
-                {user?.prenom?.[0]}{user?.nom?.[0]}
-              </div>
-            )}
-          </motion.button>
         </div>
       </div>
       <MenuReglages ouvert={reglages} onFermer={() => setReglages(false)} />
