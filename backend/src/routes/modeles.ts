@@ -5,7 +5,7 @@ import {
 import { tableauPinterestValide, epinglePinterestValide } from '../utils/liens.js';
 import { creerOffre, retirerOffre, enrichirOffres, offresDuModele, ErreurOffre, infoDistance, comparerProximite, cleOffre, modelesProches, bonusProximite, infoDomicile } from '../services/offres.js';
 import { positionDepuisRequete, communeParNom } from '../services/communes.js';
-import { OffreModele } from '../models/index.js';
+import { OffreModele, Demande } from '../models/index.js';
 import { synchroniserTableau, synchroniserTousLesTableaux } from '../services/pinterest-sync.js';
 import { getUserIdFromSession, requireAuth, requireRole } from '../middleware/auth.js';
 import { serverError } from '../utils/http.js';
@@ -194,7 +194,7 @@ router.get('/mes-likes', requireAuth, async (req: any, res: Response) => {
 // GET /api/modeles/:id?lat=&lng=|commune=&domicile=1 — détail + « Où le faire ? » (les plus proches d'abord si position)
 router.get('/:id(\\d+)', async (req: Request, res: Response) => {
   try {
-    const modele = await Modele.findOne({ _id: Number(req.params.id) }).select(`${CHAMPS_PUBLICS} recherche is_active`);
+    const modele = await Modele.findOne({ _id: Number(req.params.id) }).select(`${CHAMPS_PUBLICS} recherche is_active prix_reference couleurs conseils_entretien`);
     if (!modele) return res.status(404).json({ error: 'Modèle introuvable' });
     const pos = positionDepuisRequete(req.query as Record<string, unknown>);
 
@@ -271,8 +271,15 @@ router.get('/:id(\\d+)', async (req: Request, res: Response) => {
     const offresAffichees = domicile ? offres.filter(vient) : offres;
     const similairesAffiches = domicile ? ou.filter(vient) : ou;
 
+    // Demande en cours de la cliente sur ce modèle (bouton « Voir ma demande »)
+    const maDemande = userId ? await Demande.findOne({ client_id: userId, modele_id: modele._id, statut: 'ouverte', expires_at: { $gt: new Date() } }).select('_id') : null;
+
+    // Prix de référence : celui de l'admin, sinon le prix de la prestation d'origine, sinon la médiane des offres
+    const prixOffres = offres.map(o => o.service.prix).filter((n): n is number => typeof n === 'number').sort((a, b) => a - b);
     const { recherche: _r, ...publicModele } = modele.toJSON() as any;
+    publicModele.prix_reference = publicModele.prix_reference || publicModele.prix || (prixOffres.length ? prixOffres[Math.floor(prixOffres.length / 2)] : null);
     res.json({
+      ma_demande_id: maDemande?._id ?? null,
       modele: publicModele,
       offres: offresAffichees,
       similaires: similairesAffiches.map(({ _rang, ...o }) => o),
@@ -441,6 +448,34 @@ router.put('/admin/:id(\\d+)/toggle', requireAuth, requireRole('admin'), async (
     res.json({ ok: true, is_active: !m.is_active });
   } catch (e) {
     serverError(res, e, 'modeles/admin-toggle');
+  }
+});
+
+// PUT /api/modeles/admin/:id/fiche { prix_reference, couleurs: [{nom,hex}], conseils_entretien: [{critere,conseil,statut}] }
+router.put('/admin/:id(\\d+)/fiche', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const maj: any = { updated_at: new Date() };
+    if (req.body?.prix_reference !== undefined) {
+      const p = req.body.prix_reference === null || req.body.prix_reference === '' ? null : Math.round(Number(req.body.prix_reference));
+      if (p !== null && (!Number.isFinite(p) || p < 500 || p > 2_000_000)) return res.status(400).json({ error: 'Prix de référence invalide' });
+      maj.prix_reference = p;
+    }
+    if (Array.isArray(req.body?.couleurs)) {
+      maj.couleurs = req.body.couleurs.slice(0, 8)
+        .map((c: any) => ({ nom: String(c?.nom || '').trim().slice(0, 40), hex: String(c?.hex || '').trim() }))
+        .filter((c: any) => c.nom && /^#[0-9a-fA-F]{6}$/.test(c.hex));
+    }
+    if (Array.isArray(req.body?.conseils_entretien)) {
+      maj.conseils_entretien = req.body.conseils_entretien.slice(0, 8)
+        .map((c: any) => ({ critere: String(c?.critere || '').trim().slice(0, 40), conseil: String(c?.conseil || '').trim().slice(0, 160), statut: ['oui', 'non', 'prudence'].includes(c?.statut) ? c.statut : 'prudence' }))
+        .filter((c: any) => c.critere && c.conseil);
+    }
+    const r = await Modele.updateOne({ _id: Number(req.params.id) }, { $set: maj });
+    if (!r.matchedCount) return res.status(404).json({ error: 'Modèle introuvable' });
+    const m = await Modele.findById(Number(req.params.id)).select('prix_reference couleurs conseils_entretien');
+    res.json(m);
+  } catch (e) {
+    serverError(res, e, 'modeles/admin-fiche');
   }
 });
 

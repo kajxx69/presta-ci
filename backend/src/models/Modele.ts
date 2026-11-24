@@ -27,6 +27,10 @@ const modeleSchema = new mongoose.Schema({
   prestataire_id: { type: Number, ref: 'Prestataire', default: null },
   service_id: { type: Number, ref: 'Service', default: null },
   prix: { type: Number, default: null },
+  // Fiche du modèle (saisies par l'admin) : prix indicatif, couleurs possibles, conseils d'entretien
+  prix_reference: { type: Number, default: null },
+  couleurs: { type: [{ _id: false, nom: { type: String, maxlength: 40 }, hex: { type: String, match: /^#[0-9a-fA-F]{6}$/ } }], default: [] },
+  conseils_entretien: { type: [{ _id: false, critere: { type: String, maxlength: 40 }, conseil: { type: String, maxlength: 160 }, statut: { type: String, enum: ['oui', 'non', 'prudence'] } }], default: [] },
   ville: { type: String, default: null },
   // Texte normalisé (minuscules, sans accents) pour la recherche
   recherche: { type: String, default: '' },

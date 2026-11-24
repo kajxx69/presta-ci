@@ -13,7 +13,8 @@ const demandeSchema = new mongoose.Schema({
   client_id: { type: Number, required: true, ref: 'User' },
   titre: { type: String, required: true, maxlength: 120 },
   description: { type: String, required: true, maxlength: 2000 },
-  categorie_id: { type: Number, required: true, ref: 'Category' },
+  // Demande libre : catégorie obligatoire. Demande sur un modèle : null (on cible par modele_categorie).
+  categorie_id: { type: Number, default: null, ref: 'Category' },
   sous_categorie_id: { type: Number, default: null, ref: 'SubCategory' },
   ville: { type: String, default: null },
   budget_max: { type: Number, default: null },
@@ -22,6 +23,39 @@ const demandeSchema = new mongoose.Schema({
   // et/ou lien vers l'épingle. Visible uniquement par la cliente et les salons ciblés.
   photo: { type: String, default: null },
   lien_inspiration: { type: String, default: null },
+  // --- Demande sur un modèle du fil (« Demander cette prestation ») ---
+  // La cliente propose son prix ; chaque prestataire concernée peut accepter,
+  // refuser ou négocier (fil d'offres par prestataire). Un accord crée la réservation.
+  modele_id: { type: Number, default: null, ref: 'Modele' },
+  modele_categorie: { type: String, default: null }, // coiffure, ongles… (ciblage des pros)
+  prix_propose: { type: Number, default: null },
+  prix_reference: { type: Number, default: null }, // copie au moment de la demande
+  meches_comprises: { type: Boolean, default: null }, // coiffure uniquement
+  heure_souhaitee: { type: String, default: null }, // HH:MM
+  commune: { type: String, default: null },
+  relance_envoyee: { type: Boolean, default: false },
+  negociations: [{
+    _id: false,
+    prestataire_id: { type: Number, required: true },
+    statut: { type: String, enum: ['en_discussion', 'refusee'], default: 'en_discussion' },
+    refusee_par: { type: String, enum: ['cliente', 'pro', null], default: null },
+    offres: [{
+      _id: false,
+      auteur: { type: String, enum: ['cliente', 'pro'], required: true },
+      montant: { type: Number, required: true },
+      created_at: { type: Date, default: Date.now },
+    }],
+    updated_at: { type: Date, default: Date.now },
+  }],
+  accord: {
+    type: new mongoose.Schema({
+      prestataire_id: { type: Number, required: true },
+      prix: { type: Number, required: true },
+      reservation_id: { type: Number, default: null },
+      at: { type: Date, default: Date.now },
+    }, { _id: false }),
+    default: null,
+  },
   statut: { type: String, enum: ['ouverte', 'pourvue', 'annulee'], default: 'ouverte' },
   expires_at: { type: Date, required: true },
   reponses: [{
@@ -47,5 +81,8 @@ demandeSchema.pre('save', async function () {
 
 demandeSchema.index({ client_id: 1, statut: 1 });
 demandeSchema.index({ statut: 1, categorie_id: 1, expires_at: 1 });
+demandeSchema.index({ statut: 1, modele_categorie: 1, expires_at: 1 });
+demandeSchema.index({ 'accord.prestataire_id': 1 });
+demandeSchema.index({ 'negociations.prestataire_id': 1 });
 
 export const Demande = mongoose.model('Demande', demandeSchema);

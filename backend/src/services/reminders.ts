@@ -3,6 +3,7 @@ import { InAppNotificationService } from './in-app-notifications.js';
 import { sendMail } from '../utils/mailer.js';
 import { logger } from '../logger.js';
 import { lienItineraire } from './confidentialite.js';
+import { runRelanceDemandesSweep } from './demandes-relance.js';
 import { runSubscriptionReminderSweep } from './subscription-reminders.js';
 
 const SWEEP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -106,6 +107,7 @@ export function startReminderLoop() {
   const sweep = () => {
     runReminderSweep().catch(e => logger.error(`[reminders] sweep: ${e.message}`));
     runSubscriptionReminderSweep().catch(e => logger.error(`[relances-abonnement] sweep: ${e.message}`));
+    runRelanceDemandesSweep().catch(e => logger.error(`[relance-demandes] sweep: ${e.message}`));
   };
   sweep();
   setInterval(sweep, SWEEP_INTERVAL_MS);
