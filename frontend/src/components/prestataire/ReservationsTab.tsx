@@ -31,6 +31,7 @@ interface Reservation {
   client_prenom: string;
   client_telephone?: string;
   client_email?: string;
+  telephone_apres_confirmation?: boolean;
   service_nom: string;
   date_reservation: string;
   heure_debut: string;
@@ -608,7 +609,7 @@ export default function ReservationsTab() {
                             {reservation.client_prenom} {reservation.client_nom}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {reservation.client_email || reservation.client_telephone || '—'}
+                            {reservation.client_email || reservation.client_telephone || (reservation.telephone_apres_confirmation ? 'Contact après confirmation 🔒' : '—')}
                           </p>
                         </td>
                         <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{reservation.service_nom}</td>
@@ -761,6 +762,9 @@ export default function ReservationsTab() {
                     </div>
                   </div>
 
+                  {!reservation.client_telephone && reservation.telephone_apres_confirmation && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">🔒 Le téléphone de la cliente s’affiche dès que tu acceptes. En attendant, écris-lui par la messagerie.</p>
+                  )}
                   {reservation.client_telephone && (
                     <div className="flex items-center space-x-3 text-sm">
                       <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">

@@ -93,8 +93,11 @@ router.get('/', async (req: Request, res: Response) => {
         client_id: r.client_id,
         client_nom: client?.nom || null,
         client_prenom: client?.prenom || null,
-        client_telephone: client?.telephone || null,
-        client_email: (client as any)?.email || null,
+        // Coordonnées de la cliente : seulement une fois la réservation confirmée
+        // (comme l'adresse) — avant, l'échange passe par la messagerie Chicly
+        client_telephone: adresseVisible(statut?.nom) ? client?.telephone || null : null,
+        client_email: adresseVisible(statut?.nom) ? (client as any)?.email || null : null,
+        telephone_apres_confirmation: !adresseVisible(statut?.nom) && !['annulee', 'refusee'].includes(statut?.nom || ''),
         service_nom: service?.nom || null,
         duree_minutes: service?.duree_minutes || null,
         statut: statut?.nom || null,

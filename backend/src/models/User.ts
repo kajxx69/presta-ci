@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
   ville: String,
   // Commune choisie (« Ma commune ») — liste services/communes.ts
   commune: { type: String, default: null },
+  // Visite guidée de l'app vue une fois (sur n'importe quel appareil)
+  visite_guidee_vue: { type: Boolean, default: false },
   photo_profil: String,
   is_active: { type: Boolean, default: true },
   // Suppression douce par l'admin : le compte disparaît des listes et son email

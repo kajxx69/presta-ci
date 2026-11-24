@@ -11,6 +11,7 @@ import ModeleVisuel from './ModeleVisuel';
 import ChoixPosition from '../common/ChoixPosition';
 import { usePosition, paramsPosition, libellePosition } from '../../lib/position';
 import { libelleLieu } from '../../lib/communes';
+import VisiteGuidee from '../common/VisiteGuidee';
 
 export const CATEGORIES: { id: CategorieModele | ''; label: string; emoji: string }[] = [
   { id: '', label: 'Tout', emoji: '' },
@@ -195,7 +196,9 @@ export default function DiscoverTab() {
   const visibles = pile.slice(0, 3);
 
   return (
-    /* Plein écran : moins la barre du haut (affichée seulement une fois connectée) et la navigation du bas */
+    <>
+    <VisiteGuidee />
+    {/* Plein écran : moins la barre du haut (affichée seulement une fois connectée) et la navigation du bas */}
     <div className={`max-w-md mx-auto px-4 pt-3 flex flex-col ${isAuthenticated
       ? 'h-[calc(100dvh-8.5rem)] lg:h-[calc(100dvh-5rem)]'
       : 'h-[calc(100dvh-5rem)] lg:h-[calc(100dvh-1.5rem)]'}`}>
@@ -308,5 +311,6 @@ export default function DiscoverTab() {
       <ModeleDetailSheet modele={ouvert} onClose={() => setOuvert(null)} ouvrirProposition={ouvrirProposition} />
       <ChoixPosition ouvert={choixPosition} onFermer={() => setChoixPosition(false)} />
     </div>
+    </>
   );
 }

@@ -13,7 +13,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const userId = await getUserIdFromSession(req);
     if (!userId) return res.json({ user: null, authenticated: false });
 
-    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id');
+    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id visite_guidee_vue');
     if (!user) return res.json({ user: null, authenticated: false });
 
     res.json({ user: user.toJSON(), authenticated: true });
@@ -48,6 +48,18 @@ router.get('/me/parrainage', async (req: Request, res: Response) => {
 });
 
 // PUT /api/users/me
+// PUT /api/users/me/visite-guidee — la visite guidée a été vue (ou passée)
+router.put('/me/visite-guidee', async (req: Request, res: Response) => {
+  try {
+    const userId = await getUserIdFromSession(req);
+    if (!userId) return res.status(401).json({ error: 'Non authentifié' });
+    await User.updateOne({ _id: userId }, { $set: { visite_guidee_vue: true } });
+    res.json({ ok: true });
+  } catch (e: any) {
+    serverError(res, e);
+  }
+});
+
 router.put('/me', async (req: Request, res: Response) => {
   try {
     const userId = await getUserIdFromSession(req);
@@ -71,7 +83,7 @@ router.put('/me', async (req: Request, res: Response) => {
     }
 
     await User.updateOne({ _id: userId }, update);
-    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id');
+    const user = await User.findById(userId).select('email nom prenom telephone ville commune photo_profil role_id visite_guidee_vue');
     res.json({ user: user?.toJSON() });
   } catch (e: any) {
     serverError(res, e);

@@ -181,9 +181,9 @@ function App() {
         }
         useAuthStore.setState({ user, role, isAuthenticated: true });
 
-        if (user) {
-          await notificationService.initialize();
-        }
+        // Notifications push en arrière-plan : ne jamais bloquer l'ouverture de l'app
+        // (service worker absent, autorisation jamais répondue… l'écran Chicly restait figé)
+        if (user) notificationService.initialize().catch(() => {});
       } catch {
         localStorage.removeItem('prestaci-auth');
         useAuthStore.setState({ user: null, role: null, isAuthenticated: false });

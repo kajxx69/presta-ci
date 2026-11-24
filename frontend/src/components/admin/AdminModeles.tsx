@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Eye, EyeOff, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Eye, EyeOff, Trash2, Image as ImageIcon, FileText } from 'lucide-react';
+import AdminFicheModele from './AdminFicheModele';
 import { api } from '../../lib/api';
 import AdminTableauxPinterest from './AdminTableauxPinterest';
 import ModeleVisuel from '../client/ModeleVisuel';
@@ -22,6 +23,7 @@ export default function AdminModeles() {
   const [source, setSource] = useState('');
   const [filtreCat, setFiltreCat] = useState('');
   const [page, setPage] = useState(1);
+  const [fiche, setFiche] = useState<any | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,7 +72,13 @@ export default function AdminModeles() {
                   <p className="text-white text-[11px] line-clamp-2">{m.titre}</p>
                   <p className="text-white/70 text-[10px]">{m.categorie} · {m.source === 'prestataire' ? 'prestataire' : 'Pinterest'} · ♥ {m.nombre_likes}</p>
                 </div>
+                {(m.prix_reference || m.couleurs?.length || m.conseils_entretien?.length) ? (
+                  <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/90 text-gray-800">Fiche ✓</span>
+                ) : null}
                 <div className="absolute top-1.5 right-1.5 flex gap-1">
+                  <button title="Fiche : prix de référence, couleurs, conseils" onClick={() => setFiche(m)} className="p-1.5 rounded-lg bg-white/90">
+                    <FileText className="w-3.5 h-3.5" />
+                  </button>
                   <button title={m.is_active ? 'Masquer' : 'Réafficher'} onClick={async () => { await api.modeles.admin.toggle(m.id); load(); }}
                     className="p-1.5 rounded-lg bg-white/90">
                     {m.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -89,6 +97,7 @@ export default function AdminModeles() {
             onPageChange={(d) => setPage((p) => (d === 'next' ? p + 1 : Math.max(1, p - 1)))} />
         </>
       )}
+      <AdminFicheModele modele={fiche} onFermer={() => setFiche(null)} onEnregistre={load} />
     </div>
   );
 }

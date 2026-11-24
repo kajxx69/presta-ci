@@ -236,6 +236,7 @@ export const api = {
   users: {
     getMe: (): Promise<{ user: any }> => http('/api/users/me'),
     getParrainage: (): Promise<{ code: string; filleuls: number }> => http('/api/users/me/parrainage'),
+    visiteGuideeVue: (): Promise<{ ok: true }> => http('/api/users/me/visite-guidee', { method: 'PUT' }),
     updateMe: (payload: { nom?: string; prenom?: string; telephone?: string; ville?: string; commune?: string; photo_profil?: string }): Promise<{ user: any }> =>
       http('/api/users/me', { method: 'PUT', body: JSON.stringify(payload) }),
   },
